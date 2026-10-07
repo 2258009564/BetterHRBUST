@@ -1,0 +1,15 @@
+{
+  "_说明": "复制为 config.json 后使用：node probe.mjs --config config.json。命令行参数优先级高于本文件。",
+  "baseUrl": "http://jwzx.hrbust.edu.cn/academic/",
+  "username": "",
+  "password": "",
+  "outDir": "output",
+  "timeout": 20000,
+  "concurrency": 1,
+  "skipLogin": false,
+  "discover": true,
+  "openCaptcha": true,
+  "allowMutating": false,
+  "verbose": false,
+  "only": []
+}

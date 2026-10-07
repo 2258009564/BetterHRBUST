@@ -1,0 +1,34 @@
+{
+  "name": "betterhrbust-probe",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "哈理工教务在线（URP 架构）接口探测工具：登录、模块调度发现、多轮递进探测与样本结构分析。零第三方依赖。",
+  "keywords": [
+    "hrbust",
+    "urp",
+    "jwzx",
+    "academic",
+    "probe",
+    "scraper"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "probe": "node probe.mjs",
+    "console": "node server.mjs --open",
+    "list": "node probe.mjs --list",
+    "analyze": "node probe.mjs --analyze-only",
+    "dry-run": "node probe.mjs --dry-run",
+    "reuse": "node probe.mjs --skip-login"
+  },
+  "files": [
+    "*.mjs",
+    "lib/",
+    "public/",
+    "README.md",
+    "config.example.json"
+  ]
+}

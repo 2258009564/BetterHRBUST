@@ -1,0 +1,1023 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>哈理工教务在线 · 接口探测控制台</title>
+<style>
+  :root {
+    --bg: #020617;
+    --panel: rgba(15, 23, 42, 0.72);
+    --border: #1e293b;
+    --border-strong: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --dim: #64748b;
+    --indigo: #6366f1;
+    --indigo-hi: #818cf8;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --rose: #fb7185;
+    --cyan: #22d3ee;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before, body::after {
+    content: ''; position: fixed; width: 520px; height: 520px;
+    border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0;
+  }
+  body::before { top: -160px; left: 12%; background: rgba(99,102,241,0.14); }
+  body::after { bottom: -200px; right: 8%; background: rgba(217,70,239,0.10); }
+  .wrap { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px 20px 60px; }
+
+  code, .mono { font-family: "Cascadia Code", Consolas, "Courier New", monospace; }
+
+  /* ---------- header ---------- */
+  header {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    justify-content: space-between; padding: 16px 20px; margin-bottom: 20px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+    backdrop-filter: blur(12px);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 12px; flex: none;
+    background: linear-gradient(135deg, #6366f1, #a21caf);
+    display: grid; place-items: center; font-size: 19px;
+    box-shadow: 0 6px 18px rgba(99,102,241,0.35);
+  }
+  .brand h1 { margin: 0; font-size: 16px; letter-spacing: .2px; }
+  .brand p { margin: 2px 0 0; font-size: 11px; color: var(--dim); }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .badge {
+    font-size: 11px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--border-strong); color: var(--muted); background: rgba(2,6,23,.5);
+    white-space: nowrap;
+  }
+  .badge.ok { color: var(--green); border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.10); }
+  .badge.warn { color: var(--amber); border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.10); }
+  .badge.bad { color: var(--rose); border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.10); }
+
+  /* ---------- layout ---------- */
+  .grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; }
+  @media (max-width: 1080px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px; backdrop-filter: blur(12px); margin-bottom: 20px;
+  }
+  .card h2 { margin: 0 0 14px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .hint { font-size: 11px; font-weight: 400; color: var(--dim); }
+
+  label.field { display: block; margin-bottom: 12px; }
+  label.field span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%; padding: 9px 11px; border-radius: 9px; font-size: 13px;
+    background: #020617; color: var(--text); border: 1px solid var(--border);
+    outline: none; transition: border-color .15s;
+  }
+  input:focus, select:focus { border-color: var(--indigo); }
+
+  .captcha-row { display: flex; gap: 10px; }
+  .captcha-row input { flex: 1; text-transform: uppercase; letter-spacing: 2px; }
+  .captcha-img {
+    width: 108px; height: 40px; flex: none; border-radius: 9px; overflow: hidden;
+    border: 1px solid var(--border); background: #020617; cursor: pointer;
+    display: grid; place-items: center;
+  }
+  .captcha-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .captcha-img span { font-size: 10px; color: var(--dim); }
+  .tiny { font-size: 10px; color: var(--dim); margin-top: 5px; }
+
+  button {
+    font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    padding: 9px 14px; border-radius: 10px; border: 1px solid var(--border-strong);
+    background: #1e293b; color: var(--text); transition: all .15s;
+  }
+  button:hover:not(:disabled) { background: #334155; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: var(--indigo); border-color: transparent; color: #fff; }
+  button.primary:hover:not(:disabled) { background: var(--indigo-hi); }
+  button.danger { color: var(--rose); border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.08); }
+  button.ghost { background: transparent; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .msg {
+    margin-top: 12px; padding: 9px 11px; border-radius: 9px; font-size: 12px;
+    border: 1px solid; display: none;
+  }
+  .msg.show { display: block; }
+  .msg.info { color: var(--indigo-hi); border-color: rgba(99,102,241,.35); background: rgba(99,102,241,.10); }
+  .msg.err { color: var(--rose); border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.10); }
+  .msg.ok { color: var(--green); border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.10); }
+  .msg.warn { color: var(--amber); border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.10); }
+
+  .kv { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; padding: 5px 0; }
+  .kv span:first-child { color: var(--dim); }
+  .kv span:last-child { color: var(--text); font-family: Consolas, monospace; }
+
+  /* ---------- module filters ---------- */
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+  .chip {
+    padding: 5px 11px; border-radius: 999px; font-size: 11px; cursor: pointer;
+    border: 1px solid var(--border-strong); color: var(--muted); background: rgba(2,6,23,.5);
+    user-select: none; transition: all .15s;
+  }
+  .chip:hover { border-color: var(--indigo); color: var(--text); }
+  .chip.on { background: rgba(99,102,241,.18); border-color: var(--indigo); color: #c7d2fe; }
+
+  .row-opts { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
+  .row-opts label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: var(--muted); }
+  .row-opts label.inline { flex-direction: row; align-items: center; gap: 7px; cursor: pointer; }
+  .row-opts input[type=number] { width: 84px; }
+  .row-opts input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--indigo); cursor: pointer; }
+
+  /* ---------- progress ---------- */
+  .progress-track { height: 7px; border-radius: 999px; background: #0f172a; overflow: hidden; margin: 10px 0 6px; }
+  .progress-bar { height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #6366f1, #a21caf); transition: width .25s; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); }
+  #stageLog { margin-top: 12px; max-height: 130px; overflow-y: auto; font-size: 11px; color: var(--muted); }
+  #stageLog div { padding: 2px 0; border-bottom: 1px dashed rgba(51,65,85,.4); }
+
+  /* ---------- stats ---------- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { padding: 12px 14px; border-radius: 12px; background: rgba(2,6,23,.6); border: 1px solid var(--border); }
+  .stat b { display: block; font-size: 22px; line-height: 1.2; }
+  .stat small { color: var(--dim); font-size: 11px; }
+
+  /* ---------- table ---------- */
+  .table-wrap { max-height: 620px; overflow: auto; border: 1px solid var(--border); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    position: sticky; top: 0; z-index: 1; text-align: left; padding: 10px 12px;
+    background: #0b1220; color: var(--muted); font-weight: 600; font-size: 11px;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody td { padding: 8px 12px; border-bottom: 1px solid rgba(30,41,59,.6); vertical-align: top; }
+  tbody tr:hover { background: rgba(30,41,59,.35); }
+  td.num { font-family: Consolas, monospace; color: var(--dim); }
+  td.path { font-family: Consolas, monospace; color: var(--muted); word-break: break-all; }
+  .tag {
+    display: inline-block; padding: 1px 7px; border-radius: 6px; font-size: 10px;
+    border: 1px solid var(--border-strong); color: var(--muted); white-space: nowrap;
+  }
+  .tag.ok { color: var(--green); border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.10); }
+  .tag.err { color: var(--rose); border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.10); }
+  .tag.warn { color: var(--amber); border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.10); }
+  .tag.dim { color: var(--dim); }
+  a.link { color: var(--cyan); text-decoration: none; font-size: 11px; }
+  a.link:hover { text-decoration: underline; }
+
+  .empty { padding: 42px 20px; text-align: center; color: var(--dim); font-size: 12px; }
+
+  /* ---------- modal ---------- */
+  .modal {
+    position: fixed; inset: 0; z-index: 50; display: none;
+    align-items: center; justify-content: center; padding: 24px;
+    background: rgba(2,6,23,.82); backdrop-filter: blur(6px);
+  }
+  .modal.open { display: flex; }
+  .modal-box {
+    width: min(980px, 100%); max-height: 86vh; display: flex; flex-direction: column;
+    background: #0b1220; border: 1px solid var(--border-strong); border-radius: 16px; overflow: hidden;
+  }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+  }
+  .modal-head h3 { margin: 0; font-size: 13px; }
+  .modal-body { padding: 16px 18px; overflow: auto; }
+  .modal-body pre {
+    margin: 0; white-space: pre-wrap; word-break: break-all;
+    font-family: Consolas, monospace; font-size: 12px; color: var(--muted);
+  }
+  .modal-body img { max-width: 100%; border-radius: 10px; border: 1px solid var(--border); }
+  .x { background: transparent; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0 4px; }
+  .x:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo">⚡</div>
+      <div>
+        <h1>教务在线 · 接口探测控制台</h1>
+        <p>登录 → 托管会话 → 批量探测 → 导出接口清单与原始样本</p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge" id="badgeBase">…</span>
+      <span class="badge" id="badgeGbk">…</span>
+      <span class="badge" id="badgeCookies">…</span>
+      <span class="badge" id="badgeSession">未登录</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ============ 左栏 ============ -->
+    <div>
+      <div class="card">
+        <h2>🔐 登录教务在线</h2>
+
+        <label class="field">
+          <span>学号</span>
+          <input type="text" id="username" autocomplete="username" placeholder="请输入学号" />
+        </label>
+
+        <label class="field">
+          <span>教务密码</span>
+          <input type="password" id="password" autocomplete="current-password" placeholder="请输入教务密码" />
+        </label>
+
+        <label class="field">
+          <span>图形验证码</span>
+          <div class="captcha-row">
+            <input type="text" id="captcha" maxlength="4" placeholder="4 位验证码" />
+            <div class="captcha-img" id="captchaBox" title="点击刷新验证码">
+              <span>加载中…</span>
+            </div>
+          </div>
+          <div class="tiny">看不清？点击图片刷新</div>
+        </label>
+
+        <div class="btn-row">
+          <button class="primary" id="btnLogin" style="flex:1">登录</button>
+          <button class="ghost" id="btnLogout">退出</button>
+        </div>
+
+        <div class="msg" id="loginMsg"></div>
+      </div>
+
+      <div class="card">
+        <h2>👤 会话状态</h2>
+        <div class="kv"><span>登录状态</span><span id="sessLoggedIn">未登录</span></div>
+        <div class="kv"><span>学号</span><span id="sessStudentId">—</span></div>
+        <div class="kv"><span>学年 / 学期</span><span id="sessTerm">—</span></div>
+        <div class="kv"><span>Cookie 数</span><span id="sessCookies">0</span></div>
+        <div class="kv"><span>样本目录</span><span id="sessOutDir" style="font-size:10px">—</span></div>
+        <div class="tiny" style="margin-top:10px">
+          账号密码仅用于本次登录请求，不会写入任何文件；会话文件只保存 Cookie。
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 右栏 ============ -->
+    <div>
+      <div class="card">
+        <h2>🚀 探测控制 <span class="hint" id="catalogHint"></span></h2>
+
+        <div class="chips" id="moduleChips"></div>
+
+        <div class="row-opts">
+          <label>
+            并发数
+            <input type="number" id="concurrency" value="1" min="1" max="4" />
+          </label>
+          <label title="第 1 轮探入口，后续轮次从上一轮样本里递进挖出更深层的接口（表单 action / 按钮 onclick / 导出链接）">
+            探测轮数
+            <input type="number" id="depth" value="2" min="1" max="4" />
+          </label>
+          <label class="inline" title="清空 samples/ decoded/ portal/ 后再探测，避免多次运行的文件累积（不会删除已登录会话）">
+            <input type="checkbox" id="cleanFirst" />
+            清空旧样本
+          </label>
+          <label class="inline" title="抓取登录后门户页（index_new.jsp），提取其中的 frame / 表单 / 按钮 / 接口地址">
+            <input type="checkbox" id="portalEnabled" checked />
+            门户页分析
+          </label>
+          <label class="inline">
+            <input type="checkbox" id="discover" checked />
+            自动发现菜单接口
+          </label>
+          <label class="inline" title="选课/退课等接口会真实改变教务数据，默认禁止探测">
+            <input type="checkbox" id="allowMutating" />
+            允许变更类接口
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button class="primary" id="btnStart">开始探测</button>
+          <button class="danger" id="btnStop" disabled>停止</button>
+          <button class="ghost" id="btnReport" disabled>查看汇总报告</button>
+          <a class="link" id="btnManifest" href="/api/manifest" download="manifest.json"
+             style="align-self:center;display:none">下载 manifest.json</a>
+        </div>
+
+        <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="progress-meta">
+          <span id="progressText">尚未开始</span>
+          <span id="progressCount">0 / 0</span>
+        </div>
+
+        <div id="stageLog"></div>
+
+        <!-- 门户页分析面板 -->
+        <div id="portalPanel" style="display:none;margin-top:16px;padding:14px;border:1px solid var(--border-strong);border-radius:12px;background:rgba(2,6,23,.6)">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:space-between">
+            <div style="min-width:220px;flex:1">
+              <div style="font-weight:700;font-size:13px">
+                📄 门户页分析 ·
+                <span id="portalPath" class="mono" style="color:var(--cyan)"></span>
+              </div>
+              <div style="font-size:11px;color:var(--dim);margin-top:4px" id="portalMeta"></div>
+            </div>
+            <div class="btn-row">
+              <button class="ghost" id="btnPortalReport">分析报告</button>
+              <button class="ghost" id="btnPortalHtml">HTML 源码</button>
+              <button class="ghost" id="btnPortalScripts" style="display:none">内联脚本</button>
+            </div>
+          </div>
+          <div id="portalUrls" style="margin-top:12px"></div>
+        </div>
+
+        <!-- 样本结构分析面板 -->
+        <div id="analysisPanel" style="display:none;margin-top:16px;padding:14px;border:1px solid var(--border-strong);border-radius:12px;background:rgba(2,6,23,.6)">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:space-between">
+            <div style="min-width:220px;flex:1">
+              <div style="font-weight:700;font-size:13px">🔬 样本结构分析</div>
+              <div style="font-size:11px;color:var(--dim);margin-top:4px" id="analysisMeta"></div>
+            </div>
+            <div class="btn-row">
+              <button class="ghost" id="btnAnalysisReport">完整报告</button>
+              <button class="ghost" id="btnAnalysisJson">结构化数据</button>
+            </div>
+          </div>
+          <div id="analysisTables" style="margin-top:12px;max-height:260px;overflow:auto"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📊 探测结果</h2>
+
+        <div class="stats">
+          <div class="stat"><b id="statTotal">0</b><small>已探测</small></div>
+          <div class="stat"><b id="statOk" style="color:var(--green)">0</b><small>HTTP 成功</small></div>
+          <div class="stat"><b id="statFail" style="color:var(--rose)">0</b><small>失败</small></div>
+          <div class="stat"><b id="statData" style="color:var(--cyan)">0</b><small>拿到业务数据</small></div>
+          <div class="stat"><b id="statNotFound" style="color:var(--dim)">0</b><small>路径不存在</small></div>
+          <div class="stat"><b id="statExpired" style="color:var(--amber)">0</b><small>会话失效迹象</small></div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:44px">#</th>
+                <th style="width:190px">接口</th>
+                <th style="width:52px">方法</th>
+                <th>路径</th>
+                <th style="width:54px">状态</th>
+                <th style="width:58px">编码</th>
+                <th style="width:68px">大小</th>
+                <th style="width:60px">耗时</th>
+                <th style="width:96px">结论</th>
+                <th style="width:58px">样本</th>
+              </tr>
+            </thead>
+            <tbody id="resultBody">
+              <tr><td colspan="10" class="empty">尚未开始探测。登录后点击「开始探测」。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 样本 / 报告 弹窗 -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modalTitle">预览</h3>
+      <button class="x" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================ *
+ * 状态
+ * ============================================================ */
+const ALL_MODULES = {
+  auth: '认证与会话',
+  dispatch: '模块调度与框架',
+  score: '成绩查询',
+  timetable: '课表查询',
+  student: '个人信息与学籍',
+  exam: '考试安排',
+  plan: '培养方案与学分',
+  elective: '选课与退课',
+  classroom: '空教室查询',
+  notice: '通知公告与教学周',
+  discovered: '自动发现'
+};
+
+const selectedModules = new Set(Object.keys(ALL_MODULES));
+let eventSource = null;
+let counter = { total: 0, ok: 0, fail: 0, data: 0, expired: 0, notFound: 0 };
+let portalFiles = null;
+
+const $ = (id) => document.getElementById(id);
+
+/* ============================================================ *
+ * 通用
+ * ============================================================ */
+function showMsg(el, type, text) {
+  el.className = `msg show ${type}`;
+  el.textContent = text;
+}
+function hideMsg(el) { el.className = 'msg'; }
+
+function addStageLog(text) {
+  const box = $('stageLog');
+  const line = document.createElement('div');
+  const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  line.textContent = `${time}  ${text}`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function openModal(title, node) {
+  $('modalTitle').textContent = title;
+  const body = $('modalBody');
+  body.innerHTML = '';
+  body.appendChild(node);
+  $('modal').classList.add('open');
+}
+function closeModal() { $('modal').classList.remove('open'); $('modalBody').innerHTML = ''; }
+
+$('modalClose').onclick = closeModal;
+$('modal').onclick = (e) => { if (e.target === $('modal')) closeModal(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + 'B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+  return (bytes / 1024 / 1024).toFixed(2) + 'MB';
+}
+
+/* ============================================================ *
+ * 状态刷新
+ * ============================================================ */
+async function refreshStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+
+    $('badgeBase').textContent = data.baseUrl.replace(/^https?:\/\//, '');
+    $('badgeBase').title = data.baseUrl;
+    $('badgeGbk').textContent = 'GBK: ' + data.gbkDecoder;
+    $('badgeCookies').textContent = 'Cookie: ' + data.cookies;
+
+    const badge = $('badgeSession');
+    if (data.identity.loggedIn) {
+      badge.className = 'badge ok';
+      badge.textContent = '学号 ' + data.identity.studentId;
+    } else {
+      badge.className = 'badge warn';
+      badge.textContent = data.cookies > 0 ? '会话待验证' : '未登录';
+    }
+
+    $('sessLoggedIn').textContent = data.identity.loggedIn ? '已登录' : (data.cookies > 0 ? '会话待验证' : '未登录');
+    $('sessStudentId').textContent = data.identity.studentId || '—';
+    $('sessTerm').textContent = (data.identity.year || '?') + ' / ' + (data.identity.term || '?');
+    $('sessCookies').textContent = data.cookies;
+    $('sessOutDir').textContent = data.outDir;
+    $('sessOutDir').title = data.outDir;
+
+    const s = data.catalogSummary;
+    $('catalogHint').textContent =
+      `内置 ${s.total} 个接口 · ` +
+      Object.entries(s.byConfidence).map(([k, v]) => `${k}:${v}`).join(' ');
+
+    return data;
+  } catch (err) {
+    $('badgeBase').textContent = '无法连接本地服务';
+    return null;
+  }
+}
+
+/* ============================================================ *
+ * 验证码与登录
+ * ============================================================ */
+function refreshCaptcha() {
+  const box = $('captchaBox');
+  box.innerHTML = '<span>加载中…</span>';
+  const img = new Image();
+  img.alt = '验证码';
+  img.onload = () => { box.innerHTML = ''; box.appendChild(img); };
+  img.onerror = () => { box.innerHTML = '<span>获取失败<br>点击重试</span>'; };
+  img.src = '/api/captcha?_t=' + Date.now();
+}
+$('captchaBox').onclick = refreshCaptcha;
+
+async function doLogin() {
+  const username = $('username').value.trim();
+  const password = $('password').value.trim();
+  const captcha = $('captcha').value.trim();
+
+  if (!username || !password) return showMsg($('loginMsg'), 'err', '请填写学号与密码');
+  if (!/^\d{4}$/.test(captcha)) return showMsg($('loginMsg'), 'err', '请输入 4 位验证码');
+
+  $('btnLogin').disabled = true;
+  showMsg($('loginMsg'), 'info', '正在登录…');
+
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, captcha })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      showMsg($('loginMsg'), 'ok', '登录成功');
+      $('captcha').value = '';
+      $('password').value = '';
+      addStageLog('登录成功，会话已托管到本地服务');
+    } else {
+      showMsg($('loginMsg'), 'err', data.message || '登录失败');
+      $('captcha').value = '';
+      refreshCaptcha();
+    }
+    await refreshStatus();
+  } catch (err) {
+    showMsg($('loginMsg'), 'err', '请求失败：' + err.message);
+  } finally {
+    $('btnLogin').disabled = false;
+  }
+}
+$('btnLogin').onclick = doLogin;
+$('captcha').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+
+$('btnLogout').onclick = async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  showMsg($('loginMsg'), 'info', '已退出登录');
+  refreshCaptcha();
+  await refreshStatus();
+};
+
+/* ============================================================ *
+ * 模块筛选
+ * ============================================================ */
+function renderChips() {
+  const box = $('moduleChips');
+  box.innerHTML = '';
+  for (const [key, label] of Object.entries(ALL_MODULES)) {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (selectedModules.has(key) ? ' on' : '');
+    chip.textContent = label;
+    chip.onclick = () => {
+      if (selectedModules.has(key)) selectedModules.delete(key);
+      else selectedModules.add(key);
+      renderChips();
+    };
+    box.appendChild(chip);
+  }
+
+  const all = document.createElement('div');
+  all.className = 'chip';
+  all.textContent = selectedModules.size === Object.keys(ALL_MODULES).length ? '清空' : '全选';
+  all.onclick = () => {
+    const keys = Object.keys(ALL_MODULES);
+    if (selectedModules.size === keys.length) selectedModules.clear();
+    else keys.forEach((k) => selectedModules.add(k));
+    renderChips();
+  };
+  box.appendChild(all);
+}
+
+function buildOnlyParam() {
+  const keys = Object.keys(ALL_MODULES);
+  if (selectedModules.size === keys.length) return '';
+  return [...selectedModules].map((m) => `${m}.*`).join(',');
+}
+
+/* ============================================================ *
+ * 结果表格
+ * ============================================================ */
+function resetResults() {
+  counter = { total: 0, ok: 0, fail: 0, data: 0, expired: 0, notFound: 0 };
+  portalFiles = null;
+  $('resultBody').innerHTML =
+    '<tr><td colspan="10" class="empty">探测进行中…</td></tr>';
+  $('portalPanel').style.display = 'none';
+  $('portalUrls').innerHTML = '';
+  analysisFiles = null;
+  $('analysisPanel').style.display = 'none';
+  $('analysisTables').innerHTML = '';
+  updateStats();
+  $('progressBar').style.width = '0%';
+  $('progressCount').textContent = '0 / 0';
+}
+
+function updateStats() {
+  $('statTotal').textContent = counter.total;
+  $('statOk').textContent = counter.ok;
+  $('statFail').textContent = counter.fail;
+  $('statData').textContent = counter.data;
+  $('statNotFound').textContent = counter.notFound;
+  $('statExpired').textContent = counter.expired;
+}
+
+function appendRow(entry) {
+  const body = $('resultBody');
+  const empty = body.querySelector('.empty');
+  if (empty) body.innerHTML = '';
+
+  const expired = entry.looksLikeLogin && !entry.publicAccess;
+  if (entry.ok) counter.ok += 1; else counter.fail += 1;
+  if (entry.hitMarkers) counter.data += 1;
+  if (entry.status === 404) counter.notFound += 1;
+  if (expired) counter.expired += 1;
+  counter.total += 1;
+
+  const tr = document.createElement('tr');
+
+  let tag;
+  if (expired) tag = '<span class="tag warn">会话失效</span>';
+  else if (entry.status === 404) tag = '<span class="tag err">路径不存在</span>';
+  else if (entry.isErrorPage) tag = '<span class="tag warn">错误页/无权限</span>';
+  else if (entry.hitMarkers) tag = '<span class="tag ok">有数据</span>';
+  else if (entry.ok) tag = '<span class="tag dim">无特征</span>';
+  else tag = '<span class="tag err">失败</span>';
+
+  const statusTag = entry.ok
+    ? `<span class="tag ok">${entry.status}</span>`
+    : `<span class="tag err">${entry.error ? 'ERR' : entry.status}</span>`;
+
+  const charset = entry.charset
+    ? `<span class="tag ${entry.charset === 'utf-8' ? 'warn' : 'dim'}">${entry.charset}</span>`
+    : '<span class="tag dim">—</span>';
+
+  // 优先预览解码后的 UTF-8 副本（原始样本可能是 GBK 字节）
+  const sampleFile = entry.decodedFile || entry.file;
+
+  tr.innerHTML = `
+    <td class="num">${entry.index}</td>
+    <td><div style="font-weight:600">${escapeHtml(entry.name)}</div>
+        <div style="font-size:10px;color:var(--dim)" class="mono">${escapeHtml(entry.key)}</div></td>
+    <td class="num">${entry.method}</td>
+    <td class="path">${escapeHtml(entry.path)}${entry.query ? '?' + escapeHtml(entry.query) : ''}</td>
+    <td>${statusTag}</td>
+    <td>${charset}</td>
+    <td class="num">${formatBytes(entry.bytes)}</td>
+    <td class="num">${entry.elapsedMs}ms</td>
+    <td>${tag}</td>
+    <td>${sampleFile
+      ? `<a class="link" href="#" data-file="${escapeHtml(sampleFile)}" data-name="${escapeHtml(entry.name)}">预览</a>`
+      : '—'}</td>
+  `;
+
+  body.appendChild(tr);
+  updateStats();
+
+  const link = tr.querySelector('a.link');
+  if (link) {
+    link.onclick = (e) => { e.preventDefault(); previewSample(link.dataset.file, link.dataset.name); };
+  }
+
+  body.parentElement.scrollTop = body.parentElement.scrollHeight;
+}
+
+function escapeHtml(text) {
+  return String(text ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function previewSample(file, name) {
+  try {
+    const res = await fetch('/api/sample?file=' + encodeURIComponent(file));
+    const type = res.headers.get('content-type') || '';
+
+    if (type.startsWith('image/')) {
+      const blob = await res.blob();
+      const img = new Image();
+      img.src = URL.createObjectURL(blob);
+      openModal(`${name} · ${file}`, img);
+      return;
+    }
+
+    const text = await res.text();
+    const pre = document.createElement('pre');
+    pre.textContent = text.slice(0, 300000) + (text.length > 300000 ? '\n\n…（内容过长，已截断）' : '');
+    openModal(`${name} · ${file}`, pre);
+  } catch (err) {
+    openModal('预览失败', document.createTextNode(err.message));
+  }
+}
+
+/* ============================================================ *
+ * 门户页分析结果
+ * ============================================================ */
+function renderPortal(data) {
+  portalFiles = data.files || null;
+  const s = data.summary || {};
+
+  addStageLog(
+    `门户页 ${data.path} 分析完成：表单 ${s.forms} · 按钮 ${s.buttons} · ` +
+      `框架 ${s.frames} · 疑似接口 ${s.inlineUrls} · moduleId ${s.moduleIds}`
+  );
+
+  $('portalPanel').style.display = 'block';
+  $('portalPath').textContent = data.path || '';
+  $('portalMeta').textContent =
+    `标题「${data.title || '—'}」 · 编码 ${data.chars || '—'} · ` +
+    `表单 ${s.forms} · 按钮 ${s.buttons} · 框架 ${s.frames} · ` +
+    `链接 ${s.links} · 疑似接口 ${s.inlineUrls} · moduleId ${s.moduleIds}`;
+  $('btnPortalScripts').style.display =
+    portalFiles && portalFiles.inlineScripts ? 'inline-block' : 'none';
+
+  const box = $('portalUrls');
+  box.innerHTML = '';
+
+  const urls = data.inlineUrls || [];
+  if (urls.length === 0) {
+    const tip = document.createElement('div');
+    tip.className = 'tiny';
+    tip.textContent = '页面中未扫到疑似接口地址';
+    box.appendChild(tip);
+    return;
+  }
+
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:11px;color:var(--muted);margin-bottom:6px';
+  title.textContent = `页面中出现的疑似接口地址（共 ${urls.length} 条，展示前 30 条）`;
+  box.appendChild(title);
+
+  const list = document.createElement('div');
+  list.style.cssText =
+    'max-height:200px;overflow:auto;font-family:Consolas,monospace;font-size:11px;line-height:1.8';
+  for (const item of urls.slice(0, 30)) {
+    const row = document.createElement('div');
+    row.textContent = item.url;
+    row.style.color = 'var(--cyan)';
+    row.title = item.context || '';
+    list.appendChild(row);
+  }
+  box.appendChild(list);
+
+  if (data.moduleIds && data.moduleIds.length) {
+    const ids = document.createElement('div');
+    ids.style.cssText = 'font-size:11px;color:var(--muted);margin-top:8px';
+    ids.textContent = `moduleId：${data.moduleIds.join(', ')}`;
+    box.appendChild(ids);
+  }
+}
+
+async function openPortalArtifact(key, label) {
+  if (!portalFiles || !portalFiles[key]) return;
+  const file = portalFiles[key];
+  try {
+    const res = await fetch('/api/portal?file=' + encodeURIComponent(file));
+    const text = await res.text();
+    const pre = document.createElement('pre');
+    pre.textContent =
+      text.slice(0, 400000) + (text.length > 400000 ? '\n\n…（内容过长，已截断）' : '');
+    openModal(`${label} · ${file}`, pre);
+  } catch (err) {
+    openModal('读取失败', document.createTextNode(err.message));
+  }
+}
+
+$('btnPortalReport').onclick = () => openPortalArtifact('analysisMarkdown', '门户页分析报告');
+$('btnPortalHtml').onclick = () => openPortalArtifact('html', '门户页 HTML 源码');
+$('btnPortalScripts').onclick = () => openPortalArtifact('inlineScripts', '门户页内联脚本');
+
+/* ============================================================ *
+ * 样本结构分析结果
+ * ============================================================ */
+let analysisFiles = null;
+
+function renderAnalysis(data) {
+  analysisFiles = data.files || null;
+  $('analysisPanel').style.display = 'block';
+  $('analysisMeta').textContent =
+    `已分析 ${data.count} 个样本页面 · 提取了每个页面的表格表头、表单字段与嵌套接口地址`;
+
+  const box = $('analysisTables');
+  box.innerHTML = '';
+
+  const withTables = (data.items || []).filter((i) => i.tables && i.tables.length > 0);
+  if (withTables.length === 0) {
+    const tip = document.createElement('div');
+    tip.className = 'tiny';
+    tip.textContent = '样本中未发现带表头的表格';
+    box.appendChild(tip);
+    return;
+  }
+
+  for (const item of withTables.slice(0, 40)) {
+    const row = document.createElement('div');
+    row.style.cssText = 'margin-bottom:8px;line-height:1.7';
+
+    const name = document.createElement('div');
+    name.style.cssText = 'font-size:11px;color:var(--cyan);font-family:Consolas,monospace';
+    name.textContent = `${item.key}  ${item.title ? '· ' + item.title : ''}`;
+    row.appendChild(name);
+
+    for (const t of item.tables.slice(0, 3)) {
+      const line = document.createElement('div');
+      line.style.cssText = 'font-size:11px;color:var(--muted);padding-left:12px';
+      line.textContent = `[${t.tableClass || '-'}] ${t.headers.join(' | ')}`;
+      row.appendChild(line);
+    }
+    box.appendChild(row);
+  }
+
+  addStageLog(
+    `样本结构分析完成：${withTables.length} 个页面含数据表格，详情见 analysis.md`
+  );
+}
+
+async function openAnalysisArtifact(which, label) {
+  if (!analysisFiles || !analysisFiles[which]) return;
+  const file = analysisFiles[which];
+  try {
+    const res = await fetch('/api/portal?file=' + encodeURIComponent(file));
+    const text = await res.text();
+    const pre = document.createElement('pre');
+    pre.textContent =
+      text.slice(0, 500000) + (text.length > 500000 ? '\n\n…（内容过长，已截断）' : '');
+    openModal(`${label} · ${file}`, pre);
+  } catch (err) {
+    openModal('读取失败', document.createTextNode(err.message));
+  }
+}
+
+$('btnAnalysisReport').onclick = () => openAnalysisArtifact('markdown', '样本结构分析报告');
+$('btnAnalysisJson').onclick = () => openAnalysisArtifact('json', '样本结构化数据');
+
+/* ============================================================ *
+ * 探测
+ * ============================================================ */
+function setRunning(running) {
+  $('btnStart').disabled = running;
+  $('btnStop').disabled = !running;
+  $('btnLogin').disabled = running;
+}
+
+function startProbe() {
+  if (eventSource) return;
+
+  const params = new URLSearchParams({
+    concurrency: $('concurrency').value || '1',
+    depth: $('depth').value || '2',
+    clean: $('cleanFirst').checked ? 'true' : 'false',
+    portal: $('portalEnabled').checked ? 'true' : 'false',
+    discover: $('discover').checked ? 'true' : 'false',
+    allowMutating: $('allowMutating').checked ? 'true' : 'false'
+  });
+  const only = buildOnlyParam();
+  if (only) params.set('only', only);
+
+  resetResults();
+  setRunning(true);
+  $('btnReport').disabled = true;
+  $('btnManifest').style.display = 'none';
+  $('stageLog').innerHTML = '';
+  addStageLog('开始探测…');
+
+  eventSource = new EventSource('/api/probe/stream?' + params.toString());
+
+  eventSource.onmessage = (event) => {
+    let data;
+    try { data = JSON.parse(event.data); } catch { return; }
+
+    switch (data.type) {
+      case 'stage':
+        addStageLog(data.message);
+        $('progressText').textContent = data.message;
+        break;
+
+      case 'log':
+        addStageLog(data.message);
+        break;
+
+      case 'warn':
+        addStageLog('⚠ ' + data.message);
+        break;
+
+      case 'portal':
+        renderPortal(data);
+        break;
+
+      case 'round':
+        addStageLog(`▶ 第 ${data.round} 轮探测：本轮 ${data.probed} 个，累计 ${data.total} 个`);
+        break;
+
+      case 'analysis':
+        renderAnalysis(data);
+        break;
+
+      case 'discovered':
+        addStageLog(
+          `自动发现 ${data.discoveredCount} 个链接（新增 ${data.addedCount}，匹配内置 ${data.matchedCount}）`
+        );
+        break;
+
+      case 'plan':
+        addStageLog(`探测计划：${data.total} 个接口，跳过 ${data.skipped.length} 个`);
+        $('progressCount').textContent = `0 / ${data.total}`;
+        for (const s of data.skipped) addStageLog(`· 跳过 ${s.key}：${s.reason}`);
+        break;
+
+      case 'progress': {
+        appendRow(data.entry);
+        const pct = data.total > 0 ? Math.round((data.done / data.total) * 100) : 0;
+        $('progressBar').style.width = pct + '%';
+        $('progressCount').textContent = `${data.done} / ${data.total}`;
+        if (data.sessionAlert) addStageLog('⚠ 检测到会话失效迹象，后续结果可能不可信');
+        break;
+      }
+
+      case 'done': {
+        const s = data.summary;
+        $('progressBar').style.width = '100%';
+        $('progressText').textContent = data.aborted ? '已停止' : '探测完成';
+        addStageLog(
+          `完成：共 ${s.total} 个 · 成功 ${s.ok} · 拿到数据 ${s.withData} · ` +
+            `404 ${s.notFound} · 错误页 ${s.errorPages}`
+        );
+        if (s.loginExpired && s.sessionSuspects && s.sessionSuspects.length) {
+          addStageLog(`⚠ 疑似会话失效：${s.sessionSuspects.join(', ')}`);
+        }
+        $('btnReport').disabled = false;
+        $('btnManifest').style.display = 'inline-block';
+        finish();
+        break;
+      }
+
+      case 'error':
+        addStageLog('✗ ' + data.message);
+        $('progressText').textContent = '中断';
+        showMsg($('loginMsg'), 'err', data.message);
+        finish();
+        break;
+    }
+  };
+
+  eventSource.onerror = () => {
+    if (eventSource) addStageLog('连接中断');
+    finish();
+  };
+}
+
+function finish() {
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
+  setRunning(false);
+  refreshStatus();
+}
+
+$('btnStart').onclick = startProbe;
+$('btnStop').onclick = () => {
+  if (eventSource) {
+    addStageLog('已请求停止…');
+    // 关闭连接后服务端会收到 close 事件并中断探测
+    eventSource.close();
+    eventSource = null;
+  }
+  setRunning(false);
+};
+
+$('btnReport').onclick = async () => {
+  try {
+    const res = await fetch('/api/report');
+    const text = await res.text();
+    const pre = document.createElement('pre');
+    pre.textContent = text;
+    openModal('探测汇总报告 manifest.md', pre);
+  } catch (err) {
+    openModal('读取失败', document.createTextNode(err.message));
+  }
+};
+
+/* ============================================================ *
+ * 初始化
+ * ============================================================ */
+(async function init() {
+  renderChips();
+  const status = await refreshStatus();
+  if (status && !status.identity.loggedIn) refreshCaptcha();
+  else if (status) addStageLog('检测到上次保存的会话，可直接尝试探测（探测前会自动校验）');
+  if (status && status.cookies > 0 && !status.identity.loggedIn) refreshCaptcha();
+})();
+</script>
+</body>
+</html>

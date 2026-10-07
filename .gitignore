@@ -1,0 +1,51 @@
+# ============================================================
+# 哈理工教务在线 · 仓库忽略规则
+# ============================================================
+
+# ---------- 探测产物（含真实隐私数据，绝不入库）----------
+# 这些目录里包含成绩单、学籍信息（身份证号 / 手机号 / 家庭住址）、
+# 姓名与学号等敏感内容，以及登录会话 Cookie。
+# 用 `output/*` 而非 `output/`，以便保留 .gitignore / .gitkeep 本身。
+tools/probe/output/*
+!tools/probe/output/.gitignore
+!tools/probe/output/.gitkeep
+
+# 探测过程中可能产生的临时目录
+tools/probe/.smoke/
+tools/probe/.tmp/
+
+# ---------- 依赖与构建产物 ----------
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# ---------- 编辑器与 IDE ----------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ---------- 操作系统 ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ---------- 日志与临时文件 ----------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.temp
