@@ -41,16 +41,16 @@
 | --- | ---: | --- |
 | 认证与框架 | 21 | `getCaptcha.do`、`j_acegi_security_check`、`listLeft.do`、`accessModule.do` |
 | 成绩查询 | 4 | `manager/score/studentOwnScore.do` |
-| 课表与教学计划 | 6 | `manager/coursearrange/showTimetable.do` |
+| 课表与教学计划 | 10 | `manager/coursearrange/showTimetable.do`、`manager/studyschedule/studentScheduleShowByTerm.do` |
 | 个人信息与学籍 | 11 | `showPersonalInfo.do`、`student/studentinfo/studentInfoModifyIndex.do` |
 | 考试安排 | 3 | `student/exam/index.jsdo`、`manager/examstu/studentQueryAllExam.do` |
-| 课程与教师 | 5 | `manager/querycourse/index.jsdo` |
+| 课程与教师 | 5 | `manager/querycourse/index.jsdo`、`manager/querycourse/course_detail.jsdo` |
 | 教室查询 | 3 | `teacher/teachresource/roomschedulequery.jsdo` |
 | 选课 | 3 | `manager/electcourse/elective.do` |
 | 公告与校历 | 5 | `calendarinfo/viewCalendarInfo.do`、`calendar/calendarViewList.do` |
 | 教学评价 | 2 | `eva/index/resultlist.jsdo` |
 | 账户与其它 | 2 | `sysmgr/user_password.jsdo` |
-| **合计** | **65** | |
+| **合计** | **69** | |
 
 ## 文档约定
 

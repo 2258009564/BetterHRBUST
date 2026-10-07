@@ -151,13 +151,19 @@ GET /academic/manager/querycourse/course_detail.jsdo?cid={课程实例 ID}
 | --- | --- | --- |
 | `cid` | 是 | 课程实例 ID，如 `248686` |
 
+| 项目 | 值 |
+| --- | --- |
+| 状态 | `200` |
+| 大小 | 约 4.4 KB |
+
 `cid` 的来源是 `student/currcourse/currcourse.jsdo` 的课程列表中
 「教学记录」列的链接。
 
 > **`cid` 是课程实例 ID，不是课程号。** 同一门课在不同学期、不同教学班
 > 会有不同的 `cid`。
 
-需要带正确参数请求。参数缺失时会返回「提示信息」错误页。
+**必须带真实 `cid`**：带参数时返回课程详情页；
+不带参数则返回「提示信息」错误页。
 
 ---
 
@@ -187,10 +193,24 @@ GET /academic/manager/teacherinfo/showTeacherInfoItem.do?userid={教师 ID}
 | --- | --- | --- |
 | `userid` | 是 | 教师 ID，如 `113679` |
 
+| 项目 | 值 |
+| --- | --- |
+| 状态 | `200` |
+| 大小 | 约 3.1 KB |
+
 来源是 `student/currcourse/currcourse.jsdo` 课程列表中的教师姓名链接，
 **每位任课教师一条**。
 
-同样需要带正确参数请求，否则返回「提示信息」错误页。
+带真实 `userid` 时返回教师信息表：
+
+```
+姓名 | 性别 | 院系 | 教研组
+```
+
+**必须带真实 `userid`**：不带参数则返回「提示信息」错误页。
+
+> 注意 `userid` 是**教师**的明文 ID，与学生的内部 ID（见
+> [`00-overview.md` §4](./00-overview.md)）不是同一套编号，不要混用。
 
 ---
 

@@ -32,6 +32,7 @@ import {
   isLoginPage
 } from './lib/auth.mjs';
 import { SampleStore, cleanOutput } from './lib/dumper.mjs';
+import { createRedactor } from './lib/redact.mjs';
 import { CATALOG, MODULES, summarizeCatalog } from './catalog.mjs';
 import {
   createClient,
@@ -212,7 +213,14 @@ async function main() {
     }
   }
 
-  const store = new SampleStore({ outDir });
+  // 脱敏器：预先登记登录学号，其余敏感值（内部 ID、姓名、加密串）
+  // 会在探测过程中从响应里逐步收集，结束时统一重写
+  const redactor = createRedactor({ enabled: options.redact, username: options.username });
+  if (!options.redact) {
+    warn('已关闭脱敏（--no-redact）：产物将包含真实隐私数据，请勿分享或提交');
+  }
+
+  const store = new SampleStore({ outDir, redactor });
   store.save(
     { key: 'auth.root', name: '登录页 / 站点入口', module: 'auth', path: '', method: 'GET', public: true, markers: ['j_acegi_security_check'] },
     rootRes
@@ -266,6 +274,9 @@ async function main() {
     term: identity.term
   };
   info(`学生上下文  studentId=${context.studentId || '?'}  year=${context.year || '?'}  term=${context.term || '?'}`);
+
+  // 内部 ID 也是身份标识，登记后所有产物都会屏蔽它
+  redactor.addKnown('studentId', context.studentId);
   if (!context.studentId || !context.year || !context.term) {
     warn('未能完整解析学生上下文，依赖这些参数的接口将被跳过');
   }
@@ -423,12 +434,31 @@ async function main() {
     concurrency: options.concurrency,
     skipped: skipped.map(({ ep, reason }) => ({ key: ep.key, reason }))
   };
-  const { file: manifestFile, summary } = store.writeManifest(meta);
-  const { file: mdFile } = store.writeMarkdown(meta);
+  // 终局重写：姓名、加密串等值可能是在探测中途才发现的，
+  // 用完整的已知值集合把先落盘的文件再过一遍，确保没有遗漏
+  const finalPass = store.finalizeRedaction();
+  if (store.redacting && finalPass.files > 0) {
+    info(`脱敏回填 ${finalPass.files} 个文件（补上了中途才发现的敏感值）`);
+  }
 
-  ok(`原始样本   ${store.sampleDir}`);
+  // 先写 markdown 再写 manifest：两者落盘都会产生脱敏命中，
+  // 把 manifest 放在最后能让其中的脱敏统计反映最终值
+  const { file: mdFile } = store.writeMarkdown(meta);
+  const { file: manifestFile, summary } = store.writeManifest(meta);
+
+  ok(`样本目录   ${store.sampleDir}`);
   ok(`接口清单   ${manifestFile}`);
   ok(`汇总报告   ${mdFile}`);
+
+  const redaction = redactor.describe();
+  if (redaction.enabled) {
+    ok(
+      `产物已脱敏   替换 ${redaction.replacements} 处` +
+        `（${Object.entries(redaction.byType).map(([k, v]) => `${k}:${v}`).join('  ') || '无命中'}）`
+    );
+  } else {
+    warn('产物未脱敏：含真实隐私数据，请勿分享或提交');
+  }
 
   console.log('');
   console.log(`  接口总数    ${summary.total}`);

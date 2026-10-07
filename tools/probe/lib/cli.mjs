@@ -28,6 +28,7 @@ export const DEFAULT_OPTIONS = {
   dryRun: false, // 只打印计划，不发请求
   analyzeOnly: false, // 不联网，仅对已落盘样本重新做结构分析
   clean: false, // 探测前清空旧的样本 / 解码副本 / 门户产物
+  redact: true, // 产物脱敏（默认开启）
   assumeYes: false, // 跳过确认
   help: false
 };
@@ -59,6 +60,8 @@ const BOOLEAN_FLAGS = new Map([
   ['--dry-run', ['dryRun', true]],
   ['--analyze-only', ['analyzeOnly', true]],
   ['--clean', ['clean', true]],
+  ['--no-redact', ['redact', false]],
+  ['--redact', ['redact', true]],
   ['--yes', ['assumeYes', true]],
   ['--help', ['help', true]],
   ['-h', ['help', true]]
@@ -301,6 +304,7 @@ export const HELP_TEXT = `
   --dry-run                仅打印探测计划，不发送请求
   --analyze-only           不联网，仅对已落盘样本重新做结构分析并生成 analysis.md
   --clean                  探测前清空 samples/ decoded/ portal/，避免历史运行的文件累积
+  --no-redact              关闭产物脱敏（默认开启）。关闭后产物含真实隐私数据，慎用
   --config <文件>          从 JSON 配置文件读取默认值
   -h, --help               显示本帮助
 

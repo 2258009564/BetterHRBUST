@@ -4,12 +4,58 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { getGbkLabel } from './http.mjs';
 import { MODULES } from '../catalog.mjs';
 import { slugify, makePreview } from './text.mjs';
 import { renderPortalMarkdown } from './portal.mjs';
+import { Redactor } from './redact.mjs';
+import { collectFromText } from './harvest.mjs';
 
 export { slugify };
+
+/** 仓库根目录（用于校验输出目录的合法性） */
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+
+/**
+ * 输出目录安全校验
+ *
+ * 探测产物是**运行期数据**，接口文档是**手工维护的成果**，两者必须隔离。
+ * 这里硬性拦截指向 `docs/` 的输出目录，避免误操作覆盖接口文档
+ * （`cleanOutput()` 会删除目录内容，一旦指错后果不可逆）。
+ *
+ * @param {string} outDir 用户指定的输出目录
+ * @returns {string} 解析后的绝对路径
+ */
+export function assertSafeOutDir(outDir) {
+  const resolved = path.resolve(outDir);
+  const docsDir = path.join(REPO_ROOT, 'docs');
+
+  if (isSameOrUnder(resolved, docsDir)) {
+    throw new Error(
+      `输出目录不能指向接口文档目录：${resolved}\n` +
+        '探测产物请放在 tools/probe/output 或其他仓库外目录。'
+    );
+  }
+
+  return resolved;
+}
+
+/**
+ * 路径等同或位于其下
+ *
+ * Windows 的路径不区分大小写（`D:\` 与 `d:\` 是同一处），
+ * 但字符串比较区分——实测中 `fileURLToPath` 产出大写盘符、
+ * 用户输入小写盘符，直接 `startsWith` 会漏判，因此按平台决定是否归一化大小写。
+ */
+function isSameOrUnder(child, parent) {
+  const normalize = (p) => (process.platform === 'win32' ? p.toLowerCase() : p);
+  const c = normalize(child);
+  const p = normalize(parent);
+
+  return c === p || c.startsWith(p + path.sep);
+}
 
 /** 登录页特征（用于识别会话失效） */
 const LOGIN_MARKERS = ['j_acegi_security_check', 'getCaptcha.do'];
@@ -64,6 +110,29 @@ export function looksLikeLoginPage(text) {
   return LOGIN_MARKERS.some((marker) => String(text || '').includes(marker));
 }
 
+/**
+ * 是否为「纯 JS 跳转页」
+ *
+ * 教务系统里有一类页面本身没有任何数据，只有一句
+ * `location.href="真正目标.do?...&studentId=<加密串>"`，
+ * 作用是把浏览器带去真正的功能页（如教学计划的 scheduleJump.jsp）。
+ *
+ * 这类页面有价值——它**揭示了带真实参数的目标地址**——但不能算「拿到数据」，
+ * 否则会把跳转页误报成业务数据。判定特征：
+ *   · 体积很小（跳转页通常只有几百字节）
+ *   · 含 location.href / location.replace
+ *   · 没有任何表格结构
+ *
+ * @param {string} text 响应正文
+ * @returns {boolean}
+ */
+export function isRedirectStub(text) {
+  const t = String(text || '');
+  if (!t || t.length > 1500) return false;
+  if (/<table[\s>]|<th[\s>]|<td[\s>]/i.test(t)) return false;
+  return /location\.href\s*=|location\.replace\s*\(|window\.location/i.test(t);
+}
+
 /** 依据响应推断文件扩展名 */
 function pickExtension(endpoint, response) {
   const contentType = (response.headers.get('content-type') || '').toLowerCase();
@@ -99,10 +168,12 @@ function pickExtension(endpoint, response) {
  * @returns {string[]} 被清理的条目名
  */
 export function cleanOutput(outDir) {
+  // 会删除目录内容，因此必须先在安全校验里拦掉指向 docs/ 的情况
+  const safeDir = assertSafeOutDir(outDir);
   const removed = [];
 
   for (const name of ['samples', 'decoded', 'portal']) {
-    const dir = path.join(outDir, name);
+    const dir = path.join(safeDir, name);
     if (fs.existsSync(dir)) {
       fs.rmSync(dir, { recursive: true, force: true });
       removed.push(`${name}/`);
@@ -110,7 +181,7 @@ export function cleanOutput(outDir) {
   }
 
   for (const name of ['manifest.json', 'manifest.md', 'analysis.json', 'analysis.md']) {
-    const file = path.join(outDir, name);
+    const file = path.join(safeDir, name);
     if (fs.existsSync(file)) {
       fs.rmSync(file, { force: true });
       removed.push(name);
@@ -126,11 +197,12 @@ export class SampleStore {
    * @param {Object} options
    * @param {string} options.outDir 输出根目录
    * @param {string} [options.runId] 本次运行标识（用于 manifest 记录）
+   * @param {Redactor} [options.redactor] 脱敏器，默认启用脱敏
    */
-  constructor({ outDir, runId }) {
-    this.outDir = path.resolve(outDir);
+  constructor({ outDir, runId, redactor }) {
+    this.outDir = assertSafeOutDir(outDir);
     this.sampleDir = path.join(this.outDir, 'samples');
-    /** 已按正确字符集解码的 UTF-8 副本，便于直接阅读/分析 */
+    /** 按正确字符集解码后的 UTF-8 副本，便于直接阅读/分析 */
     this.decodedDir = path.join(this.outDir, 'decoded');
     /** 门户页分析产物 */
     this.portalDir = path.join(this.outDir, 'portal');
@@ -138,8 +210,28 @@ export class SampleStore {
     this.counter = 0;
     this.entries = [];
     this.artifacts = [];
+    /**
+     * 参数收割结果：从响应中提取的「接口 + 真实参数」组合。
+     * 在脱敏前收集，供多轮探测的第二轮带参补测使用。
+     * @type {Array<{ruleId:string, candidate:Object}>}
+     */
+    this.harvested = [];
+    /** 收割去重（跨调用共享，避免同一参数组合被重复收集） */
+    this.harvestSeen = new Set();
+    /** 脱敏器：所有落盘内容统一经过它 */
+    this.redactor = redactor || new Redactor({ enabled: true });
     fs.mkdirSync(this.sampleDir, { recursive: true });
     fs.mkdirSync(this.decodedDir, { recursive: true });
+  }
+
+  /** 是否处于脱敏模式 */
+  get redacting() {
+    return this.redactor.active;
+  }
+
+  /** 落盘前的统一脱敏出口 */
+  clean(content) {
+    return this.redactor.redact(content);
   }
 
   /** 分配下一个序号 */
@@ -157,7 +249,11 @@ export class SampleStore {
   writeArtifact(relPath, content) {
     const abs = path.join(this.outDir, relPath);
     fs.mkdirSync(path.dirname(abs), { recursive: true });
-    fs.writeFileSync(abs, content);
+
+    // 文本类产物统一脱敏；Buffer 原样写入（调用方已确认可安全落盘）
+    const payload = Buffer.isBuffer(content) ? content : this.clean(String(content));
+    fs.writeFileSync(abs, payload);
+
     const normalized = relPath.split(path.sep).join('/');
     this.artifacts.push(normalized);
     return normalized;
@@ -214,38 +310,85 @@ export class SampleStore {
     const relFile = path.posix.join('samples', fileName);
     const absFile = path.join(this.outDir, relFile);
 
-    fs.writeFileSync(absFile, response.buffer);
-
     const text = response.text || '';
     const isBinary =
       Boolean(endpoint.binary) || /^image\//i.test(response.contentType || '');
 
-    // 另存一份「按正确字符集解码后的 UTF-8 副本」：
-    // samples/ 保持服务器原始字节（GBK 原貌，利于字节级核对），
-    // decoded/ 是可直接用编辑器打开与检索的 UTF-8 文本，便于人工/AI 分析源码。
-    let relDecoded = null;
     if (!isBinary && text) {
-      relDecoded = path.posix.join('decoded', fileName);
-      fs.writeFileSync(path.join(this.outDir, relDecoded), text, 'utf8');
+      // ① 参数收割：必须在脱敏**之前**——加密串是敏感值，落盘后只剩占位符，
+      //    只有在这里才能拿到真实参数供第二轮带参补测
+      this.harvested.push(...collectFromText(text, this.harvestSeen));
+
+      // ② 敏感值收集（加密串、学号、真实姓名），后续所有落盘内容都会屏蔽它们。
+      //    姓名的来源是「我的信息」页，通常在中途才被探测到，
+      //    因此结束时会用 `finalizeRedaction()` 把先落盘的文件重写一遍。
+      this.redactor.harvest(text);
     }
+
+    /** 二进制内容是否被跳过落盘 */
+    let binarySkipped = false;
+    /** 实际写入的样本文件与解码副本（二进制会被替换为说明文件） */
+    let relFileForEntry = relFile;
+    let relDecodedForEntry = null;
+
+    if (isBinary) {
+      // 图片等二进制响应**不保存副本**：
+      // 学生照片、验证码这类内容本身就是个人数据，且无法在不破坏文件的前提下脱敏。
+      // 改为写入一份文本说明，保留尺寸与哈希以供核对。
+      const digest = crypto
+        .createHash('sha256')
+        .update(response.buffer)
+        .digest('hex')
+        .slice(0, 16);
+      const stubName = `${seq}-${endpoint.key.replace(/^discovered\./, 'd-')}.txt`
+        .replace(/[^A-Za-z0-9._-]/g, '-');
+      const relStub = path.posix.join('samples', stubName);
+      const stub = [
+        '[二进制响应，未落盘]',
+        `content-type: ${response.contentType || response.headers.get('content-type') || '-'}`,
+        `bytes: ${response.buffer.length}`,
+        `sha256[:16]: ${digest}`,
+        '',
+        '为保护隐私，图片等二进制内容不保存副本。'
+      ].join('\n');
+
+      fs.writeFileSync(path.join(this.outDir, relStub), stub, 'utf8');
+      binarySkipped = true;
+      relFileForEntry = relStub;
+      relDecodedForEntry = null;
+    } else if (text) {
+      // 脱敏需要「解码 → 替换 → 重新编码」，而 Node 没有 GBK 编码器，
+      // 因此脱敏模式下两份产物统一写成 UTF-8；原始编码记录在 manifest.charset。
+      const cleaned = this.clean(text);
+      fs.writeFileSync(absFile, cleaned, 'utf8');
+
+      relDecodedForEntry = path.posix.join('decoded', fileName);
+      fs.writeFileSync(path.join(this.outDir, relDecodedForEntry), cleaned, 'utf8');
+    } else {
+      fs.writeFileSync(absFile, response.buffer);
+    }
+
     const haystack = text.toLowerCase();
     const markersHit = (endpoint.markers || []).filter((m) =>
       haystack.includes(String(m).toLowerCase())
     );
     const looksLikeLogin = LOGIN_MARKERS.some((m) => text.includes(m));
     const isErrorPage = detectErrorPage(response.status, text);
+    const redirectStub = isRedirectStub(text);
 
-    // 只有「请求成功 + 有响应体 + 不是错误页 + 不是登录页 +
+    // 只有「请求成功 + 有响应体 + 不是错误页 + 不是登录页 + 不是跳转页 +
     // （命中关键字 或 该接口本就无关键字约束）」才算真正拿到了业务数据。
-    // 两个排除项都来自实测教训：
+    // 排除项都来自实测教训：
     //   · 404 页面上会偶然出现关键字 → 误报「有数据」
     //   · 0 字节的 200 响应（如需要参数的接口）→ 误报「有数据」
+    //   · 纯 JS 跳转页（如 scheduleJump.jsp）→ 误报「有数据」
     const hasBody = response.buffer.length > 0;
     const hitMarkers =
       Boolean(response.ok) &&
       hasBody &&
       !isErrorPage &&
       !looksLikeLogin &&
+      !redirectStub &&
       (markersHit.length > 0 || (endpoint.markers || []).length === 0);
 
     /** @type {Object} */
@@ -277,11 +420,13 @@ export class SampleStore {
       hitMarkers,
       looksLikeLogin,
       isErrorPage,
-      file: relFile,
-      decodedFile: relDecoded,
-      preview: isBinary ? '(二进制内容，见文件)' : makePreview(text),
+      redirectStub,
+      file: relFileForEntry,
+      decodedFile: relDecodedForEntry,
+      binarySkipped,
+      preview: isBinary ? '(二进制内容，未落盘)' : this.clean(makePreview(text)),
       error: response.error || null,
-      note: endpoint.note || null,
+      note: this.clean(endpoint.note || '') || null,
       discoveredFrom: endpoint.discoveredFrom || null,
       ...extra
     };
@@ -352,6 +497,43 @@ export class SampleStore {
     return stats;
   }
 
+  /**
+   * 终局脱敏重写
+   *
+   * 真实姓名、内部 ID 等值是在探测**中途**才从页面里发现的，
+   * 在它们之前落盘的样本无法在写入时就替换掉。因此探测结束后，
+   * 用完整的已知值集合把全部文本产物重写一遍，确保没有遗漏。
+   *
+   * @returns {{files:number, replacements:number}}
+   */
+  finalizeRedaction() {
+    if (!this.redactor.active) return { files: 0, replacements: 0 };
+
+    const dirs = ['samples', 'decoded', 'portal'];
+    let files = 0;
+
+    for (const dir of dirs) {
+      const abs = path.join(this.outDir, dir);
+      if (!fs.existsSync(abs)) continue;
+
+      for (const name of fs.readdirSync(abs)) {
+        const file = path.join(abs, name);
+        if (!fs.statSync(file).isFile()) continue;
+        if (!/\.(html?|js|json|txt|md)$/i.test(name)) continue;
+
+        const original = fs.readFileSync(file, 'utf8');
+        const cleaned = this.redactor.redactAll(original);
+        if (cleaned !== original) {
+          fs.writeFileSync(file, cleaned, 'utf8');
+          files += 1;
+        }
+      }
+    }
+
+    // 返回本次实际被改写的文件数；累计替换次数由 describe() 提供
+    return { files, replacements: this.redactor.stats().total };
+  }
+
   /** 写出 manifest.json */
   writeManifest(meta = {}) {
     const summary = this.summarize();
@@ -362,13 +544,26 @@ export class SampleStore {
       gbkFallback: getGbkLabel(),
       charsets: this.charsetStats(),
       nodeVersion: process.version,
+      redaction: this.redactor.describe(),
       ...meta,
       artifacts: this.artifacts,
       summary,
       entries: this.entries
     };
+
     const file = path.join(this.outDir, 'manifest.json');
-    fs.writeFileSync(file, JSON.stringify(manifest, null, 2), 'utf8');
+    const json = JSON.stringify(manifest, null, 2);
+
+    // 整体过一遍脱敏：条目里的 url / preview / note 都可能带上真实值。
+    // 占位符不含引号与反斜杠，因此替换后仍是合法 JSON。
+    const cleaned = this.clean(json);
+    try {
+      JSON.parse(cleaned);
+    } catch {
+      throw new Error('脱敏后 manifest.json 不是合法 JSON，请检查已知值是否含引号');
+    }
+
+    fs.writeFileSync(file, cleaned, 'utf8');
     return { file, manifest, summary };
   }
 
@@ -387,6 +582,9 @@ export class SampleStore {
       `- 拿到业务数据：${summary.withData}`,
       `- 路径不存在（404）：${summary.notFound}`,
       `- 返回错误页：${summary.errorPages}`,
+      this.redactor.active
+        ? '- 脱敏：已启用（产物统一为 UTF-8，图片不落盘）'
+        : '- 脱敏：**已关闭**，产物含真实隐私数据，请勿分享',
       summary.loginExpired
         ? `- ⚠️ 疑似会话失效的接口：${summary.sessionSuspects.join(', ')}`
         : '',
@@ -432,7 +630,7 @@ export class SampleStore {
 
     lines.push('');
     const file = path.join(this.outDir, 'manifest.md');
-    fs.writeFileSync(file, lines.filter(Boolean).join('\n'), 'utf8');
+    fs.writeFileSync(file, this.clean(lines.filter(Boolean).join('\n')), 'utf8');
     return { file, summary };
   }
 }

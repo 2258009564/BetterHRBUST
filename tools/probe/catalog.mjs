@@ -664,21 +664,32 @@ export const CATALOG = [
     path: 'manager/querycourse/course_detail.jsdo',
     method: 'GET',
     params: { cid: '' },
-    confidence: 'likely',
-    markers: ['课程'],
+    need: ['cid'],
+    confidence: 'verified',
+    markers: ['课程', '学分'],
     note:
-      '由 currcourse.jsdo 发现，**带真实 cid 参数**（如 `course_detail.jsdo?cid=248686`）。' +
-      'cid 是课程实例 ID，同一门课不同学期/班级的 cid 不同。'
+      'cid 是课程实例 ID，同一门课不同学期/班级各不相同，只能从 currcourse.jsdo 的' +
+      '「教学记录」列链接里取（如 `course_detail.jsdo?cid=248686`）。' +
+      '实测带真实 cid：HTTP 200，约 4.4KB；不带参数则是「提示信息」错误页。' +
+      '探测工具会在运行期自动收割 cid 并带参补测（见 lib/harvest.mjs）。'
   },
   {
     key: 'course.export',
     name: '课程查询结果导出 Excel',
     module: 'course',
     path: 'manager/querycourse/excel_exp.jsdo',
-    method: 'GET',
+    method: 'POST',
+    params: {
+      keyvalue: '', terms: '', ctype: '', stusorts: '', depid: '1', trgroup: '',
+      keyword: '', roomsort: '', emanner: '', emode: '', status: '', orderby: '', orderseq: ''
+    },
     confidence: 'likely',
     binary: true,
-    note: '由课程查询页发现，导出 Excel（二进制）'
+    skipInBatch: true,
+    note:
+      '页面 JS 中 `fp.action="excel_exp.jsdo"` 定义，**必须 POST 且携带完整查询条件**，' +
+      '用 GET 直接请求会 404（探测工具因此默认跳过，避免每次运行都产生噪音）。' +
+      '响应为 Excel 二进制。'
   },
   {
     key: 'course.teacherInfo',
@@ -687,11 +698,14 @@ export const CATALOG = [
     path: 'manager/teacherinfo/showTeacherInfoItem.do',
     method: 'GET',
     params: { userid: '' },
-    confidence: 'likely',
-    markers: ['教师'],
+    need: ['userid'],
+    confidence: 'verified',
+    markers: ['姓名', '性别', '院系'],
     note:
-      '由 currcourse.jsdo 发现，**每位任课教师一条**，带真实 userid' +
-      '（如 `showTeacherInfoItem.do?userid=113679`）。是教师详情页入口。'
+      'userid 是教师明文 ID（与学生内部 ID 不同源），来源是 currcourse.jsdo ' +
+      '课程列表的教师链接（如 `showTeacherInfoItem.do?userid=113679`），每位任课教师一条。' +
+      '实测带真实 userid：HTTP 200，约 3.1KB，表头为 姓名|性别|院系|教研组。' +
+      '不带参数则是「提示信息」错误页。'
   },
 
   /* ========================== 空教室查询 ========================== */
@@ -733,6 +747,13 @@ export const CATALOG = [
   },
 
   /* ========================== 培养方案与学分 ========================== */
+  //
+  // 实测结论（2026-10-08，通过参数收割发现）：
+  //   按 URP 命名推测的 manager/teachingplan/*、manager/studentcredit/* 全部 404。
+  //   真实的培养方案数据在 manager/studyschedule/ 下，有四种展示形态，
+  //   入口是 studentSelfSchedule.jsdo 页面里的 scheduleJump.jsp 跳转链接，
+  //   **studentId 参数是加密串**，必须从页面里原样取出回传，不能自己拼。
+  //   探测工具会自动完成「发现跳转 → 收割参数 → 探测真实页」的链式过程。
   {
     key: 'plan.help',
     name: '教学计划管理说明',
@@ -741,6 +762,61 @@ export const CATALOG = [
     method: 'GET',
     confidence: 'verified',
     note: '实测：HTTP 200，2721 字节。是 moduleId=210 的默认落点（帮助页）'
+  },
+  {
+    key: 'plan.showByTerm',
+    name: '个人培养方案（按学期展示）',
+    module: 'plan',
+    path: 'manager/studyschedule/studentScheduleShowByTerm.do',
+    method: 'GET',
+    params: { z: 'z', studentId: '{encryptedStudentId}', classId: '' },
+    need: ['encryptedStudentId'],
+    confidence: 'verified',
+    markers: ['教学计划', '课程', '学期'],
+    note:
+      '**这是培养方案的完整数据源**。实测 HTTP 200，约 442KB，结构分三部分：\n' +
+      '  ① 头部信息表（datalist）：院系|专业|年级|学生类别|专业方向|最后修改时间|查询成绩时间\n' +
+      '  ② 课组要求（<option>）：`课组名（年级） 选课属性：必修 学分要求=2.0 门数要求=2`\n' +
+      '     —— 这就是毕业学分结构，如 专业必修课 17.0 学分/8 门、实践性教学环节 42.0/12\n' +
+      '  ③ 课程明细（datalist，按学年学期分组）：\n' +
+      '     课程号|课程名|考核方式|学分|学时|课程类别|课组|课组要求|专业方向\n' +
+      '⚠️ studentId 是加密串，从 studentSelfSchedule.jsdo 的跳转链接里取。'
+  },
+  {
+    key: 'plan.lineShow',
+    name: '个人培养方案（按课程线展示）',
+    module: 'plan',
+    path: 'manager/studyschedule/studentScheduleLineShow.do',
+    method: 'GET',
+    params: { z: 'z', studentId: '{encryptedStudentId}', classId: '' },
+    need: ['encryptedStudentId'],
+    confidence: 'verified',
+    markers: ['教学计划', '课程'],
+    note: '实测 HTTP 200，约 312KB。与 showByTerm 数据同源，按课程线组织。'
+  },
+  {
+    key: 'plan.courseTermOrder',
+    name: '个人培养方案（按学期排序）',
+    module: 'plan',
+    path: 'manager/studyschedule/studentScheduleCourseTermOrder.do',
+    method: 'GET',
+    params: { z: 'z', studentId: '{encryptedStudentId}', classId: '' },
+    need: ['encryptedStudentId'],
+    confidence: 'verified',
+    markers: ['教学计划', '课程'],
+    note: '实测 HTTP 200，约 94KB。与 showByTerm 数据同源，按学期排序的精简视图。'
+  },
+  {
+    key: 'plan.showFrame',
+    name: '个人培养方案（框架页）',
+    module: 'plan',
+    path: 'manager/studyschedule/studentScheduleShowFrame.do',
+    method: 'GET',
+    params: { z: 'z', studentId: '{encryptedStudentId}', classId: '' },
+    need: ['encryptedStudentId'],
+    confidence: 'verified',
+    markers: ['教学计划'],
+    note: '实测 HTTP 200，约 10KB。frameset 容器，内嵌上述几种视图。'
   },
 
   /* ============================ 选课与退课 ============================ */
@@ -864,11 +940,13 @@ export const CATALOG = [
     path: 'teacher/teachingtask/schoolTeachingReportIndexStudent.do',
     method: 'GET',
     params: { scoreid: '' },
-    confidence: 'likely',
-    markers: ['教学'],
+    need: ['scoreid'],
+    confidence: 'verified',
+    markers: ['教学', '课程'],
     note:
-      '由 currcourse.jsdo 发现，**每门课一条**，带真实 scoreid' +
-      '（如 `?scoreid=233727590`）'
+      'scoreid 是成绩记录 ID，来源是 currcourse.jsdo 课程列表的「教学记录」列链接' +
+      '（如 `?scoreid=233727590`），每门课一条。' +
+      '实测带真实 scoreid：HTTP 200，约 4.9KB。不带参数则是「提示信息」错误页。'
   },
 
   /* ========================== 系统与账户 ========================== */

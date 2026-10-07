@@ -89,6 +89,11 @@ GET /academic/teacher/teachingtask/schoolTeachingReportIndexStudent.do?scoreid={
 | --- | --- | --- |
 | `scoreid` | 是 | 成绩记录 ID，如 `233727590` |
 
+| 项目 | 值 |
+| --- | --- |
+| 状态 | `200` |
+| 大小 | 约 4.9 KB |
+
 来源是 `student/currcourse/currcourse.jsdo` 课程列表「教学记录」列中的链接，
 **每门课一条**。
 

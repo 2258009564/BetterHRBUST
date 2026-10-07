@@ -12,8 +12,12 @@
 | 学生课表（大节） | GET | `manager/coursearrange/showTimetable.do` | `sectionType=COMBINE` |
 | 学生课表（小节） | GET | `manager/coursearrange/showTimetable.do` | `sectionType=BASE` |
 | 周次课表 | GET | `manager/coursearrange/studentWeeklyTimetable.do` | 按周展示 |
-| 个人教学计划 | GET | `manager/studyschedule/studentSelfSchedule.jsdo` | 含规划课程 |
-| 教学计划跳转器 | GET | `manager/studyschedule/scheduleJump.jsp` | 统一跳转入口 |
+| 个人教学计划（入口） | GET | `manager/studyschedule/studentSelfSchedule.jsdo` | 提供跳转链接 |
+| 教学计划跳转器 | GET | `manager/studyschedule/scheduleJump.jsp` | 仅跳转，无数据 |
+| 培养方案（按学期） | GET | `manager/studyschedule/studentScheduleShowByTerm.do` | **数据最完整** |
+| 培养方案（按课程线） | GET | `manager/studyschedule/studentScheduleLineShow.do` | 同源另一视图 |
+| 培养方案（按学期排序） | GET | `manager/studyschedule/studentScheduleCourseTermOrder.do` | 精简视图 |
+| 培养方案（框架页） | GET | `manager/studyschedule/studentScheduleShowFrame.do` | frameset 容器 |
 | 教学计划说明 | GET | `manager/studyschedule/help.htm` | 模块默认落点 |
 
 ---
@@ -215,7 +219,11 @@ GET /academic/manager/coursearrange/studentWeeklyTimetable.do?yearid={year}
 | `yearid` | 是 | 学年序号 |
 
 在 `currcourse.jsdo` 页面中以「周次课表」按钮的形式出现。
-适合用来做「按周查看」视图；从 `showTimetable.do` 的周次字段自行筛选也可达到同样效果。
+
+> ⚠️ **只带 `yearid` 会返回「提示信息」错误页**（实测），该接口还需要
+> 其它参数（具体未知，教务页面上是通过表单提交进入的）。
+> 做「按周查看」时，更可靠的做法是用 `showTimetable.do` 的周次字段
+> 在客户端自行筛选，而不是调用这个接口。
 
 ---
 
@@ -231,7 +239,7 @@ GET /academic/manager/studyschedule/studentSelfSchedule.jsdo
 | 标题 | 个人教学计划 |
 | 大小 | 约 4.8 KB |
 
-响应中包含 4 个 `scheduleJump.jsp` 跳转链接：
+响应中包含 4 个 `scheduleJump.jsp` 跳转链接，指向培养方案的四种展示形态：
 
 | 目标 | 说明 |
 | --- | --- |
@@ -240,8 +248,8 @@ GET /academic/manager/studyschedule/studentSelfSchedule.jsdo
 | `studentScheduleCourseTermOrder` | 按学期排序 |
 | `studentScheduleShowByTerm` | 按学期展示 |
 
-> ⚠️ 链接中的 `studentId` 是**加密串**（如 `A1b2C3d4E5f6G7h8I9j0K1==`），
-> 不是明文内部 ID。必须从页面响应中提取，不能自己拼接。
+> ⚠️ 链接中的 `studentId` 是**加密串**，不是明文内部 ID。
+> 必须从页面响应中提取并原样回传，不能自己拼接。
 > 详见 [`00-overview.md` §4.6](./00-overview.md)。
 
 ---
@@ -250,7 +258,7 @@ GET /academic/manager/studyschedule/studentSelfSchedule.jsdo
 
 ```
 GET /academic/manager/studyschedule/scheduleJump.jsp
-      ?link={目标}&studentId={加密串}&classId=
+      ?link={目标}&studentId={加密串}&classId={班级ID}
 ```
 
 | 参数 | 必需 | 说明 |
@@ -259,7 +267,102 @@ GET /academic/manager/studyschedule/scheduleJump.jsp
 | `studentId` | 是 | 加密串，从 `studentSelfSchedule.jsdo` 中提取 |
 | `classId` | 否 | 班级 ID |
 
-统一的跳转入口，`link` 参数指定目标 `.do`。
+**这个接口本身没有数据**——响应体只有一句
+`location.href="studentScheduleShowByTerm.do?z=z&studentId=...&classId=..."`
+（约 480 字节），作用是把浏览器带去真正的功能页。
+
+它的价值在于**揭示了真实目标地址与完整参数**。调用后应解析其中的
+`location.href`，再去请求 §5 的真实页面。
+
+---
+
+## 5. 个人培养方案
+
+培养方案数据在 `manager/studyschedule/` 下，有四种展示形态。
+**真实地址无法推测**——按 URP 命名猜测的 `manager/teachingplan/*`、
+`manager/studentcredit/*` 全部 404，只能通过上面的跳转链路发现：
+
+```
+studentSelfSchedule.jsdo           ← 入口页（§3）
+  └─ scheduleJump.jsp?link=...     ← 跳转器（§4，揭示目标与参数）
+       └─ studentSchedule*.do      ← 真实的培养方案页面
+```
+
+| 接口 | 大小 | 说明 |
+| --- | ---: | --- |
+| `studentScheduleShowByTerm.do` | **约 442 KB** | 按学期展示，**数据最完整** |
+| `studentScheduleLineShow.do` | 约 312 KB | 按课程线展示 |
+| `studentScheduleCourseTermOrder.do` | 约 94 KB | 按学期排序的精简视图 |
+| `studentScheduleShowFrame.do` | 约 10 KB | frameset 容器 |
+
+### 5.1 请求
+
+```
+GET /academic/manager/studyschedule/studentScheduleShowByTerm.do
+      ?z=z&studentId={加密串}&classId={班级ID}
+```
+
+| 参数 | 必需 | 说明 |
+| --- | --- | --- |
+| `z` | 是 | 固定 `z`（跳转链接里的写法） |
+| `studentId` | 是 | **加密串**，从入口页提取 |
+| `classId` | 是 | 班级 ID，同样从跳转链接里取 |
+
+### 5.2 响应结构
+
+以 `ShowByTerm`（442KB）为例，页面分三部分：
+
+**① 头部信息表**（class `datalist`）：
+
+```
+院系 | 专业 | 年级 | 学生类别 | 专业方向 | 最后修改时间 | 查询成绩时间
+```
+
+**② 课组要求**（`<option>` 列表）——这是**毕业学分结构**：
+
+```
+第二课堂（2023）        选课属性：必修  学分要求=2.0   门数要求=2
+公共外语（小语种（2023） 选课属性：必修  学分要求=49.5  门数要求=15
+人文 、社科类（2023）    选课属性：必修  学分要求=35.0  门数要求=20
+实践性教学环节（2023）   选课属性：必修  学分要求=42.0  门数要求=12
+学科基础课程（2023）     选课属性：必修  学分要求=26.5  门数要求=8
+专业必修课（2023）       选课属性：必修  学分要求=17.0  门数要求=8
+自然科学类（2023）       选课属性：必修  学分要求=29.0  门数要求=8
+专业选修课（2023）       选课属性：限选  学分要求=8.0   门数要求=4
+```
+
+每个课组的文本格式固定为
+`{课组名}（{年级}） 选课属性：{属性} 学分要求={学分} 门数要求={门数}`，可正则提取。
+
+**③ 课程明细**（class `datalist`，按学年学期分组）：
+
+```
+课程号 | 课程名 | 考核方式 | 学分 | 学时 | 课程类别 | 课组 | 课组要求 | 专业方向
+```
+
+示例数据行：
+
+```
+U960123dW10N1 | 国家安全教育（网络） | 分散（55） | 1 | 16 | 非学位课 | 第二课堂（2023） | 必修
+```
+
+行按「第 N 学年 / 学年学期」分组展示，解析时需要跟踪分组标记。
+
+### 5.3 与成绩关联
+
+培养方案给出「要求」，成绩给出「实际」，两者结合可做**学分完成度**分析：
+
+| 数据 | 来源 | 用途 |
+| --- | --- | --- |
+| 课组学分要求 | 本模块（§5.2 ②） | 毕业要求 |
+| 已获学分（按课组） | [`02-scores.md`](./02-scores.md) | 实际完成 |
+| 课程归属哪个课组 | 本模块（课程明细的「课组」列） | 关联键 |
+
+### 5.4 注意事项
+
+- 页面很大（数百 KB），**不要在移动端全量渲染**，按学期或课组拆分展示；
+- `studentId` 加密串随会话变化，**每次都要重新提取**，不能跨会话缓存；
+- 四种视图数据同源，选 `ShowByTerm` 一种即可，不必全部请求。
 
 ---
 

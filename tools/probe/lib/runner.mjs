@@ -15,6 +15,7 @@ import {
   renderSampleAnalysisMarkdown,
   resolveCandidatePath
 } from './analyzer.mjs';
+import { toEndpointSpecs } from './harvest.mjs';
 import { looksLikeLoginPage, detectErrorPage } from './dumper.mjs';
 import {
   MODULES,
@@ -240,12 +241,24 @@ export async function probeWithExpansion(options) {
       maxCandidates: maxNewPerRound
     });
 
+    // 参数收割：目录里「缺参数」的接口，真实参数就藏在别的页面链接里。
+    // 用收割到的参数生成带参候选，与地址发现的候选合并进下一轮。
+    // 注意去重键用「完整路径含参数」——基础路径在第一轮已登记过，
+    // 按 base 去重会把带参候选全部误杀。
+    const harvestedSpecs = toEndpointSpecs(store.harvested).filter(
+      (ep) => !knownPaths.has(ep.path)
+    );
+    for (const ep of harvestedSpecs) knownPaths.add(ep.path);
+
     for (const candidate of candidates) knownPaths.add(candidate.path.split('?')[0]);
-    addedTotal += candidates.length;
+    addedTotal += candidates.length + harvestedSpecs.length;
 
-    log(`   · 第 ${round} 轮结束，从样本中挖出 ${candidates.length} 个新地址`);
+    log(
+      `   · 第 ${round} 轮结束，挖出新地址 ${candidates.length} 个` +
+        (harvestedSpecs.length > 0 ? `、带参候选 ${harvestedSpecs.length} 个` : '')
+    );
 
-    current = candidates;
+    current = [...harvestedSpecs, ...candidates];
   }
 
   return { rounds, entries: store.entries, addedTotal };

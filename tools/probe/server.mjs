@@ -34,6 +34,7 @@ import {
   logout
 } from './lib/auth.mjs';
 import { SampleStore, cleanOutput } from './lib/dumper.mjs';
+import { createRedactor } from './lib/redact.mjs';
 import { CATALOG, MODULES, summarizeCatalog } from './catalog.mjs';
 import {
   createClient,
@@ -118,6 +119,10 @@ const state = {
   }),
   identity: { loggedIn: false, studentId: '', year: '', term: '' },
   landingPath: '',
+  /** 登录学号，用于产物脱敏 */
+  username: '',
+  /** 当前生效的脱敏器 */
+  redactor: null,
   portal: null,
   store: null,
   running: false,
@@ -130,9 +135,19 @@ function log(message) {
   console.log(`  ${time}  ${message}`);
 }
 
+/** 获取当前脱敏器（默认启用） */
+function ensureRedactor() {
+  if (!state.redactor) {
+    state.redactor = createRedactor({ enabled: true, username: state.username });
+  }
+  return state.redactor;
+}
+
 /** 确保样本仓库存在 */
 function ensureStore() {
-  if (!state.store) state.store = new SampleStore({ outDir: OPTIONS.outDir });
+  if (!state.store) {
+    state.store = new SampleStore({ outDir: OPTIONS.outDir, redactor: ensureRedactor() });
+  }
   return state.store;
 }
 
@@ -414,6 +429,10 @@ async function handleLogin(req, res) {
   // 登录跳转落点通常就是门户页（如 index_new.jsp），记录下来供门户捕获优先使用
   state.landingPath = toRelativePath(result.finalUrl, state.client.baseUrl);
 
+  // 记录登录学号，并同步到脱敏器：学号会出现在多处响应里，必须屏蔽
+  state.username = username;
+  ensureRedactor().addKnown('username', username);
+
   saveSession(state.client, sessionFile, {
     studentId: state.identity.studentId,
     landingPath: state.landingPath
@@ -536,6 +555,7 @@ async function handleProbeStream(req, res, url) {
   const portalEnabled = params.get('portal') !== 'false';
   const allowMutating = params.get('allowMutating') === 'true';
   const cleanFirst = params.get('clean') === 'true';
+  const redactEnabled = params.get('redact') !== 'false';
 
   let aborted = false;
   req.on('close', () => {
@@ -571,6 +591,7 @@ async function handleProbeStream(req, res, url) {
       year: state.identity.year,
       term: state.identity.term
     };
+
     sseSend(res, { type: 'stage', stage: 'session', message: '会话有效', identity: state.identity });
 
     if (!context.studentId || !context.year || !context.term) {
@@ -590,6 +611,24 @@ async function handleProbeStream(req, res, url) {
           message: `已清空旧产物（保留会话文件）：${removed.join('、')}`
         });
       }
+    }
+
+    // 每次探测按请求参数重建脱敏器（登记当前登录学号），
+    // 并让样本仓库随之重建，避免沿用上一次的脱敏配置
+    state.redactor = createRedactor({
+      enabled: redactEnabled,
+      username: state.username
+    });
+    // ⚠️ 内部学生 ID 必须在重建**之后**登记：重建会丢弃之前登记的值。
+    //    实测教训：登记放在重建之前，导致内部 ID 明文写进了 40 处产物。
+    state.redactor.addKnown('studentId', context.studentId);
+    state.store = null;
+
+    if (!redactEnabled) {
+      sseSend(res, {
+        type: 'warn',
+        message: '已关闭脱敏：产物将包含真实隐私数据，请勿分享或提交'
+      });
     }
 
     const store = ensureStore();
@@ -804,8 +843,19 @@ async function handleProbeStream(req, res, url) {
       skipped: skipped.map(({ ep, reason }) => ({ key: ep.key, reason }))
     };
 
-    const { file: manifestFile, summary } = store.writeManifest(meta);
+    // 终局重写：姓名、加密串等值可能在探测中途才发现，用完整集合再过一遍
+    const finalPass = store.finalizeRedaction();
+    if (store.redacting && finalPass.files > 0) {
+      sseSend(res, {
+        type: 'log',
+        message: `脱敏回填 ${finalPass.files} 个文件（补上了中途才发现的敏感值）`
+      });
+    }
+
+    // 同 probe.mjs：manifest 最后写，让其中的脱敏统计反映最终值
     const { file: reportFile } = store.writeMarkdown(meta);
+    const { file: manifestFile, summary } = store.writeManifest(meta);
+    const redaction = store.redactor.describe();
 
     state.lastRun = {
       at: new Date().toISOString(),
@@ -820,6 +870,7 @@ async function handleProbeStream(req, res, url) {
       type: 'done',
       aborted: result.aborted,
       summary,
+      redaction,
       durationMs: Date.now() - started,
       manifestFile,
       reportFile

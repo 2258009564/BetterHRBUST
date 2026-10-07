@@ -293,6 +293,10 @@
             <input type="checkbox" id="cleanFirst" />
             清空旧样本
           </label>
+          <label class="inline" title="对产物脱敏：屏蔽学号、姓名、证件号、手机号、加密串等。关闭后产物含真实隐私数据，请勿分享">
+            <input type="checkbox" id="redactEnabled" checked />
+            产物脱敏
+          </label>
           <label class="inline" title="抓取登录后门户页（index_new.jsp），提取其中的 frame / 表单 / 按钮 / 接口地址">
             <input type="checkbox" id="portalEnabled" checked />
             门户页分析
@@ -877,6 +881,7 @@ function startProbe() {
     concurrency: $('concurrency').value || '1',
     depth: $('depth').value || '2',
     clean: $('cleanFirst').checked ? 'true' : 'false',
+    redact: $('redactEnabled').checked ? 'true' : 'false',
     portal: $('portalEnabled').checked ? 'true' : 'false',
     discover: $('discover').checked ? 'true' : 'false',
     allowMutating: $('allowMutating').checked ? 'true' : 'false'
