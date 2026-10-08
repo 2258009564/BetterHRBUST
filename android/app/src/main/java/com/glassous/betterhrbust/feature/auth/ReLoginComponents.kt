@@ -39,11 +39,13 @@ import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 
 /**
- * 顶部“登录状态已失效 (当前为离线数据)”通知栏，与 Web 端 AppHeader 保持一致。
+ * 顶部“登录状态已失效”通知栏，与 Web 端 AppHeader 保持一致。
+ * 支持「忽略」收起，收起后本轮失效不再打扰（下次手动刷新失败仍会重新提示）。
  */
 @Composable
 fun SessionExpiredBanner(
     onReLoginClick: () -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bannerBg = Color(0xFFFEF3C7)
@@ -90,9 +92,20 @@ fun SessionExpiredBanner(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "登录状态已失效 (当前为离线数据)",
+                    text = "登录状态已失效",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
+                    color = textColor
+                )
+            }
+            TextButton(
+                onClick = onDismiss,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                modifier = Modifier.height(30.dp)
+            ) {
+                Text(
+                    text = "忽略",
+                    fontSize = 12.sp,
                     color = textColor
                 )
             }
@@ -133,7 +146,9 @@ fun ReLoginBottomSheet(
 
     val initialUsername = prefs?.username ?: ""
     var username by remember(initialUsername) { mutableStateOf(initialUsername) }
-    var password by remember { mutableStateOf("") }
+    // 回填本地保存的密码，免重复输入（与登录页一致）
+    val initialPassword = prefs?.savedPassword ?: ""
+    var password by remember(initialPassword) { mutableStateOf(initialPassword) }
     var captcha by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
@@ -179,6 +194,8 @@ fun ReLoginBottomSheet(
                     }
                     is Resource.Success -> {
                         isLoading = false
+                        // 记住密码，供下次免重复输入
+                        prefsManager.setSavedPassword(password)
                         authRepo.markSessionExpired(false)
                         onDismiss()
                     }

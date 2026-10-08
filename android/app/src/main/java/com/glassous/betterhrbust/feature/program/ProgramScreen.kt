@@ -128,7 +128,7 @@ fun ProgramScreen(
                     )
                 ) {
                     // 页面标题（作为滚动内容，可穿透状态栏）
-                    item { PageHeaderTitle("培养方案与毕业审核") }
+                    item { PageHeaderTitle("培养方案") }
 
                     // Summary Card
                     item {
@@ -147,7 +147,7 @@ fun ProgramScreen(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "毕业方案总学分达成进度",
+                                            text = "毕业学分进度",
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -189,7 +189,7 @@ fun ProgramScreen(
 
                     item {
                         Text(
-                            text = "课组毕业要求 (${groups.size} 个课组)",
+                            text = "课组要求（${groups.size}）",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -258,7 +258,7 @@ fun CurriculumGroupCard(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "要求学分: $requiredCredits | 要求门数: ${group.requiredCourses} 门",
+                        text = "要求 $requiredCredits 学分 · ${group.requiredCourses} 门",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -297,7 +297,7 @@ fun CurriculumGroupCard(
             ) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "选修类课程学分不计入\"已获得学分\"，此处仅展示课组要求",
+                    text = "选修课学分不计入已获得学分",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -312,7 +312,7 @@ fun CurriculumGroupCard(
                 ) {
                     HorizontalDivider()
                     Text(
-                        text = "课组内课程 (${group.courses.size} 门):",
+                        text = "课程（${group.courses.size}）",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary

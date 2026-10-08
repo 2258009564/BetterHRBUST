@@ -44,14 +44,17 @@ fun AuthScreen(
     modifier: Modifier = Modifier
 ) {
     val authRepo = remember { BetterHrbustApp.instance.authRepository }
+    val prefsManager = remember { BetterHrbustApp.instance.preferencesManager }
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     val isSessionExpired by authRepo.isSessionExpired.collectAsState()
+    val prefs by prefsManager.preferencesFlow.collectAsState(initial = null)
 
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var captcha by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var prefilled by remember { mutableStateOf(false) }
 
     var captchaBytes by remember { mutableStateOf<ByteArray?>(null) }
     var isCaptchaLoading by remember { mutableStateOf(false) }
@@ -77,6 +80,19 @@ fun AuthScreen(
         refreshCaptcha()
     }
 
+    // 回填本地保存的账号与密码（仅首次生效，不覆盖用户正在输入的内容）
+    LaunchedEffect(prefs) {
+        val snapshot = prefs ?: return@LaunchedEffect
+        if (prefilled) return@LaunchedEffect
+        if (snapshot.username.isNotEmpty() && username.isBlank()) {
+            username = snapshot.username
+        }
+        if (snapshot.savedPassword.isNotEmpty() && password.isBlank()) {
+            password = snapshot.savedPassword
+        }
+        prefilled = true
+    }
+
     fun submitLogin() {
         if (username.isBlank() || password.isBlank()) {
             errorMessage = "请输入学号和密码"
@@ -96,6 +112,8 @@ fun AuthScreen(
                     }
                     is Resource.Success -> {
                         isLoading = false
+                        // 记住密码（仅存本地 DataStore，用于下次免重复输入）
+                        prefsManager.setSavedPassword(password)
                         onLoginSuccess()
                     }
                     is Resource.Error -> {

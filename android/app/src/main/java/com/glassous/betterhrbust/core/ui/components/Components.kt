@@ -2,6 +2,8 @@ package com.glassous.betterhrbust.core.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Refresh
@@ -155,6 +157,76 @@ fun EmptyView(
                 textAlign = TextAlign.Center
             )
         }
+    }
+}
+
+/** 指标项：用于 [ResponsiveStatGrid] */
+data class StatEntry(
+    val label: String,
+    val value: String,
+    val valueColor: Color = Color.Unspecified
+)
+
+/**
+ * 自适应指标网格：
+ * - 手机（窗口宽度 < [tabletWidthDp]）：每行 [compactColumns] 列（默认 2 列，即 2×N）
+ * - 平板 / 横屏（窗口宽度 ≥ [tabletWidthDp]）：单行等分展示全部指标（1×N）
+ *
+ * 以「窗口宽度」而非容器宽度判定，避免成绩页在平板双栏布局下因列表栏变窄而误判为手机。
+ */
+@Composable
+fun ResponsiveStatGrid(
+    entries: List<StatEntry>,
+    modifier: Modifier = Modifier,
+    compactColumns: Int = 2,
+    tabletWidthDp: Int = 600
+) {
+    if (entries.isEmpty()) return
+
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val columns = if (screenWidthDp >= tabletWidthDp) entries.size else compactColumns.coerceAtLeast(1)
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        entries.chunked(columns).forEach { rowEntries ->
+            Row(modifier = Modifier.fillMaxWidth()) {
+                rowEntries.forEach { entry ->
+                    StatEntryCell(entry = entry, modifier = Modifier.weight(1f))
+                }
+                // 末行不足时补占位，保证与上一行对齐
+                repeat(columns - rowEntries.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatEntryCell(
+    entry: StatEntry,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = entry.value,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = if (entry.valueColor == Color.Unspecified) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                entry.valueColor
+            },
+            maxLines = 1
+        )
+        Text(
+            text = entry.label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline,
+            maxLines = 1
+        )
     }
 }
 

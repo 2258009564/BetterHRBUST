@@ -17,7 +17,6 @@ data class AppPreferences(
     val currentWeek: Int = 1,
     val selectedWeek: Int = 1,
     val darkTheme: Boolean? = null,
-    val dynamicColor: Boolean = true,
     val offlineMode: Boolean = false,
     /** 上次成功登录时间（毫秒时间戳），用于会话失效提示的"一周节流"判定 */
     val lastLoginAt: Long = 0L,
@@ -25,10 +24,16 @@ data class AppPreferences(
     val lastPromptAt: Long = 0L,
     /** 上次全量同步日期（yyyy-MM-dd），用于"每天首次打开自动同步"判定 */
     val lastFullSyncDate: String = "",
-    /** 上一轮会话是否已判定失效（持久化，保证冷启动后仍能正确展示提示） */
+    /**
+     * 上一轮会话是否已判定失效。
+     * 持久化以保证冷启动后登录页仍能提示"登录状态已失效"；
+     * 而"是否弹出提示"不做持久化——用户看过一次后，下次启动不再重复弹出。
+     */
     val sessionExpired: Boolean = false,
-    /** 上一轮会话失效是否已决定要提示（持久化） */
-    val promptReLogin: Boolean = false
+    /** 真实姓名（供概览页在档案缓存缺失时兜底展示，避免回退为占位文案） */
+    val realName: String = "",
+    /** 记住的登录密码（仅本地 DataStore，用于免重复输入） */
+    val savedPassword: String = ""
 )
 
 class UserPreferencesManager(private val context: Context) {
@@ -40,13 +45,13 @@ class UserPreferencesManager(private val context: Context) {
         private val KEY_CURRENT_WEEK = intPreferencesKey("current_week")
         private val KEY_SELECTED_WEEK = intPreferencesKey("selected_week")
         private val KEY_DARK_THEME = stringPreferencesKey("dark_theme") // "system", "dark", "light"
-        private val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val KEY_OFFLINE_MODE = booleanPreferencesKey("offline_mode")
         private val KEY_LAST_LOGIN_AT = longPreferencesKey("last_login_at")
         private val KEY_LAST_PROMPT_AT = longPreferencesKey("last_prompt_at")
         private val KEY_LAST_FULL_SYNC_DATE = stringPreferencesKey("last_full_sync_date")
         private val KEY_SESSION_EXPIRED = booleanPreferencesKey("session_expired")
-        private val KEY_PROMPT_RELOGIN = booleanPreferencesKey("prompt_relogin")
+        private val KEY_REAL_NAME = stringPreferencesKey("real_name")
+        private val KEY_SAVED_PASSWORD = stringPreferencesKey("saved_password")
     }
 
     val preferencesFlow: Flow<AppPreferences> = context.dataStore.data.map { prefs ->
@@ -64,21 +69,40 @@ class UserPreferencesManager(private val context: Context) {
             currentWeek = prefs[KEY_CURRENT_WEEK] ?: 1,
             selectedWeek = prefs[KEY_SELECTED_WEEK] ?: 1,
             darkTheme = darkThemeBool,
-            dynamicColor = prefs[KEY_DYNAMIC_COLOR] ?: true,
             offlineMode = prefs[KEY_OFFLINE_MODE] ?: false,
             lastLoginAt = prefs[KEY_LAST_LOGIN_AT] ?: 0L,
             lastPromptAt = prefs[KEY_LAST_PROMPT_AT] ?: 0L,
             lastFullSyncDate = prefs[KEY_LAST_FULL_SYNC_DATE] ?: "",
             sessionExpired = prefs[KEY_SESSION_EXPIRED] ?: false,
-            promptReLogin = prefs[KEY_PROMPT_RELOGIN] ?: false
+            realName = prefs[KEY_REAL_NAME] ?: "",
+            savedPassword = prefs[KEY_SAVED_PASSWORD] ?: ""
         )
     }
 
-    /** 持久化会话失效状态与提示状态 */
-    suspend fun setSessionState(expired: Boolean, promptReLogin: Boolean) {
+    /** 记录真实姓名（用于概览页展示） */
+    suspend fun setRealName(name: String) {
         context.dataStore.edit { prefs ->
-            prefs[KEY_SESSION_EXPIRED] = expired
-            prefs[KEY_PROMPT_RELOGIN] = promptReLogin
+            if (name.isBlank()) prefs.remove(KEY_REAL_NAME) else prefs[KEY_REAL_NAME] = name
+        }
+    }
+
+    /** 记住登录密码（仅存本地，便于免重复输入） */
+    suspend fun setSavedPassword(password: String) {
+        context.dataStore.edit { prefs ->
+            if (password.isEmpty()) prefs.remove(KEY_SAVED_PASSWORD) else prefs[KEY_SAVED_PASSWORD] = password
+        }
+    }
+
+    /**
+     * 持久化会话失效状态。
+     *
+     * 只持久化「是否失效」，「是否弹提示」仅在本次运行期间有效：
+     * 用户看过一次提示（或点了忽略）后，再次启动应用不再重复弹出，
+     * 而是继续按一周节流来决定下一次提示时机。
+     */
+    suspend fun setSessionState(expired: Boolean) {
+        context.dataStore.edit { prefs ->
+            if (expired) prefs[KEY_SESSION_EXPIRED] = true else prefs.remove(KEY_SESSION_EXPIRED)
         }
     }
 
@@ -130,21 +154,18 @@ class UserPreferencesManager(private val context: Context) {
         }
     }
 
-    suspend fun setDynamicColor(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_DYNAMIC_COLOR] = enabled
-        }
-    }
-
     suspend fun setOfflineMode(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_OFFLINE_MODE] = enabled
         }
     }
 
+    /**
+     * 退出登录时清理会话数据。
+     * 注意：保留「账号」与「记住的密码」，以便下次登录免重复输入（需求：登录页持久保存用户名与密码）。
+     */
     suspend fun clearSession() {
         context.dataStore.edit { prefs ->
-            prefs.remove(KEY_USERNAME)
             prefs.remove(KEY_STUDENT_ID)
             prefs.remove(KEY_YEAR)
             prefs.remove(KEY_TERM)
@@ -152,7 +173,7 @@ class UserPreferencesManager(private val context: Context) {
             prefs.remove(KEY_LAST_PROMPT_AT)
             prefs.remove(KEY_LAST_FULL_SYNC_DATE)
             prefs.remove(KEY_SESSION_EXPIRED)
-            prefs.remove(KEY_PROMPT_RELOGIN)
+            prefs.remove(KEY_REAL_NAME)
         }
     }
 }

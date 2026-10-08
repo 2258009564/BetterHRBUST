@@ -7,7 +7,6 @@ const SESSION_FLAG_KEY = 'better_hrbust_has_session';
 const SESSION_CACHE_KEY = 'better_hrbust_cached_profile';
 const LAST_LOGIN_KEY = 'better_hrbust_last_login_at';
 const LAST_PROMPT_KEY = 'better_hrbust_session_prompt_at';
-const PROMPT_ACTIVE_KEY = 'better_hrbust_session_prompt_active';
 const SESSION_EXPIRED_KEY = 'better_hrbust_session_expired';
 
 /**
@@ -45,8 +44,14 @@ const loginError = ref('');
 // 会话失效提示节流状态
 const lastLoginAt = ref(readNumber(LAST_LOGIN_KEY));
 const lastPromptAt = ref(readNumber(LAST_PROMPT_KEY));
-/** 当前这一轮失效是否已经决定要提示（本轮提示一旦触发则持续展示，直到重新登录） */
-const promptActive = ref(storageGetItem(PROMPT_ACTIVE_KEY) === 'true');
+/**
+ * 当前这一轮失效是否已经决定要提示。
+ * 只在本次运行期间有效：用户看过一次提示后，重新打开页面不再重复弹出，
+ * 而是继续按一周节流（lastPromptAt）计算下一次提示时机。
+ */
+const promptActive = ref(false);
+/** 用户已忽略本轮失效提示（收起横幅） */
+const sessionPromptDismissed = ref(false);
 /** 本次运行期间是否已对当前这一轮失效做过节流判定（重新打开应用后归零） */
 let promptDecided = false;
 
@@ -116,8 +121,15 @@ function resetProfile() {
 /** 会话已失效但本地仍有缓存数据 → 进入离线只读模式 */
 const offlineMode = computed(() => isSessionExpired.value && !isLoggedIn.value);
 
-/** 是否展示"登录状态已失效"提示（按周节流后的最终判定） */
-const shouldShowSessionBanner = computed(() => isSessionExpired.value && promptActive.value);
+/** 是否展示"登录状态已失效"提示（按周节流后的最终判定，且用户未忽略） */
+const shouldShowSessionBanner = computed(
+  () => isSessionExpired.value && promptActive.value && !sessionPromptDismissed.value
+);
+
+/** 用户点击忽略：收起本轮失效横幅 */
+function dismissSessionPrompt() {
+  sessionPromptDismissed.value = true;
+}
 
 /** 登录页需要展示"登录状态已失效"（不满足提示条件时仅在此处体现） */
 const showLoginPageExpiredHint = computed(() => isSessionExpired.value);
@@ -147,10 +159,10 @@ function markSessionExpired(options = {}) {
     promptActive.value = true;
     lastPromptAt.value = now;
     storageSetItem(LAST_PROMPT_KEY, String(now));
-    storageSetItem(PROMPT_ACTIVE_KEY, 'true');
+    // 新的一次提示：重新展示横幅（覆盖上一次的"忽略"）
+    sessionPromptDismissed.value = false;
   } else {
     promptActive.value = false;
-    storageRemoveItem(PROMPT_ACTIVE_KEY);
   }
 }
 
@@ -158,10 +170,10 @@ function markSessionExpired(options = {}) {
 function clearSessionExpired() {
   isSessionExpired.value = false;
   promptActive.value = false;
+  sessionPromptDismissed.value = false;
   promptDecided = false;
   lastPromptAt.value = 0;
   storageRemoveItem(LAST_PROMPT_KEY);
-  storageRemoveItem(PROMPT_ACTIVE_KEY);
   storageRemoveItem(SESSION_EXPIRED_KEY);
 }
 
@@ -292,13 +304,13 @@ async function logout() {
   isLoggedIn.value = false;
   isSessionExpired.value = false;
   promptActive.value = false;
+  sessionPromptDismissed.value = false;
   promptDecided = false;
   lastLoginAt.value = 0;
   lastPromptAt.value = 0;
   studentId.value = '';
   storageRemoveItem(LAST_LOGIN_KEY);
   storageRemoveItem(LAST_PROMPT_KEY);
-  storageRemoveItem(PROMPT_ACTIVE_KEY);
   storageRemoveItem(SESSION_EXPIRED_KEY);
   resetProfile();
 
@@ -329,6 +341,8 @@ export function useSession() {
     isSessionExpired,
     offlineMode,
     shouldShowSessionBanner,
+    sessionPromptDismissed,
+    dismissSessionPrompt,
     showLoginPageExpiredHint,
     authChecked,
     isCheckingAuth,

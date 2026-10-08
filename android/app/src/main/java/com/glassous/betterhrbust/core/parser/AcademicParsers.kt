@@ -437,67 +437,111 @@ object AcademicParsers {
     fun calculateGpaStats(scores: List<ScoreItem>): ScoreStats =
         com.glassous.betterhrbust.core.util.GpaCalculator.buildStats(scores)
 
+    /**
+     * 定位考试数据表。
+     *
+     * 不同入口的页面结构不一致：
+     *  - `studentQueryAllExam.do`（全部考试）：数据行 class 为 `classicLook0/1/2…`，
+     *    表格自身的 class 并不固定（常见为 `classicLook0` 或直接带 id），**不能只认 `datalist`**；
+     *  - `student/exam/index.jsdo`（近期考试）：`table.infolist_tab`，数据行 `infolist_common`；
+     *  - 其它模块复用 `table.datalist`。
+     *
+     * 因此先按已知 class 查找，再兜底「首个含至少一行 >=4 个 td 的表格」（排除分页表）。
+     */
+    private fun findExamTable(doc: Document): org.jsoup.nodes.Element? {
+        doc.selectFirst("table.datalist")?.let { return it }
+        doc.selectFirst("table.infolist_tab")?.let { return it }
+        doc.selectFirst("table.classicLook0")?.let { return it }
+        doc.selectFirst("table[id]")?.takeIf { table ->
+            table.select("tr").any { it.select("td").size >= 4 }
+        }?.let { return it }
+        return doc.select("table").firstOrNull { table ->
+            table.select("tr").any { tr ->
+                tr.select("td").size >= 4 && !tr.className().contains("PagingTag")
+            }
+        }
+    }
+
     fun parseExams(html: String): List<ExamItem> {
         val cleanHtml = stripHtmlComments(html)
         val doc: Document = Jsoup.parse(cleanHtml)
         val exams = mutableListOf<ExamItem>()
 
-        val table = doc.selectFirst("table.datalist") ?: doc.selectFirst("table.infolist_tab")
-        if (table != null) {
-            val trList = table.select("tr")
-            if (trList.size > 1) {
-                val ths = trList[0].select("th")
-                val headers = ths.map { it.text().trim() }
+        val table = findExamTable(doc)
+        val trList = table?.select("tr") ?: emptyList()
 
-                val colCode = headers.indexOfFirst { it.contains("课程号") }
-                val colName = headers.indexOfFirst { it.contains("课程名称") }
-                val colTime = headers.indexOfFirst { it.contains("考试时间") }
-                val colLoc = headers.indexOfFirst { it.contains("考试地点") }
-                val colProp = headers.indexOfFirst { it.contains("考试性质") }
+        // 表头可能不在第 0 行（部分页面存在标题行），按首个含 th 的行定位
+        val headerIndex = trList.indexOfFirst { it.select("th").isNotEmpty() }
+        if (headerIndex >= 0) {
+            val headers = trList[headerIndex].select("th").map { it.text().trim() }
 
-                val today = LocalDate.now()
-                val dateRegex = Regex("""(\d{4}-\d{2}-\d{2})""")
+            val colCode = headers.indexOfFirst { it.contains("课程号") || it.contains("课程代码") }
+            val colName = headers.indexOfFirst { it.contains("课程名") }
+            val colTime = headers.indexOfFirst { it.contains("考试时间") }
+            val colLoc = headers.indexOfFirst { it.contains("考试地点") || it.contains("考场") }
+            val colProp = headers.indexOfFirst { it.contains("考试性质") }
 
-                for (i in 1 until trList.size) {
-                    val tds = trList[i].select("td")
-                    if (tds.size < 4) continue
+            for (i in headerIndex + 1 until trList.size) {
+                val tr = trList[i]
+                if (tr.className().contains("PagingTag")) continue
 
-                    val courseId = (if (colCode >= 0 && colCode < tds.size) tds[colCode].text() else tds[0].text()).trim()
-                    val courseName = (if (colName >= 0 && colName < tds.size) tds[colName].text() else tds[1].text()).trim()
-                    val time = (if (colTime >= 0 && colTime < tds.size) tds[colTime].text() else tds[2].text()).trim()
-                    val location = (if (colLoc >= 0 && colLoc < tds.size) tds[colLoc].text() else tds[3].text()).trim()
-                    val property = (if (colProp >= 0 && colProp < tds.size) tds[colProp].text() else if (tds.size > 4) tds[4].text() else "正常考试").trim()
+                val tds = tr.select("td")
+                if (tds.size < 4) continue
 
-                    if (courseName.isEmpty() && courseId.isEmpty()) continue
-
-                    var countdownDays: Int? = null
-                    var isUpcoming = true
-                    val dateMatch = dateRegex.find(time)
-                    if (dateMatch != null) {
-                        try {
-                            val examDate = LocalDate.parse(dateMatch.value, DateTimeFormatter.ISO_LOCAL_DATE)
-                            val diff = ChronoUnit.DAYS.between(today, examDate).toInt()
-                            countdownDays = diff
-                            isUpcoming = diff >= 0
-                        } catch (_: Exception) {}
-                    }
-
-                    exams.add(
-                        ExamItem(
-                            courseId = courseId,
-                            courseName = courseName,
-                            time = time,
-                            location = location,
-                            property = property,
-                            countdownDays = countdownDays,
-                            isUpcoming = isUpcoming
-                        )
-                    )
+                // 表头缺失时按 URP 默认列序兜底：课程号 / 课程名 / 考试时间 / 考试地点 / 考试性质
+                fun cell(index: Int, fallback: Int): String {
+                    val target = if (index >= 0) index else fallback
+                    return if (target in tds.indices) tds[target].text().trim() else ""
                 }
+
+                val courseId = cell(colCode, 0)
+                val courseName = cell(colName, 1)
+                val time = cell(colTime, 2)
+                val location = cell(colLoc, 3)
+                val property = cell(colProp, 4).ifEmpty { "正常考试" }
+
+                if (courseName.isEmpty() && courseId.isEmpty()) continue
+
+                exams.add(
+                    ExamItem(
+                        courseId = courseId,
+                        courseName = courseName,
+                        time = time,
+                        location = location,
+                        property = property
+                    )
+                )
             }
         }
 
-        return exams
+        return refreshExamCountdown(exams)
+    }
+
+    /**
+     * 依据当前日期重算考试倒计时与「是否未考」。
+     *
+     * 考试缓存会在本地保存数天，若直接复用落库时的 countdownDays，隔天后就会出现
+     * 「还有 N 天」过期、已考考试仍按未考排序等问题，因此读取缓存时必须重算。
+     */
+    fun refreshExamCountdown(exams: List<ExamItem>): List<ExamItem> {
+        if (exams.isEmpty()) return exams
+        val today = LocalDate.now()
+        val dateRegex = Regex("""(\d{4}-\d{2}-\d{2})""")
+
+        return exams.map { exam ->
+            val dateMatch = dateRegex.find(exam.time)
+            if (dateMatch == null) {
+                exam
+            } else {
+                try {
+                    val examDate = LocalDate.parse(dateMatch.value, DateTimeFormatter.ISO_LOCAL_DATE)
+                    val diff = ChronoUnit.DAYS.between(today, examDate).toInt()
+                    exam.copy(countdownDays = diff, isUpcoming = diff >= 0)
+                } catch (_: Exception) {
+                    exam
+                }
+            }
+        }
     }
 
     fun parseCurriculumPlan(html: String): CurriculumPlanResult {

@@ -257,7 +257,7 @@ fun ExamsScreen(
                                 ) {
                                     Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text(text = "考试时间: ${exam.time}", style = MaterialTheme.typography.bodySmall)
+                                    Text(text = exam.time, style = MaterialTheme.typography.bodySmall)
                                 }
 
                                 Spacer(modifier = Modifier.height(6.dp))
@@ -268,13 +268,13 @@ fun ExamsScreen(
                                 ) {
                                     Icon(Icons.Default.Place, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text(text = "考场地点: ${exam.location}", style = MaterialTheme.typography.bodySmall)
+                                    Text(text = exam.location, style = MaterialTheme.typography.bodySmall)
                                 }
 
                                 if (exam.property.isNotEmpty()) {
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "考试性质: ${exam.property} | 课程代码: ${exam.courseId}",
+                                        text = "${exam.property} · ${exam.courseId}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.outline
                                     )

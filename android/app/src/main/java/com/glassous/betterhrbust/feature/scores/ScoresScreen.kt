@@ -28,6 +28,8 @@ import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.EmptyView
 import com.glassous.betterhrbust.core.ui.components.LoadingView
+import com.glassous.betterhrbust.core.ui.components.ResponsiveStatGrid
+import com.glassous.betterhrbust.core.ui.components.StatEntry
 import com.glassous.betterhrbust.core.util.GpaCalculator
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
@@ -145,7 +147,7 @@ fun ScoresScreen(
                         bottom = LocalBottomContentInset.current + 16.dp
                     )
                 ) {
-                    // GPA Stats Summary
+                    // 学业概览：手机 2×2 / 平板 1×4 自适应
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -156,45 +158,40 @@ fun ScoresScreen(
                         ) {
                             Column(modifier = Modifier.padding(18.dp)) {
                                 Text(
-                                    text = "学业分析概览",
+                                    text = "学业概览",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
+                                Spacer(modifier = Modifier.height(14.dp))
+                                ResponsiveStatGrid(
+                                    entries = listOf(
+                                        StatEntry(
+                                            label = "GPA",
+                                            value = stats?.gpa?.let { String.format("%.2f", it) } ?: "0.00",
+                                            valueColor = MaterialTheme.colorScheme.primary
+                                        ),
+                                        StatEntry(
+                                            label = "均分",
+                                            value = stats?.weightedAvg?.let { String.format("%.1f", it) } ?: "0.0",
+                                            valueColor = MaterialTheme.colorScheme.secondary
+                                        ),
+                                        StatEntry(
+                                            label = "学分",
+                                            value = "${stats?.earnedCredits ?: 0.0}/${stats?.totalCredits ?: 0.0}"
+                                        ),
+                                        StatEntry(
+                                            label = "挂科",
+                                            value = "${stats?.failedCount ?: 0}",
+                                            valueColor = if ((stats?.failedCount ?: 0) > 0) {
+                                                MaterialTheme.colorScheme.error
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            }
+                                        )
+                                    )
+                                )
                                 Spacer(modifier = Modifier.height(12.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = stats?.gpa?.let { String.format("%.2f", it) } ?: "0.00",
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text(text = "累计 GPA (五分制)", style = MaterialTheme.typography.labelSmall)
-                                    }
-                                    Column {
-                                        Text(
-                                            text = stats?.weightedAvg?.let { String.format("%.1f", it) } ?: "0.0",
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.secondary
-                                        )
-                                        Text(text = "加权均分", style = MaterialTheme.typography.labelSmall)
-                                    }
-                                    Column {
-                                        Text(
-                                            text = "${stats?.earnedCredits ?: 0.0}/${stats?.totalCredits ?: 0.0}",
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.tertiary
-                                        )
-                                        Text(text = "已获/总学分", style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(10.dp))
                                 Text(
                                     text = GpaCalculator.EARNED_CREDITS_NOTE,
                                     style = MaterialTheme.typography.labelSmall,
@@ -215,7 +212,7 @@ fun ScoresScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "特色学业算法（哈理工口径，门槛以教务处文件为准）",
+                                    text = "特色学业算法",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -231,8 +228,8 @@ fun ScoresScreen(
                                     value = stats?.degree?.gpa?.let { String.format("%.2f", it) } ?: "--",
                                     qualified = stats?.degree?.qualified == true,
                                     detail = stats?.degree?.let {
-                                        "学位课（必修课口径）绩点，门槛 ${it.threshold}" +
-                                            if (it.allPassed) "，已全部通过" else "，存在未通过必修课"
+                                        "门槛 ${it.threshold} · " +
+                                            if (it.allPassed) "已全部通过" else "存在未通过必修课"
                                     } ?: "暂无数据"
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
@@ -241,7 +238,7 @@ fun ScoresScreen(
                                     value = stats?.recommend?.let { "${it.retakeCount}/${it.retakeLimit}" } ?: "--",
                                     qualified = stats?.recommend?.qualified == true,
                                     detail = stats?.recommend?.let {
-                                        "仅统计必修课的补考 + 重修累计门数，上限 ${it.retakeLimit} 门"
+                                        "补考 + 重修累计，上限 ${it.retakeLimit} 门"
                                     } ?: "暂无数据"
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
@@ -257,7 +254,7 @@ fun ScoresScreen(
                                     value = if (stats?.earlyGraduation?.qualified == true) "达标" else "未达标",
                                     qualified = stats?.earlyGraduation?.qualified == true,
                                     detail = stats?.earlyGraduation?.let {
-                                        "需全部课程平均学分绩点 ≥ ${it.threshold}"
+                                        "平均学分绩点 ≥ ${it.threshold}"
                                     } ?: "暂无数据"
                                 )
                             }
@@ -319,7 +316,7 @@ fun ScoresScreen(
                     // Results count
                     item {
                         Text(
-                            text = "共找到 ${filteredScores.size} 门课程记录",
+                            text = "${filteredScores.size} 门课程",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -483,7 +480,7 @@ fun ScoresScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "课程代码: ${item.courseId} • 课序号: ${item.courseSeq}",
+                            text = "${item.courseId} · ${item.courseSeq}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )

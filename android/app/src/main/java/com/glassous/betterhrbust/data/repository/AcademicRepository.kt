@@ -5,6 +5,7 @@ import com.glassous.betterhrbust.core.datastore.UserPreferencesManager
 import com.glassous.betterhrbust.core.model.*
 import com.glassous.betterhrbust.core.network.AcademicHttpClient
 import com.glassous.betterhrbust.core.network.CharsetDecoderHelper
+import com.glassous.betterhrbust.core.network.SessionExpiredException
 import com.glassous.betterhrbust.core.parser.AcademicParsers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -113,6 +114,27 @@ class AcademicRepository(
         }
     }
 
+    /**
+     * 拉取考试列表：主接口「全部考试」优先，为空时回退「近期考试」接口
+     * （后者只返回 7 天内考试，编码也不同，见 docs/api/05-exam.md）
+     */
+    private suspend fun fetchExamList(): List<ExamItem> {
+        try {
+            val html = client.get(
+                "manager/examstu/studentQueryAllExam.do?pagingNumberPerVLID=100",
+                preferredCharset = CharsetDecoderHelper.UTF_8
+            )
+            val parsed = AcademicParsers.parseExams(html)
+            if (parsed.isNotEmpty()) return parsed
+        } catch (e: SessionExpiredException) {
+            throw e
+        } catch (_: Exception) {
+            // 主接口异常时继续尝试备用接口
+        }
+        val fallbackHtml = client.get("student/exam/index.jsdo", preferredCharset = CharsetDecoderHelper.GBK)
+        return AcademicParsers.parseExams(fallbackHtml)
+    }
+
     fun getExams(
         studentId: String,
         forceRefresh: Boolean = false,
@@ -123,7 +145,10 @@ class AcademicRepository(
         val localEntity = database.examDao().getExams(studentId).firstOrNull()
         if (localEntity != null && !forceRefresh) {
             try {
-                val cached = json.decodeFromString<List<ExamItem>>(localEntity.json)
+                // 缓存可能已落库数天，倒计时必须按当前日期重算
+                val cached = AcademicParsers.refreshExamCountdown(
+                    json.decodeFromString<List<ExamItem>>(localEntity.json)
+                )
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
@@ -136,11 +161,19 @@ class AcademicRepository(
         }
 
         try {
-            val html = client.get(
-                "manager/examstu/studentQueryAllExam.do?pagingNumberPerVLID=100",
-                preferredCharset = CharsetDecoderHelper.UTF_8
-            )
-            val parsed = AcademicParsers.parseExams(html)
+            val parsed = fetchExamList()
+
+            // 远端返回空（教务未发布 / 解析异常）时保留既有缓存，
+            // 避免一次空结果把已持久化的考试数据永久覆盖为空
+            if (parsed.isEmpty() && localEntity != null) {
+                val cached = AcademicParsers.refreshExamCountdown(
+                    json.decodeFromString<List<ExamItem>>(localEntity.json)
+                )
+                if (cached.isNotEmpty()) {
+                    emit(Resource.Success(cached, isOfflineCache = true))
+                    return@flow
+                }
+            }
 
             val encoded = json.encodeToString(parsed)
             database.examDao().insert(ExamEntity(studentId = studentId, json = encoded))
@@ -149,7 +182,9 @@ class AcademicRepository(
         } catch (e: Exception) {
             if (localEntity != null) {
                 try {
-                    val cached = json.decodeFromString<List<ExamItem>>(localEntity.json)
+                    val cached = AcademicParsers.refreshExamCountdown(
+                        json.decodeFromString<List<ExamItem>>(localEntity.json)
+                    )
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 } catch (_: Exception) {}
@@ -165,7 +200,9 @@ class AcademicRepository(
     ): Flow<Resource<PersonalInfo>> = flow {
         emit(Resource.Loading)
 
+        // 先按登录账号查找；未命中时兜底取最新一条，兼容历史上按"页面学号"写入的缓存
         val localEntity = database.profileDao().getProfile(studentNumber).firstOrNull()
+            ?: database.profileDao().getLatest().firstOrNull()
         if (localEntity != null && !forceRefresh) {
             try {
                 val cached = json.decodeFromString<PersonalInfo>(localEntity.json)
@@ -184,9 +221,17 @@ class AcademicRepository(
             val html = client.get("showPersonalInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
             val parsed = AcademicParsers.parsePersonalInfo(html)
 
-            val sNumber = parsed.studentNumber.ifEmpty { studentNumber }
             val encoded = json.encodeToString(parsed)
-            database.profileDao().insert(ProfileEntity(studentNumber = sNumber, json = encoded))
+            // 统一以登录账号为缓存键（读写两侧一致），同时按页面学号再存一份以兼容其它入口
+            database.profileDao().insert(ProfileEntity(studentNumber = studentNumber, json = encoded))
+            val sNumber = parsed.studentNumber
+            if (sNumber.isNotEmpty() && sNumber != studentNumber) {
+                database.profileDao().insert(ProfileEntity(studentNumber = sNumber, json = encoded))
+            }
+            // 姓名落到 DataStore，缓存被清理后概览页仍能正确显示
+            if (parsed.realName.isNotBlank()) {
+                prefs.setRealName(parsed.realName)
+            }
 
             emit(Resource.Success(parsed, isOfflineCache = false))
         } catch (e: Exception) {

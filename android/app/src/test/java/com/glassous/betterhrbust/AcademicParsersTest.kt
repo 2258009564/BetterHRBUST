@@ -1,5 +1,6 @@
 package com.glassous.betterhrbust
 
+import com.glassous.betterhrbust.core.model.ExamItem
 import com.glassous.betterhrbust.core.model.ScoreItem
 import com.glassous.betterhrbust.core.parser.AcademicParsers
 import org.junit.Assert.*
@@ -180,6 +181,79 @@ class AcademicParsersTest {
             assertTrue("Exam time must not be empty", exam.time.isNotEmpty())
             assertTrue("Exam location must not be empty", exam.location.isNotEmpty())
         }
+    }
+
+    @Test
+    fun testParseExams_ClassicLookTableWithoutDatalistClass() {
+        // 回归用例：真实「全部考试」页的表格 class 不固定（常见为 classicLook0），
+        // 数据行 class 为 classicLook*，早期实现只认 table.datalist 会解析为空
+        val html = """
+            <html><body>
+            <table class="classicLook0">
+              <tr>
+                <th>课程号</th><th>课程名称</th><th>考试时间</th><th>考试地点</th><th>考试性质</th>
+              </tr>
+              <tr class="classicLook0">
+                <td>U080123TW06W3</td><td>复变函数与积分变换</td>
+                <td>2026-11-01 08:10--09:50</td><td>西区&nbsp;新教学楼&nbsp;西-新A308</td><td>开班重修</td>
+              </tr>
+              <tr class="classicLook1">
+                <td>U040023XN07W4</td><td>操作系统</td>
+                <td>2026-07-04 13:30--15:10</td><td>西区&nbsp;新教学楼&nbsp;西-新A514</td><td>正常考试</td>
+              </tr>
+              <tr class="classicLookPagingTag PagingTag">
+                <td class="classicLookSummary Summary">共<b>2</b>条，<b>1</b> / <b>1</b>页</td>
+              </tr>
+            </table>
+            </body></html>
+        """.trimIndent()
+
+        val exams = AcademicParsers.parseExams(html)
+
+        assertEquals(2, exams.size)
+        assertEquals("U080123TW06W3", exams[0].courseId)
+        assertEquals("复变函数与积分变换", exams[0].courseName)
+        assertEquals("开班重修", exams[0].property)
+        assertEquals("操作系统", exams[1].courseName)
+    }
+
+    @Test
+    fun testParseExams_RecentExamTableWithoutTableClass() {
+        // 无识别 class 的表格也应通过「含 >=4 个 td 的数据行」兜底命中
+        val html = """
+            <html><body>
+            <table id="dataTable">
+              <tr><th>课程号</th><th>课程名称</th><th>考试时间</th><th>考试地点</th><th>考试性质</th></tr>
+              <tr><td>U010203TW04W5</td><td>大学英语</td><td>2026-12-20 08:10--09:50</td><td>西-新B406</td><td>正常考试</td></tr>
+            </table>
+            </body></html>
+        """.trimIndent()
+
+        val exams = AcademicParsers.parseExams(html)
+
+        assertEquals(1, exams.size)
+        assertEquals("大学英语", exams[0].courseName)
+        assertEquals("西-新B406", exams[0].location)
+    }
+
+    @Test
+    fun testRefreshExamCountdown() {
+        // 缓存跨天后必须按当前日期重算倒计时，避免"还有 N 天"失效
+        val today = java.time.LocalDate.now()
+        val past = today.minusDays(3).toString()
+        val future = today.plusDays(5).toString()
+
+        val exams = listOf(
+            ExamItem(courseId = "A", courseName = "已考", time = "$past 08:10--09:50", location = "L1", property = "正常考试"),
+            ExamItem(courseId = "B", courseName = "未考", time = "$future 08:10--09:50", location = "L2", property = "正常考试")
+        )
+
+        val refreshed = AcademicParsers.refreshExamCountdown(exams)
+
+        assertEquals(-3, refreshed[0].countdownDays)
+        assertFalse(refreshed[0].isUpcoming)
+        assertEquals(5, refreshed[1].countdownDays)
+        assertTrue(refreshed[1].isUpcoming)
     }
 
     @Test

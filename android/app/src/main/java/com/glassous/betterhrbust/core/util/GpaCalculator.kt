@@ -53,17 +53,16 @@ object GpaCalculator {
     /** 已获得学分是否只统计必修课（限选 / 任选不计） */
     const val EARNED_CREDITS_REQUIRED_ONLY = true
 
-    /** 学分统计口径说明文案 */
+    /** 学分统计口径说明文案（面向用户，保持简短） */
     val EARNED_CREDITS_NOTE: String
         get() = if (EARNED_CREDITS_REQUIRED_ONLY) {
-            "已获得学分仅统计必修课，重修/补考及格后合并计一次"
+            "仅统计必修课，重修/补考合并计一次"
         } else {
-            "已获得学分按全部课程统计，重修/补考及格后合并计一次"
+            "按全部课程统计，重修/补考合并计一次"
         }
 
     /** 学业统计口径说明文案（全部指标仅统计必修课） */
-    const val STATS_SCOPE_NOTE =
-        "全部学业指标（GPA / 加权均分 / 优秀率 / 挂科门数与学分 / 风险预警）均只统计必修课，限选与任选课不参与任何计算"
+    const val STATS_SCOPE_NOTE = "仅统计必修课，选修课不参与计算"
 
     /**
      * 是否参与学业统计的课程。

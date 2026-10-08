@@ -45,10 +45,17 @@
         class="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs shadow-sm backdrop-blur-md"
       >
         <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-        <span class="font-medium">登录状态已失效 (当前为离线数据)</span>
+        <span class="font-medium">登录状态已失效</span>
         <button
           type="button"
-          class="ml-1 px-3 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs transition-colors cursor-pointer shadow-xs active:scale-95"
+          class="ml-1 px-2 py-1 rounded-full font-medium text-xs transition-colors cursor-pointer active:scale-95 hover:bg-amber-500/15"
+          @click="dismissSessionPrompt"
+        >
+          忽略
+        </button>
+        <button
+          type="button"
+          class="px-3 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs transition-colors cursor-pointer shadow-xs active:scale-95"
           @click="openLoginModal"
         >
           重新登录
@@ -64,7 +71,8 @@ import { useSession } from '@/composables/useSession.js';
 import { useAcademicData } from '@/composables/useAcademicData.js';
 import { useToast } from '@/composables/useToast.js';
 
-const { isLoggedIn, isSessionExpired, shouldShowSessionBanner, openLoginModal, navigateTo } = useSession();
+const { isLoggedIn, isSessionExpired, shouldShowSessionBanner, dismissSessionPrompt, openLoginModal, navigateTo } =
+  useSession();
 const { syncing, lastSyncText, refreshAll } = useAcademicData();
 const { showToast } = useToast();
 

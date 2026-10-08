@@ -6,12 +6,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
@@ -29,6 +32,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun NoticesSettingsScreen(
     onLogout: () -> Unit,
+    onReLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val app = remember { BetterHrbustApp.instance }
@@ -70,13 +74,18 @@ fun NoticesSettingsScreen(
         }
     }
 
-    /** 手动全量刷新：会话失效时要求重新登录 */
-    fun refreshAll() {
+    /**
+     * 手动全量刷新：会话失效时要求重新登录。
+     *
+     * [fromPullDown] 为 true（下拉手势触发）时才驱动下拉刷新指示器；
+     * 顶部按钮触发时只显示按钮自身的 loading，避免出现"没有下拉却在转圈"的动画。
+     */
+    fun refreshAll(fromPullDown: Boolean = false) {
         coroutineScope.launch {
-            isRefreshing = true
+            if (fromPullDown) isRefreshing = true
             val outcome = syncManager.syncAll(manual = true)
             syncMessage = outcome.message
-            isRefreshing = false
+            if (fromPullDown) isRefreshing = false
             if (outcome.expired) {
                 authRepo.markSessionExpired(true)
             } else {
@@ -92,7 +101,7 @@ fun NoticesSettingsScreen(
     Box(modifier = modifier.fillMaxSize()) {
         AppPullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = { refreshAll() },
+            onRefresh = { refreshAll(fromPullDown = true) },
             modifier = Modifier.fillMaxSize()
         ) {
             LazyColumn(
@@ -111,7 +120,7 @@ fun NoticesSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            PageHeaderTitle("通知与应用设置", modifier = Modifier.weight(1f))
+                            PageHeaderTitle("更多", modifier = Modifier.weight(1f))
                             FilledTonalIconButton(
                                 onClick = { refreshAll() },
                                 enabled = !isSyncing
@@ -142,13 +151,13 @@ fun NoticesSettingsScreen(
                 // Section: Academic Notices
                 item {
                     Text(
-                        text = "教务运行通知 (${notices.size} 条)",
+                        text = "教务通知",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                if (notices.isEmpty() && isRefreshing) {
+                if (notices.isEmpty() && (isRefreshing || isSyncing)) {
                     item {
                         LoadingView(message = "正在加载教务通知...")
                     }
@@ -201,10 +210,10 @@ fun NoticesSettingsScreen(
                     }
                 }
 
-                // Section: System & Theme Settings
+                // Section: 外观（主题模式单独成组，与数据清理分离）
                 item {
                     Text(
-                        text = "偏好与系统设置",
+                        text = "外观",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 8.dp)
@@ -217,90 +226,82 @@ fun NoticesSettingsScreen(
                         shape = RoundedCornerShape(18.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            // Dark mode selection
-                            Column {
-                                Text(text = "深浅色主题模式", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                val currentMode = when (prefs?.darkTheme) {
-                                    true -> "深色"
-                                    false -> "浅色"
-                                    null -> "系统"
-                                }
-                                val modes = listOf("系统", "浅色", "深色")
-                                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                                    modes.forEachIndexed { index, mode ->
-                                        SegmentedButton(
-                                            selected = currentMode == mode,
-                                            onClick = {
-                                                coroutineScope.launch {
-                                                    val saveVal = when (mode) {
-                                                        "深色" -> "dark"
-                                                        "浅色" -> "light"
-                                                        else -> "system"
-                                                    }
-                                                    prefsManager.setDarkTheme(saveVal)
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "深浅色主题",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            val currentMode = when (prefs?.darkTheme) {
+                                true -> "深色"
+                                false -> "浅色"
+                                null -> "系统"
+                            }
+                            val modes = listOf("系统", "浅色", "深色")
+                            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                                modes.forEachIndexed { index, mode ->
+                                    SegmentedButton(
+                                        selected = currentMode == mode,
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                val saveVal = when (mode) {
+                                                    "深色" -> "dark"
+                                                    "浅色" -> "light"
+                                                    else -> "system"
                                                 }
-                                            },
-                                            shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size)
-                                        ) {
-                                            Text(mode, style = MaterialTheme.typography.labelSmall)
-                                        }
+                                                prefsManager.setDarkTheme(saveVal)
+                                            }
+                                        },
+                                        shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size)
+                                    ) {
+                                        Text(mode, style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
-                            }
-
-                            HorizontalDivider()
-
-                            // Dynamic Color Switch
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(text = "Material You 动态取色", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                    Text(text = "基于系统壁纸生成配色主题", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                                }
-                                Switch(
-                                    checked = prefs?.dynamicColor ?: true,
-                                    onCheckedChange = { checked ->
-                                        coroutineScope.launch { prefsManager.setDynamicColor(checked) }
-                                    }
-                                )
-                            }
-
-                            HorizontalDivider()
-
-                            // Clear Cache
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showClearCacheDialog = true },
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(text = "清理离线本地缓存", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                    Text(text = "清除本地缓存的课表、成绩与考试数据", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                                }
-                                Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
                 }
 
-                // Logout Button
+                // Section: 账号与数据（清理缓存 / 重新登录 / 退出登录 合并为一组）
                 item {
-                    Button(
-                        onClick = { showLogoutDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        shape = RoundedCornerShape(14.dp)
+                    Text(
+                        text = "账号与数据",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                     ) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("退出教务账号登录", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                        Column {
+                            SettingsActionRow(
+                                icon = Icons.Default.DeleteOutline,
+                                title = "清理离线缓存",
+                                subtitle = "清除本地缓存的教务数据",
+                                onClick = { showClearCacheDialog = true }
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            SettingsActionRow(
+                                icon = Icons.Default.Refresh,
+                                title = "重新登录",
+                                subtitle = "重新认证教务会话",
+                                onClick = onReLogin
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            SettingsActionRow(
+                                icon = Icons.AutoMirrored.Filled.Logout,
+                                title = "退出登录",
+                                subtitle = "清除会话并返回登录页",
+                                tint = MaterialTheme.colorScheme.error,
+                                onClick = { showLogoutDialog = true }
+                            )
+                        }
                     }
                 }
             }
@@ -344,7 +345,7 @@ fun NoticesSettingsScreen(
             AlertDialog(
                 onDismissRequest = { showClearCacheDialog = false },
                 title = { Text("确认清理缓存？") },
-                text = { Text("清理后离线时将无法查看已保存的数据，直到下次连网刷新。") },
+                text = { Text("清理后需联网重新获取数据。") },
                 confirmButton = {
                     TextButton(onClick = {
                         coroutineScope.launch {
@@ -369,7 +370,7 @@ fun NoticesSettingsScreen(
             AlertDialog(
                 onDismissRequest = { showLogoutDialog = false },
                 title = { Text("退出登录") },
-                text = { Text("确定要注销当前教务在线会话并返回登录页面吗？") },
+                text = { Text("将清除会话并返回登录页。") },
                 confirmButton = {
                     TextButton(onClick = {
                         showLogoutDialog = false
@@ -389,5 +390,53 @@ fun NoticesSettingsScreen(
                 }
             )
         }
+    }
+}
+
+/**
+ * 设置项行：图标 + 标题 + 说明 + 箭头。
+ * 采用低调的列表样式（无填充色按钮），替代原先的大号红色按钮。
+ */
+@Composable
+private fun SettingsActionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = if (tint == MaterialTheme.colorScheme.error) tint else MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
