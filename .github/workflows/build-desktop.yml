@@ -1,7 +1,8 @@
 name: Build Desktop (Tauri)
 
 # 推送 desktop-tauri/ 或 web/ 相关改动到 main 时自动构建 Windows 桌面端,
-# Rust 集成测试作为门禁;打 desktop-v* 标签时额外发布 Release。
+# Rust 集成测试作为门禁;构建产物上传为 workflow artifact,可从 Actions 页面下载。
+# Release 由维护者手动创建并上传产物(桌面端更新检查读取 GitHub Release 的 latest)。
 on:
   push:
     branches: [main]
@@ -9,11 +10,10 @@ on:
       - 'desktop-tauri/**'
       - 'web/**'
       - '.github/workflows/build-desktop.yml'
-    tags: ['desktop-v*']
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: build-desktop
@@ -61,19 +61,13 @@ jobs:
         working-directory: desktop-tauri
         run: node scripts/make-portable.mjs
 
+      # 产物已统一命名(见 desktop-tauri/scripts/make-portable.mjs),发布 Release 时直接上传:
+      #   BetterHRBUST-<version>-windows-setup.exe     安装版
+      #   BetterHRBUST-<version>-windows-portable.zip  便携版(解压即用)
+      # Android 安装包在本地打包后重命名为 BetterHRBUST-<version>-android.apk 一并上传
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: betterhrbust-desktop-windows
-          path: |
-            desktop-tauri/src-tauri/target/release/bundle/nsis/*.exe
-            desktop-tauri/release/*.zip
+          path: desktop-tauri/release/*
           if-no-files-found: error
-
-      - name: Release (desktop-v* tags)
-        if: startsWith(github.ref, 'refs/tags/desktop-v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            desktop-tauri/src-tauri/target/release/bundle/nsis/*.exe
-            desktop-tauri/release/*.zip

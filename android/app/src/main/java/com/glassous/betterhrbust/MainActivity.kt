@@ -124,6 +124,7 @@ fun MainAppScaffold(
 ) {
     val authRepo = remember { BetterHrbustApp.instance.authRepository }
     val syncManager = remember { BetterHrbustApp.instance.syncManager }
+    val updateRepo = remember { BetterHrbustApp.instance.updateRepository }
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -140,6 +141,11 @@ fun MainAppScaffold(
         MainRoute
     } else {
         AuthRoute
+    }
+
+    // 版本更新检测：启动静默检查一次（按天节流，失败静默，不阻塞主流程）
+    LaunchedEffect(Unit) {
+        updateRepo.checkIfNeeded()
     }
 
     // 数据策略：用户主动登录成功 → 立即全量同步；

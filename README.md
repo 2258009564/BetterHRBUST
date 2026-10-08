@@ -16,6 +16,15 @@
   <a href="https://github.com/Glassous/BetterHRBUST/actions/workflows/build-userscript.yml"><img src="https://github.com/Glassous/BetterHRBUST/actions/workflows/build-userscript.yml/badge.svg" alt="Userscript CI" /></a>
 </p>
 
+<!-- 快捷下载：发版时请把下方三条 releases/latest/download 链接中的版本号（1.0.0）同步替换为新版本 -->
+<p align="center">
+  <a href="https://github.com/Glassous/BetterHRBUST/releases/latest/download/BetterHRBUST-1.0.0-windows-setup.exe"><img src="https://img.shields.io/badge/下载-Windows_安装版-0078D6?logo=windows&logoColor=white" alt="下载 Windows 安装版" /></a>
+  <a href="https://github.com/Glassous/BetterHRBUST/releases/latest/download/BetterHRBUST-1.0.0-windows-portable.zip"><img src="https://img.shields.io/badge/下载-Windows_便携版-5C2D91?logo=windows&logoColor=white" alt="下载 Windows 便携版" /></a>
+  <a href="https://github.com/Glassous/BetterHRBUST/releases/latest/download/BetterHRBUST-1.0.0-android.apk"><img src="https://img.shields.io/badge/下载-Android_APK-3DDC84?logo=android&logoColor=white" alt="下载 Android APK" /></a>
+  <a href="https://raw.githubusercontent.com/Glassous/BetterHRBUST/dist/better-hrbust.user.js"><img src="https://img.shields.io/badge/安装-油猴脚本-990000?logo=tampermonkey&logoColor=white" alt="安装油猴脚本" /></a>
+  <a href="https://github.com/Glassous/BetterHRBUST/releases"><img src="https://img.shields.io/badge/全部版本-Releases-181717?logo=github&logoColor=white" alt="全部版本" /></a>
+</p>
+
 自制的现代化哈尔滨理工大学教务在线（URP）客户端：Web / 油猴 / Windows 桌面端 / Android 原生四端同源。
 
 哈理工教务在线（`http://jwzx.hrbust.edu.cn/academic/`）基于清华教育在线 / 优慕课 URP 架构，为早期 JSP 应用：缺乏公开 API 与官方文档、网页编码不统一（GBK / UTF-8 混用）、真实功能路径深藏于模块调度器后。
@@ -52,6 +61,7 @@ BetterHRBUST/
 - **空教室检索**：按校区、教学楼、周次推算空闲自习教室。
 - **学籍档案与全校课程**：学籍关键信息一览，全校开课名录便捷检索。
 - **原生 Android 客户端**：Kotlin + Jetpack Compose 原生实现，Material You 动态取色与深浅色主题、边到边全屏 + 悬浮胶囊导航坞、自适应双栏成绩页（列表 / 明细）、下拉刷新；Room 本地持久化 + DataStore 会话偏好，离线同样可用。
+- **版本更新检测**：桌面端（设置页底部）与 Android 端（「更多」页底部）内置基于 GitHub Release 的更新检测——启动时静默检查一次（按天节流），并提供手动「检查更新」；发现新版本时展示版本号与更新日志，一键跳转 Release 页面自行下载。网页与油猴版不显示该模块。
 - **四端统一口径**：Web、油猴、桌面端与 Android 共用同一套业务口径（API 路径、解析规则、五分制绩点与特色算法、缓存与刷新策略），任一端的结果可互相印证。
 
 ---
@@ -117,6 +127,13 @@ cd android
 > 但**未内置签名配置**，正式分发前需自行在 `app/build.gradle.kts` 中补充 `signingConfigs`。
 > 因教务在线为 `http` 明文站点，Manifest 中显式开启了 `usesCleartextTraffic`。
 
+> [!IMPORTANT]
+> **安装包命名格式**：发布到 GitHub Release 时统一命名为 `BetterHRBUST-<版本>-android.apk`
+> （如 `BetterHRBUST-1.0.0-android.apk`，构建产物 `app-release-unsigned.apk` 重命名即可），
+> 与桌面端安装版 `BetterHRBUST-<版本>-windows-setup.exe`、便携版 `BetterHRBUST-<版本>-windows-portable.zip`
+> 保持同一命名格式，便于用户识别与 README 快捷下载链接对齐。
+> 详见「[发布 Release 与更新检测](#5-发布-release-与更新检测)」。
+
 **客户端特性**：
 
 | 模块 | 说明 |
@@ -171,7 +188,7 @@ WebView 数据被清理均不丢。体量轻量：安装包 ≤ 10MB、
 ```powershell
 cd desktop-tauri
 npm install
-npm run dist    # 构建 web + 打包，产物见 desktop-tauri/release/ 与 bundle/nsis/
+npm run dist    # 构建 web + 打包 + 统一命名，产物见 desktop-tauri/release/
 ```
 
 架构、体积/内存目标、开发与分发细节见
@@ -179,7 +196,43 @@ npm run dist    # 构建 web + 打包，产物见 desktop-tauri/release/ 与 bun
 
 ---
 
-### 5. 接口探测工具 (`tools/probe/`)
+### 5. 发布 Release 与更新检测
+
+桌面端与 Android 端的更新检测均读取 GitHub 的 **latest Release**
+（`https://api.github.com/repos/Glassous/BetterHRBUST/releases/latest`，请求按天节流）：
+
+| 端 | 更新检测入口 | 当前版本来源 |
+| --- | --- | --- |
+| Windows 桌面端 | 设置页最底部「版本更新」卡片（**仅 Tauri 端渲染**，网页 / 油猴不显示） | `tauri.conf.json` 的 `version`（运行时经 `getVersion()` 读取） |
+| Android | 「更多」页最底部「关于与更新」 | `app/build.gradle.kts` 的 `versionName` |
+| Web / 油猴 | 不显示更新模块（油猴凭 `@updateURL` 自动更新） | — |
+
+**Release 产物命名**（统一格式 `BetterHRBUST-<version>-<平台>[-<形态>].<扩展名>`）：
+
+| 平台 | 文件名 | 生成方式 |
+| --- | --- | --- |
+| Windows 安装版 | `BetterHRBUST-<version>-windows-setup.exe` | CI / `npm run dist` 自动统一命名 |
+| Windows 便携版 | `BetterHRBUST-<version>-windows-portable.zip` | 同上（单文件 exe 压缩，解压即用） |
+| Android | `BetterHRBUST-<version>-android.apk` | `./gradlew :app:assembleRelease` 后重命名 |
+
+**发布流程**：
+
+1. 桌面端产物从 Actions 的 `betterhrbust-desktop-windows` 下载（已统一命名）；Android 本地打包后重命名；
+2. 打 tag `v<version>`（如 `v1.0.0`）并创建 Release，标题建议 `BetterHRBUST v<version>`，正文填写更新日志；
+3. 上传上述三个产物；
+4. 把 README 顶部「快捷下载」徽章链接中的版本号同步替换为新版本。
+
+> [!TIP]
+> **tag 统一用 `v<version>`**：桌面端与 Android 共用同一个 Release（内含三份产物）。
+> 检测逻辑走 `/releases/latest`，tag 前缀（`v` / `desktop-v` / `android-v`）都会被正确剥离比较；
+> 但若为单端单独打 tag 发 Release，另一端会把该版本误判为自己的更新，故保持统一 tag。
+
+客户端以 `tag_name` 做版本比较、以 Release 正文作为更新日志、以 `html_url` 作为跳转下载地址；
+仓库尚无 Release 时检测按「暂无更新」静默处理。
+
+---
+
+### 6. 接口探测工具 (`tools/probe/`)
 
 教务系统改版或需验证底层接口时，可直接运行逆向探测工具：
 

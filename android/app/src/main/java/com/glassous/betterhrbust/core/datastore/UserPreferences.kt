@@ -33,7 +33,9 @@ data class AppPreferences(
     /** 真实姓名（供概览页在档案缓存缺失时兜底展示，避免回退为占位文案） */
     val realName: String = "",
     /** 记住的登录密码（仅本地 DataStore，用于免重复输入） */
-    val savedPassword: String = ""
+    val savedPassword: String = "",
+    /** 上次版本更新检测时间（毫秒时间戳），用于启动静默检测的"按天节流" */
+    val lastUpdateCheckAt: Long = 0L
 )
 
 class UserPreferencesManager(private val context: Context) {
@@ -52,6 +54,7 @@ class UserPreferencesManager(private val context: Context) {
         private val KEY_SESSION_EXPIRED = booleanPreferencesKey("session_expired")
         private val KEY_REAL_NAME = stringPreferencesKey("real_name")
         private val KEY_SAVED_PASSWORD = stringPreferencesKey("saved_password")
+        private val KEY_LAST_UPDATE_CHECK_AT = longPreferencesKey("last_update_check_at")
     }
 
     val preferencesFlow: Flow<AppPreferences> = context.dataStore.data.map { prefs ->
@@ -75,7 +78,8 @@ class UserPreferencesManager(private val context: Context) {
             lastFullSyncDate = prefs[KEY_LAST_FULL_SYNC_DATE] ?: "",
             sessionExpired = prefs[KEY_SESSION_EXPIRED] ?: false,
             realName = prefs[KEY_REAL_NAME] ?: "",
-            savedPassword = prefs[KEY_SAVED_PASSWORD] ?: ""
+            savedPassword = prefs[KEY_SAVED_PASSWORD] ?: "",
+            lastUpdateCheckAt = prefs[KEY_LAST_UPDATE_CHECK_AT] ?: 0L
         )
     }
 
@@ -133,6 +137,14 @@ class UserPreferencesManager(private val context: Context) {
     suspend fun setLastFullSyncDate(date: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_LAST_FULL_SYNC_DATE] = date
+        }
+    }
+
+    /** 记录上一次版本更新检测时间（毫秒时间戳，用于启动静默检测的按天节流） */
+    suspend fun setLastUpdateCheckAt(timestamp: Long) {
+        context.dataStore.edit { prefs ->
+            if (timestamp <= 0L) prefs.remove(KEY_LAST_UPDATE_CHECK_AT)
+            else prefs[KEY_LAST_UPDATE_CHECK_AT] = timestamp
         }
     }
 

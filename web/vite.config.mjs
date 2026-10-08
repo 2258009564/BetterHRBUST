@@ -1,7 +1,11 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
+
+// 构建期注入应用版本（桌面端更新模块的版本回退值，权威值仍取 Tauri 运行时 getVersion()）
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
 const academicProxy = {
   target: 'http://jwzx.hrbust.edu.cn',
@@ -30,6 +34,9 @@ const academicProxy = {
 
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version)
+  },
   resolve: {
     alias: {
       '@': path.resolve(process.cwd(), './src')

@@ -66,6 +66,9 @@
         </div>
       </div>
     </UiCard>
+
+    <!-- 版本更新（桌面端 Tauri 专属：Web / 油猴环境内部自行隐藏） -->
+    <UpdateCard />
   </div>
 </template>
 
@@ -74,6 +77,7 @@ import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiTabs from '@/components/ui/UiTabs.vue';
 import Icon from '@/components/icons/Icon.vue';
+import UpdateCard from '@/components/settings/UpdateCard.vue';
 import { useTheme } from '@/composables/useTheme.js';
 import { useSession } from '@/composables/useSession.js';
 

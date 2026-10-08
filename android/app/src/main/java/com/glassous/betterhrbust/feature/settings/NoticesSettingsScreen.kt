@@ -1,10 +1,17 @@
 package com.glassous.betterhrbust.feature.settings
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
@@ -15,10 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.model.NoticeItem
+import com.glassous.betterhrbust.core.model.UpdateState
 import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
@@ -41,7 +50,12 @@ fun NoticesSettingsScreen(
     val prefsManager = remember { app.preferencesManager }
     val database = remember { app.database }
     val syncManager = remember { app.syncManager }
+    val updateRepo = remember { app.updateRepository }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val updateState by updateRepo.state.collectAsState()
+    val isCheckingUpdate = updateState is UpdateState.Checking
 
     val prefs by prefsManager.preferencesFlow.collectAsState(initial = null)
     val isSyncing by syncManager.isSyncing.collectAsState()
@@ -304,6 +318,132 @@ fun NoticesSettingsScreen(
                         }
                     }
                 }
+
+                // Section: 关于与更新（数据源为 GitHub Release：仅提示 + 跳转下载页，不做应用内安装）
+                item {
+                    Text(
+                        text = "关于与更新",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                item {
+                    val available = updateState as? UpdateState.Available
+                    val errorState = updateState as? UpdateState.Error
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "版本更新",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "当前版本 v${updateRepo.currentVersion}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                                TextButton(
+                                    onClick = { coroutineScope.launch { updateRepo.check() } },
+                                    enabled = !isCheckingUpdate
+                                ) {
+                                    when {
+                                        isCheckingUpdate -> CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp
+                                        )
+
+                                        updateState is UpdateState.UpToDate -> {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("已是最新")
+                                        }
+
+                                        else -> Text("检查更新")
+                                    }
+                                }
+                            }
+
+                            // 仅在检测失败时提示（成功/最新状态由按钮自身表达，不再额外占一行）
+                            if (errorState != null && !isCheckingUpdate) {
+                                Text(
+                                    text = errorState.message,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+
+                            if (available != null) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f)
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Text(
+                                            text = buildString {
+                                                append("发现新版本 v")
+                                                append(available.latestVersion)
+                                                if (available.publishedDate.isNotBlank()) {
+                                                    append("（")
+                                                    append(available.publishedDate)
+                                                    append(" 发布）")
+                                                }
+                                            },
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = available.notes.ifBlank {
+                                                "新版本已发布，点击下方按钮前往 Release 页面查看详情并下载安装包。"
+                                            },
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            // 更新日志可能较长：限高滚动，避免撑破页面
+                                            modifier = Modifier
+                                                .heightIn(max = 160.dp)
+                                                .verticalScroll(rememberScrollState())
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Button(
+                                            onClick = { openReleasePage(context, available.releaseUrl) },
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Download,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("前往下载")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -438,5 +578,19 @@ private fun SettingsActionRow(
             tint = MaterialTheme.colorScheme.outline,
             modifier = Modifier.size(18.dp)
         )
+    }
+}
+
+/**
+ * 打开 Release 页面（交系统浏览器 / GitHub 客户端处理）。
+ * 无可用处理应用时给出轻提示，避免直接崩溃。
+ */
+private fun openReleasePage(context: Context, url: String) {
+    try {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, "未找到可打开该链接的应用", Toast.LENGTH_SHORT).show()
     }
 }
