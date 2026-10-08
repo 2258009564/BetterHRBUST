@@ -19,6 +19,7 @@ Windows 桌面客户端：Tauri（Rust）封装 `web/` 前端，主进程内置�
 ```
 WebView2 窗口 → http://127.0.0.1:1950（固定端口，占用向后顺延）
   ├─ 静态文件     web/dist（rust-embed 嵌入二进制，debug 模式读磁盘）
+  ├─ /__app/storage → 键值持久化（storage.rs，JSON 文件原子落盘）
   └─ /academic/* → http://jwzx.hrbust.edu.cn（hyper 流式转发）
        ├─ Host/Referer 注入（教务系统校验这两个请求头）
        ├─ Set-Cookie 剥离 Domain 属性（会话 Cookie 落在 127.0.0.1）
@@ -35,6 +36,13 @@ WebView2 窗口 → http://127.0.0.1:1950（固定端口，占用向后顺延）
 
 会话 Cookie 由 WebView2 用户数据目录（按 bundle identifier 固定）持久保存，
 重启应用后仍有效，直至教务侧过期。固定端口 1950 保证页面源跨冷启动稳定。
+
+教务数据缓存与会话元数据（成绩 / 考试 / 课表 / 登录时间戳等）经
+`/__app/storage` 端点落盘到 `%APPDATA%/edu.hrbust.betterhrbust/storage.json`
+（键值 JSON，临时文件 + 原子改名写回，损坏文件保留 `.corrupt` 现场），
+由前端存储门面 `web/src/services/storage.js` 在桌面环境自动启用。
+数据归 Rust 进程所有：本地端口被占顺延、WebView2 用户数据目录被清理
+均不丢数据（端点规则同样有集成测试覆盖）。
 
 反代层刻意不引 axum/tower 全家桶，直接基于 hyper 实现（约 300 行），
 以守住上表的体积与内存目标；规则有 Rust 集成测试（mock 教务系统）完整覆盖。
@@ -63,8 +71,9 @@ npm run dev
 
 ## 测试
 
-本地服务层（静态托管、SPA 回退、路径穿越防护、反代规则、断连语义、端口顺延）
-无需启动窗口即可验证，上游用本地 mock 替代，不依赖校园网：
+本地服务层（静态托管、SPA 回退、路径穿越防护、反代规则、断连语义、端口顺延、
+键值持久化读写与跨重启恢复）无需启动窗口即可验证，上游用本地 mock 替代，
+不依赖校园网：
 
 ```powershell
 cd desktop-tauri

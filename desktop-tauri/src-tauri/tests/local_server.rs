@@ -115,12 +115,25 @@ async fn spawn_mock_upstream() -> (String, Arc<Mutex<SeenHeaders>>) {
     (format!("http://{addr}"), seen)
 }
 
-/// 以指定上游 + 随机端口启动被测服务
+/// 以指定上游 + 随机端口启动被测服务（不启用持久化）
 async fn spawn_server(upstream_origin: &str) -> String {
     let config = ServerConfig {
         upstream: Upstream::parse(upstream_origin),
         port_base: 0,
         port_tries: 1,
+        storage_dir: None,
+    };
+    let addr = server::start(config).await.expect("本地服务启动失败");
+    format!("http://{addr}")
+}
+
+/// 以指定持久化目录 + 随机端口启动被测服务（静态/反代不涉及，无需 web/dist）
+async fn spawn_server_with_storage(storage_dir: std::path::PathBuf) -> String {
+    let config = ServerConfig {
+        upstream: Upstream::parse("http://127.0.0.1:1"),
+        port_base: 0,
+        port_tries: 1,
+        storage_dir: Some(storage_dir),
     };
     let addr = server::start(config).await.expect("本地服务启动失败");
     format!("http://{addr}")
@@ -278,8 +291,153 @@ async fn port_falls_back_when_occupied() {
         upstream: Upstream::parse("http://127.0.0.1:1"),
         port_base: server::PORT_BASE,
         port_tries: server::PORT_TRIES,
+        storage_dir: None,
     };
     let addr = server::start(config).await.expect("端口顺延后应绑定成功");
     assert_eq!(addr.port(), server::PORT_BASE + 1);
     drop(occupant);
+}
+
+// ---------------------------------------------------------------- 键值持久化
+
+async fn put(
+    url: &str,
+    key: &str,
+    value: &str,
+) -> Result<Response<Incoming>, hyper_util::client::legacy::Error> {
+    let request = Request::builder()
+        .method(http::Method::PUT)
+        .uri(url)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Full::new(Bytes::from(
+            serde_json::json!({ "key": key, "value": value }).to_string(),
+        )))
+        .unwrap();
+    tokio::time::timeout(Duration::from_secs(10), client().request(request))
+        .await
+        .expect("请求超时")
+}
+
+async fn delete(
+    url: &str,
+) -> Result<Response<Incoming>, hyper_util::client::legacy::Error> {
+    let request = Request::builder().method(http::Method::DELETE).uri(url).body(Full::new(Bytes::new())).unwrap();
+    tokio::time::timeout(Duration::from_secs(10), client().request(request))
+        .await
+        .expect("请求超时")
+}
+
+/// 落盘文件存在且为合法 JSON 对象
+fn assert_storage_file(dir: &std::path::Path) {
+    let text = std::fs::read_to_string(dir.join("storage.json")).expect("storage.json 应存在");
+    let map = serde_json::from_str::<std::collections::BTreeMap<String, String>>(&text)
+        .expect("storage.json 应为键值 JSON 对象");
+    assert!(!map.is_empty());
+}
+
+#[tokio::test]
+async fn storage_roundtrip_and_persistence_across_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    let origin = spawn_server_with_storage(dir.path().to_path_buf()).await;
+
+    // 空库 GET 返回空对象
+    let res = get(&format!("{origin}/__app/storage"), &[]).await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert!(res.headers()[header::CACHE_CONTROL].to_str().unwrap().contains("no-store"));
+    assert_eq!(body_text(res).await, "{}");
+
+    // PUT 写入两个键（模拟一次全量同步落缓存）
+    put(&format!("{origin}/__app/storage"), "better_hrbust_cache_scores", r#"[{"name":"高数"}]"#)
+        .await
+        .unwrap();
+    put(&format!("{origin}/__app/storage"), "better_hrbust_last_login_at", "1760000000000")
+        .await
+        .unwrap();
+    assert_storage_file(dir.path());
+
+    // GET 全量可见
+    let res = get(&format!("{origin}/__app/storage"), &[]).await.unwrap();
+    let map: serde_json::Value = serde_json::from_str(&body_text(res).await).unwrap();
+    assert_eq!(map["better_hrbust_cache_scores"], r#"[{"name":"高数"}]"#);
+    assert_eq!(map["better_hrbust_last_login_at"], "1760000000000");
+
+    // 模拟冷启动：同一目录重开服务（新 Storage 实例），数据从磁盘恢复
+    drop(origin);
+    let origin = spawn_server_with_storage(dir.path().to_path_buf()).await;
+    let res = get(&format!("{origin}/__app/storage"), &[]).await.unwrap();
+    let map: serde_json::Value = serde_json::from_str(&body_text(res).await).unwrap();
+    assert_eq!(map["better_hrbust_cache_scores"], r#"[{"name":"高数"}]"#);
+}
+
+#[tokio::test]
+async fn storage_delete_key_and_clear_all() {
+    let dir = tempfile::tempdir().unwrap();
+    let origin = spawn_server_with_storage(dir.path().to_path_buf()).await;
+
+    put(&format!("{origin}/__app/storage"), "k1", "v1").await.unwrap();
+    put(&format!("{origin}/__app/storage"), "k2", "v2").await.unwrap();
+
+    // 删除单键
+    let res = delete(&format!("{origin}/__app/storage?key=k1")).await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let map: serde_json::Value =
+        serde_json::from_str(&body_text(get(&format!("{origin}/__app/storage"), &[]).await.unwrap()).await).unwrap();
+    assert!(map.get("k1").is_none());
+    assert_eq!(map["k2"], "v2");
+
+    // 不带 key 清空全部（退出登录场景）
+    let res = delete(&format!("{origin}/__app/storage")).await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let text = body_text(get(&format!("{origin}/__app/storage"), &[]).await.unwrap()).await;
+    assert_eq!(text, "{}");
+}
+
+#[tokio::test]
+async fn storage_rejects_invalid_requests() {
+    let dir = tempfile::tempdir().unwrap();
+    let origin = spawn_server_with_storage(dir.path().to_path_buf()).await;
+
+    // 非 JSON 体
+    let res = put_raw(&format!("{origin}/__app/storage"), "not-json").await.unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+
+    // 缺 key
+    let res = put_raw(&format!("{origin}/__app/storage"), r#"{"value":"x"}"#).await.unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+
+    // 不支持的方法（POST）
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .uri(format!("{origin}/__app/storage"))
+        .body(Full::new(Bytes::new()))
+        .unwrap();
+    let res = tokio::time::timeout(Duration::from_secs(10), client().request(request))
+        .await
+        .expect("请求超时")
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::METHOD_NOT_ALLOWED);
+}
+
+/// 直接以原始文本作为 PUT 体（校验 4xx 路径）
+async fn put_raw(
+    url: &str,
+    raw: &str,
+) -> Result<Response<Incoming>, hyper_util::client::legacy::Error> {
+    let request = Request::builder()
+        .method(http::Method::PUT)
+        .uri(url)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Full::new(Bytes::from(raw.to_string())))
+        .unwrap();
+    tokio::time::timeout(Duration::from_secs(10), client().request(request))
+        .await
+        .expect("请求超时")
+}
+
+#[tokio::test]
+async fn storage_disabled_returns_503() {
+    // dev 模式（storage_dir = None）：端点明确 503，前端门面据此回落 localStorage
+    let origin = spawn_server("http://127.0.0.1:1").await;
+    let res = get(&format!("{origin}/__app/storage"), &[]).await.unwrap();
+    assert_eq!(res.status(), StatusCode::SERVICE_UNAVAILABLE);
 }

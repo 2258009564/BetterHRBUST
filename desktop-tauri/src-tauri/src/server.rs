@@ -4,16 +4,19 @@
 //!  - 静态文件：web/dist 构建产物（release 经 rust-embed 嵌入二进制，
 //!    debug 模式直接读磁盘），SPA 回退、/assets 长缓存、路径穿越防护
 //!  - /academic/* → 反向代理 → http://jwzx.hrbust.edu.cn（见 proxy.rs）
+//!  - /__app/storage → 键值持久化（见 storage.rs，教务数据缓存落盘）
 //!  - 端口策略：固定 1950 起（建校年份），被占用向后顺延至多 10 次。
 //!    固定端口保证页面源（http://127.0.0.1:1950）跨冷启动稳定，
-//!    localStorage 与教务会话 Cookie 因此持久——随机端口会使用户数据"消失"。
+//!    教务会话 Cookie 因此持久；数据缓存自 v1.1 起归 Rust 存储文件所有，
+//!    端口漂移 / WebView 数据被清理均不影响。
 //!
 //! 依赖刻意保持最小（hyper/tokio/rust-embed，不引 axum/tower 全家桶），
 //! 以满足体积与内存目标：安装包 <= 10MB、主进程 RSS <= 25MB。
 
 use std::io;
 use std::net::SocketAddr;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use http::{header, Method, Request, Response, StatusCode, Uri};
 use http_body_util::combinators::BoxBody;
@@ -129,6 +132,8 @@ pub struct ServerConfig {
     pub upstream: Upstream,
     pub port_base: u16,
     pub port_tries: u16,
+    /// 键值持久化目录（None = 不启用 /__app/storage，如 dev 模式）
+    pub storage_dir: Option<PathBuf>,
 }
 
 impl Default for ServerConfig {
@@ -143,6 +148,7 @@ impl ServerConfig {
             upstream: Upstream::parse(UPSTREAM_ORIGIN),
             port_base: PORT_BASE,
             port_tries: PORT_TRIES,
+            storage_dir: None,
         }
     }
 }
@@ -158,6 +164,7 @@ struct WebAssets;
 struct AppState {
     client: Client<hyper_util::client::legacy::connect::HttpConnector, AppBody>,
     upstream: Upstream,
+    storage: Option<Arc<crate::storage::Storage>>,
 }
 
 /// 启动本地服务：绑定端口（含顺延逻辑）并进入 accept 循环。
@@ -165,9 +172,20 @@ struct AppState {
 pub async fn start(config: ServerConfig) -> io::Result<SocketAddr> {
     let listener = bind_listener(config.port_base, config.port_tries).await?;
     let addr = listener.local_addr()?;
+    // 存储打开失败仅降级（不启用持久化端点），不阻断应用启动
+    let storage = config.storage_dir.as_deref().and_then(|dir| {
+        match crate::storage::Storage::open(dir) {
+            Ok(storage) => Some(Arc::new(storage)),
+            Err(err) => {
+                eprintln!("[BetterHRBUST] 持久化存储打开失败({}): {err}", dir.display());
+                None
+            }
+        }
+    });
     let state = AppState {
         client: Client::builder(TokioExecutor::new()).build_http::<AppBody>(),
         upstream: config.upstream,
+        storage,
     };
 
     tokio::spawn(async move {
@@ -212,11 +230,14 @@ async fn bind_listener(port_base: u16, port_tries: u16) -> io::Result<TcpListene
     }))
 }
 
-/// 总入口：/academic 走反代（错误冒泡断连），其余走静态托管（错误转 4xx/5xx 响应）
+/// 总入口：/academic 走反代（错误冒泡断连），/__app/storage 走键值持久化，
+/// 其余走静态托管（错误转 4xx/5xx 响应）
 async fn handle(state: AppState, req: Request<Incoming>) -> Result<Response<AppBody>, GatewayError> {
     let path = req.uri().path();
     if path == "/academic" || path.starts_with("/academic/") {
         crate::proxy::forward(&state.client, &state.upstream, req).await
+    } else if path == "/__app/storage" {
+        Ok(crate::storage::handle(&state.storage, req).await)
     } else {
         Ok(static_response(&req))
     }
@@ -225,18 +246,18 @@ async fn handle(state: AppState, req: Request<Incoming>) -> Result<Response<AppB
 /// 静态托管：MIME、缓存策略、SPA 回退、路径穿越防护
 fn static_response(req: &Request<Incoming>) -> Response<AppBody> {
     if !matches!(*req.method(), Method::GET | Method::HEAD) {
-        return plain(StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed");
+        return plain_response(StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed");
     }
 
     let raw_path = req.uri().path();
     let decoded = match percent_encoding::percent_decode_str(raw_path).decode_utf8() {
         Ok(decoded) => decoded,
-        Err(_) => return plain(StatusCode::BAD_REQUEST, "Bad Request"),
+        Err(_) => return plain_response(StatusCode::BAD_REQUEST, "Bad Request"),
     };
     // 穿越防护：出现 .. 段一律拒绝（release 下资产嵌入二进制本就无法逃逸，
     // 该检查同时覆盖 debug 模式的磁盘读取）
     if decoded.split('/').any(|segment| segment == "..") {
-        return plain(StatusCode::FORBIDDEN, "Forbidden");
+        return plain_response(StatusCode::FORBIDDEN, "Forbidden");
     }
 
     let lookup = decoded.trim_start_matches('/');
@@ -249,11 +270,11 @@ fn static_response(req: &Request<Incoming>) -> Response<AppBody> {
 
     // SPA 回退：无扩展名路径回退 index.html；带扩展名的资源缺失则 404
     if Path::new(lookup).extension().is_some() {
-        return plain(StatusCode::NOT_FOUND, "Not Found");
+        return plain_response(StatusCode::NOT_FOUND, "Not Found");
     }
     match WebAssets::get("index.html") {
         Some(asset) => asset_response("index.html", &asset, head_only),
-        None => plain(StatusCode::NOT_FOUND, "Frontend build not found: web/dist"),
+        None => plain_response(StatusCode::NOT_FOUND, "Frontend build not found: web/dist"),
     }
 }
 
@@ -278,7 +299,7 @@ fn asset_response(name: &str, asset: &rust_embed::EmbeddedFile, head_only: bool)
     builder.body(body).expect("静态响应构造不会失败")
 }
 
-fn plain(status: StatusCode, text: &str) -> Response<AppBody> {
+pub(crate) fn plain_response(status: StatusCode, text: &str) -> Response<AppBody> {
     Response::builder()
         .status(status)
         .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")

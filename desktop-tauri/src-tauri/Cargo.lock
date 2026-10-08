@@ -254,10 +254,12 @@ dependencies = [
  "mime_guess",
  "percent-encoding",
  "rust-embed",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
+ "tempfile",
  "tokio",
 ]
 

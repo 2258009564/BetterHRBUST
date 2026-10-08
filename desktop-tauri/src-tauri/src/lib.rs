@@ -2,7 +2,9 @@
 //!
 //! 架构：WebView2 窗口 → http://127.0.0.1:1950 本地服务（server.rs）
 //!   ├─ 静态文件：web/dist（嵌入二进制）
-//!   └─ /academic/* → 反向代理 → http://jwzx.hrbust.edu.cn（proxy.rs）
+//!   ├─ /academic/* → 反向代理 → http://jwzx.hrbust.edu.cn（proxy.rs）
+//!   └─ /__app/storage → 键值持久化（storage.rs，落盘 app_data_dir，
+//!      存教务数据缓存与会话元数据，见前端 services/storage.js 门面）
 //!
 //! 仅监听 127.0.0.1，不对局域网暴露；http://127.0.0.1 在 WebView2
 //! 中属于 secure context，无明文/混合内容限制。教务会话 Cookie 由
@@ -13,6 +15,7 @@
 
 mod proxy;
 pub mod server;
+mod storage;
 
 use tauri::Manager;
 
@@ -44,13 +47,18 @@ pub fn run() {
         })
         .setup(|app| {
             let handle = app.handle().clone();
+            // 键值持久化目录：%APPDATA%/edu.hrbust.betterhrbust/storage.json
+            // （打开失败在 server::start 内降级为不启用，不影响启动）
+            let data_dir = app.path().app_data_dir().ok();
             tauri::async_runtime::spawn(async move {
                 // 开发模式直连 Vite dev server（其自带 /academic 代理，热更新）；
                 // 生产启动内置本地服务
                 let url = if tauri::is_dev() {
                     "http://localhost:5173/".to_string()
                 } else {
-                    match server::start(server::ServerConfig::production()).await {
+                    let mut config = server::ServerConfig::production();
+                    config.storage_dir = data_dir;
+                    match server::start(config).await {
                         Ok(addr) => format!("http://{addr}/"),
                         Err(err) => {
                             eprintln!("[BetterHRBUST] 本地服务启动失败: {err}");
