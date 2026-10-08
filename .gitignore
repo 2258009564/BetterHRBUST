@@ -24,6 +24,11 @@ dist-ssr/
 # 桌面端打包产物
 desktop/release/
 
+# Tauri 桌面端：Rust 构建产物 / 权限 schema 生成物 / 打包输出
+desktop-tauri/src-tauri/target/
+desktop-tauri/src-tauri/gen/
+desktop-tauri/release/
+
 # ---------- 编辑器与 IDE ----------
 .vscode/*
 !.vscode/extensions.json

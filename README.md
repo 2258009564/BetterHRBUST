@@ -11,7 +11,8 @@ BetterHRBUST/
 ├── docs/api/        # 接口逆向文档（13 篇，手写整理，详细踩坑记录）
 ├── tools/probe/     # 接口探测与逆向工具（零依赖 Node.js CLI + 网页控制台）
 ├── web/             # 现代化 Web 客户端（Vue 3 + Vite + Tailwind CSS）
-└── desktop/         # Windows 桌面端（Electron，内置本地反向代理）
+├── desktop/         # Windows 桌面端（Electron，内置本地反向代理）
+└── desktop-tauri/   # Windows 桌面端（Tauri + Rust，Electron 版的轻量重构）
 ```
 
 ---
@@ -105,7 +106,26 @@ npm run dist    # 构建 web + 打包，产物位于 desktop/release/
 
 ---
 
-### 4. 接口探测工具 (`tools/probe/`)
+### 4. Windows 桌面端 · Tauri 重构版 (`desktop-tauri/`)
+
+Tauri（Rust）封装的桌面客户端，与 Electron 版（`desktop/`）功能对等、
+前端代码近乎零改动，但体量大幅缩减：安装包 ≤ 10MB（Electron 版 ~85MB）、
+单 exe 绿色版（前端资产嵌入二进制）、主进程为 Rust 实现（无 Node 运行时）、
+渲染改用系统 WebView2。本地反向代理规则与开发代理完全一致，
+并有 mock 教务系统的 Rust 集成测试完整覆盖。
+
+```powershell
+cd desktop-tauri
+npm install
+npm run dist    # 构建 web + 打包，产物见 desktop-tauri/release/ 与 bundle/nsis/
+```
+
+架构、体积/内存目标、开发与分发细节见
+[`desktop-tauri/README.md`](./desktop-tauri/README.md)。
+
+---
+
+### 5. 接口探测工具 (`tools/probe/`)
 
 教务系统改版或需验证底层接口时，可直接运行逆向探测工具：
 

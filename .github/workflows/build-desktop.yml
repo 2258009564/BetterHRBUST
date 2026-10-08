@@ -1,0 +1,79 @@
+name: Build Desktop (Tauri)
+
+# 推送 desktop-tauri/ 或 web/ 相关改动到 main 时自动构建 Windows 桌面端,
+# Rust 集成测试作为门禁;打 desktop-v* 标签时额外发布 Release。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop-tauri/**'
+      - 'web/**'
+      - '.github/workflows/build-desktop.yml'
+    tags: ['desktop-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-desktop
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            desktop-tauri/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop-tauri/src-tauri
+
+      - name: Build web
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install Tauri CLI
+        working-directory: desktop-tauri
+        run: npm ci
+
+      # 本地服务层门禁：静态托管/SPA/穿越防护/反代规则(mock 上游)/断连语义/端口顺延
+      - name: Rust tests
+        run: cargo test --manifest-path desktop-tauri/src-tauri/Cargo.toml
+
+      - name: Build bundles
+        working-directory: desktop-tauri
+        run: npx tauri build
+
+      - name: Portable zip
+        working-directory: desktop-tauri
+        run: node scripts/make-portable.mjs
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: betterhrbust-desktop-windows
+          path: |
+            desktop-tauri/src-tauri/target/release/bundle/nsis/*.exe
+            desktop-tauri/release/*.zip
+          if-no-files-found: error
+
+      - name: Release (desktop-v* tags)
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop-tauri/src-tauri/target/release/bundle/nsis/*.exe
+            desktop-tauri/release/*.zip
