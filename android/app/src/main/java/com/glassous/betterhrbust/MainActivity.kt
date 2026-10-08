@@ -49,13 +49,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             val app = remember { BetterHrbustApp.instance }
             val prefs by app.preferencesManager.preferencesFlow.collectAsState(initial = null)
-            val authState by app.authRepository.authState.collectAsState(initial = AuthState.Unauthenticated)
+            // 会话状态初始为 null（尚未从 DataStore 读出）：
+            // 若直接给 Unauthenticated 作为初值，会先渲染登录页再跳到首页，出现"一闪而过的登录页"
+            val authState by app.authRepository.authState.collectAsState(initial = null)
             val isSessionExpired by app.authRepository.isSessionExpired.collectAsState()
             val shouldPromptReLogin by app.authRepository.shouldPromptReLogin.collectAsState()
+            val sessionPromptDismissed by app.authRepository.sessionPromptDismissed.collectAsState()
 
             val isSystemDark = isSystemInDarkTheme()
             val useDarkTheme = prefs?.darkTheme ?: isSystemDark
-            val useDynamicColor = prefs?.dynamicColor ?: true
 
             // 系统栏图标明暗跟随应用内主题（支持与系统主题不一致的手动切换）
             val window = this@MainActivity.window
@@ -66,15 +68,27 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // 动态取色固定开启（已移除开关）：Android 12+ 一律使用壁纸取色
             BetterHRBUSTTheme(
                 darkTheme = useDarkTheme,
-                dynamicColor = useDynamicColor
+                dynamicColor = true
             ) {
-                MainAppScaffold(
-                    authState = authState,
-                    isSessionExpired = isSessionExpired,
-                    shouldPromptReLogin = shouldPromptReLogin
-                )
+                val resolvedAuthState = authState
+                if (resolvedAuthState == null) {
+                    // 首帧占位：仅渲染与主题一致的底色，等会话状态就绪后再决定落地页
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                    )
+                } else {
+                    MainAppScaffold(
+                        authState = resolvedAuthState,
+                        isSessionExpired = isSessionExpired,
+                        shouldPromptReLogin = shouldPromptReLogin,
+                        sessionPromptDismissed = sessionPromptDismissed
+                    )
+                }
             }
         }
     }
@@ -84,8 +98,10 @@ class MainActivity : ComponentActivity() {
 fun MainAppScaffold(
     authState: AuthState,
     isSessionExpired: Boolean,
-    shouldPromptReLogin: Boolean = isSessionExpired
+    shouldPromptReLogin: Boolean = isSessionExpired,
+    sessionPromptDismissed: Boolean = false
 ) {
+    val authRepo = remember { BetterHrbustApp.instance.authRepository }
     val syncManager = remember { BetterHrbustApp.instance.syncManager }
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -121,8 +137,8 @@ fun MainAppScaffold(
         }
     }
 
-    // 会话失效提示按一周节流；仅在应提示时展示顶部横幅
-    val showSessionBanner = !isAuthScreen && shouldPromptReLogin
+    // 会话失效提示按一周节流；仅在应提示且用户未忽略时展示顶部横幅
+    val showSessionBanner = !isAuthScreen && shouldPromptReLogin && !sessionPromptDismissed
     val showBottomNav = !isAuthScreen
 
     // 系统栏安全间距（dp）
@@ -157,6 +173,7 @@ fun MainAppScaffold(
                 if (showSessionBanner) {
                     SessionExpiredBanner(
                         onReLoginClick = { showReLoginSheet = true },
+                        onDismiss = { authRepo.dismissSessionPrompt() },
                         modifier = Modifier.statusBarsPadding()
                     )
                 }
@@ -219,6 +236,12 @@ fun MainAppScaffold(
                             onLogout = {
                                 navController.navigate(AuthRoute) {
                                     popUpTo(DashboardRoute) { inclusive = true }
+                                }
+                            },
+                            onReLogin = {
+                                // 重新登录：进入登录页，成功后回到概览
+                                navController.navigate(AuthRoute) {
+                                    launchSingleTop = true
                                 }
                             }
                         )

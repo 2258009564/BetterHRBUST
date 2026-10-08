@@ -374,7 +374,7 @@ fun TimetableScreen(
                 if (unarranged.isNotEmpty()) {
                     item {
                         Text(
-                            text = "未排时间地点课程 (${unarranged.size} 门)",
+                            text = "未排课（${unarranged.size}）",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
@@ -401,7 +401,7 @@ fun TimetableScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "教师: ${un.teacher} | 班级: ${un.mergeClass}",
+                                    text = "${un.teacher} · ${un.mergeClass}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

@@ -44,6 +44,10 @@ interface ProfileDao {
     @Query("SELECT * FROM profile_cache WHERE studentNumber = :studentNumber")
     fun getProfile(studentNumber: String): Flow<ProfileEntity?>
 
+    /** 兜底读取最新一条档案（兼容早期以"页面学号"为键写入、与登录账号不一致的历史缓存） */
+    @Query("SELECT * FROM profile_cache ORDER BY updatedAt DESC LIMIT 1")
+    fun getLatest(): Flow<ProfileEntity?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: ProfileEntity)
 

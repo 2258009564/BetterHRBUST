@@ -62,7 +62,7 @@ fun CoursesScreen(
         )
     ) {
         // 页面标题（作为滚动内容，可穿透状态栏）
-        item { PageHeaderTitle("全校开课与课程检索") }
+        item { PageHeaderTitle("全校课程") }
 
         item {
             OutlinedTextField(
@@ -132,7 +132,7 @@ fun CoursesScreen(
 
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "课程编号: ${course.courseId} | 开课院系: ${course.department.ifEmpty { "哈尔滨理工大学" }}",
+                            text = "${course.courseId} · ${course.department.ifEmpty { "哈尔滨理工大学" }}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -140,7 +140,7 @@ fun CoursesScreen(
                         if (course.hours > 0 || course.examWay.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "学时: ${course.hours} | 考核方式: ${course.examWay.ifEmpty { "考试" }}",
+                                text = "${course.hours} 学时 · ${course.examWay.ifEmpty { "考试" }}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )

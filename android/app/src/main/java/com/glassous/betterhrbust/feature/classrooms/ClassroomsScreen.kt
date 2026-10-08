@@ -92,7 +92,7 @@ fun ClassroomsScreen(
         )
     ) {
         // 页面标题（作为滚动内容，可穿透状态栏）
-        item { PageHeaderTitle("空闲自习教室检索") }
+        item { PageHeaderTitle("自习空教室") }
 
         // SearchBar
         item {
@@ -123,7 +123,7 @@ fun ClassroomsScreen(
 
         item {
             Text(
-                text = "推算空闲教室 (${filteredRooms.size} 间可用)",
+                text = "空闲教室（${filteredRooms.size}）",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )

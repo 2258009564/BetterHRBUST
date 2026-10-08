@@ -38,6 +38,15 @@ class AuthRepository(
     private val _shouldPromptReLogin = kotlinx.coroutines.flow.MutableStateFlow(false)
     val shouldPromptReLogin: kotlinx.coroutines.flow.StateFlow<Boolean> = _shouldPromptReLogin
 
+    /** 用户已忽略本轮失效提示（点击"忽略"后收起横幅） */
+    private val _sessionPromptDismissed = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val sessionPromptDismissed: kotlinx.coroutines.flow.StateFlow<Boolean> = _sessionPromptDismissed
+
+    /** 用户点击忽略：收起本轮失效横幅 */
+    fun dismissSessionPrompt() {
+        _sessionPromptDismissed.value = true
+    }
+
     /** 用户已发起手动刷新：随后的会话失效需要无条件要求重新登录 */
     private var pendingManualPrompt = false
 
@@ -57,11 +66,14 @@ class AuthRepository(
     }
 
     init {
-        // 冷启动恢复上一轮的会话失效与提示状态，避免横幅在重启后消失
+        // 冷启动只恢复"会话已失效"状态（用于登录页提示与刷新拦截），
+        // 不恢复"是否弹提示"：用户已看过一次提示后，下次启动不再重复弹出，
+        // 而是继续按一周节流（lastPromptAt）计算下一次提示时机。
         scope.launch {
             val snapshot = prefs.preferencesFlow.firstOrNull() ?: return@launch
             _isSessionExpired.value = snapshot.sessionExpired
-            _shouldPromptReLogin.value = snapshot.promptReLogin
+            _shouldPromptReLogin.value = false
+            _sessionPromptDismissed.value = false
         }
     }
 
@@ -74,9 +86,10 @@ class AuthRepository(
         if (!expired) {
             _isSessionExpired.value = false
             _shouldPromptReLogin.value = false
+            _sessionPromptDismissed.value = false
             pendingManualPrompt = false
             promptDecided = false
-            scope.launch { prefs.setSessionState(expired = false, promptReLogin = false) }
+            scope.launch { prefs.setSessionState(expired = false) }
             return
         }
 
@@ -96,8 +109,10 @@ class AuthRepository(
             _shouldPromptReLogin.value = shouldPrompt
             if (shouldPrompt) {
                 prefs.setLastPromptAt(now)
+                // 新的一次提示：重新展示横幅（覆盖上一次的"忽略"）
+                _sessionPromptDismissed.value = false
             }
-            prefs.setSessionState(expired = true, promptReLogin = shouldPrompt)
+            prefs.setSessionState(expired = true)
         }
     }
 
@@ -143,9 +158,10 @@ class AuthRepository(
             // 记录登录时间并清理提示节流状态，重新开始一周计时
             prefs.setLastLoginAt(System.currentTimeMillis())
             prefs.setLastPromptAt(0L)
-            prefs.setSessionState(expired = false, promptReLogin = false)
+            prefs.setSessionState(expired = false)
             _isSessionExpired.value = false
             _shouldPromptReLogin.value = false
+            _sessionPromptDismissed.value = false
             pendingManualPrompt = false
             promptDecided = false
 
@@ -159,10 +175,11 @@ class AuthRepository(
         emit(Resource.Loading)
         _isSessionExpired.value = false
         _shouldPromptReLogin.value = false
+        _sessionPromptDismissed.value = false
         pendingManualPrompt = false
         promptDecided = false
         // clearSession() 会一并清理 lastLoginAt / lastPromptAt / lastFullSyncDate
-        prefs.setSessionState(expired = false, promptReLogin = false)
+        prefs.setSessionState(expired = false)
         val studentId = prefs.preferencesFlow.firstOrNull()?.studentId ?: ""
         try {
             client.logout()

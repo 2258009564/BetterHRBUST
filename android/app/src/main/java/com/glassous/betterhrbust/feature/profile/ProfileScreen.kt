@@ -92,7 +92,7 @@ fun ProfileScreen(
                     )
                 ) {
                     // 页面标题（作为滚动内容，可穿透状态栏）
-                    item { PageHeaderTitle("学籍档案与基本资料") }
+                    item { PageHeaderTitle("学籍档案") }
 
                     // Profile Header Card
                     item {

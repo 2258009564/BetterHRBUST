@@ -181,8 +181,14 @@ fun DashboardScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column {
+                                // 姓名来源优先级：档案缓存 → DataStore 持久化姓名 → 账号兜底，
+                                // 避免档案缓存被清理后回退为占位文案
+                                val displayName = profile?.realName?.takeIf { it.isNotBlank() }
+                                    ?: prefs?.realName?.takeIf { it.isNotBlank() }
+                                    ?: prefs?.username?.takeIf { it.isNotBlank() }
+                                    ?: "哈理工同学"
                                 Text(
-                                    text = profile?.realName?.ifEmpty { "哈理工同学" } ?: "哈理工同学",
+                                    text = displayName,
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -280,7 +286,7 @@ fun DashboardScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "特色学业算法（哈理工口径）",
+                            text = "特色学业算法",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -316,10 +322,11 @@ fun DashboardScreen(
                                 highlight = stats?.earlyGraduation?.qualified == true
                             )
                         }
-                        if (!stats?.risk?.description.isNullOrEmpty()) {
+                        val riskDescription = stats?.risk?.description
+                        if (!riskDescription.isNullOrEmpty()) {
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = stats!!.risk.description,
+                                text = riskDescription,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
