@@ -1,0 +1,129 @@
+/**
+ * 教务在线业务 API 汇聚层
+ * 提供直接调用的异步服务方法
+ */
+
+import { request, getCaptchaUrl, checkCaptcha, postLogin, postLogout } from './client.js';
+import {
+  parseStudentContext,
+  parsePersonalInfo,
+  parseScores,
+  parseTimetable,
+  parseExams,
+  parseCalendarInfo,
+  parseCurriculumPlan,
+  parseClassroomQueryOptions
+} from './parser.js';
+
+export const academicApi = {
+  getCaptchaUrl,
+  checkCaptcha,
+  login: postLogin,
+  logout: postLogout,
+
+  /**
+   * 校验会话有效性并拉取核心上下文
+   */
+  async getStudentContext() {
+    const res = await request('student/currcourse/currcourse.jsdo', { encoding: 'gbk' });
+    return parseStudentContext(res.html);
+  },
+
+  /**
+   * 获取个人详细信息档案与学籍异动
+   */
+  async getPersonalInfo() {
+    const res = await request('showPersonalInfo.do', { encoding: 'utf-8' });
+    return parsePersonalInfo(res.html);
+  },
+
+  /**
+   * 获取成绩单
+   * @param {Object} [params]
+   * @param {string} [params.year] 学年序号（留空为全部）
+   * @param {string} [params.term] 学期序号（1=春，2=秋，留空为全部）
+   * @param {string} [params.prop] 属性筛选（0=必修，1=限选，2=任选）
+   */
+  async getScores(params = {}) {
+    const query = new URLSearchParams({
+      year: params.year || '',
+      term: params.term || '',
+      prop: params.prop || '',
+      groupName: params.groupName || '',
+      para: '0',
+      sortColumn: params.sortColumn || ''
+    });
+
+    if (params.failedStatus) query.append('failedStatus', '1');
+    if (params.passedStatus) query.append('passedStatus', '1');
+    if (params.maxStatus) query.append('maxStatus', '1');
+
+    const res = await request(`manager/score/studentOwnScore.do?${query.toString()}`, {
+      encoding: 'utf-8'
+    });
+    return parseScores(res.html);
+  },
+
+  /**
+   * 获取课表
+   * @param {Object} params
+   * @param {string} params.studentId 教务内部学生 ID
+   * @param {string} params.yearId 学年序号
+   * @param {string} params.termId 学期序号 (1 或 2)
+   * @param {string} [params.sectionType] 'BASE' 或 'COMBINE'
+   */
+  async getTimetable({ studentId, yearId, termId, sectionType = 'COMBINE' }) {
+    const res = await request(
+      `manager/coursearrange/showTimetable.do?id=${studentId}&yearid=${yearId}&termid=${termId}&timetableType=STUDENT&sectionType=${sectionType}`,
+      { encoding: 'gbk' }
+    );
+    return parseTimetable(res.html);
+  },
+
+  /**
+   * 获取考试安排
+   */
+  async getExams() {
+    try {
+      // 优先拉取全部考试
+      const res = await request('manager/examstu/studentQueryAllExam.do', { encoding: 'utf-8' });
+      const exams = parseExams(res.html);
+      if (exams.length > 0) return exams;
+    } catch {
+      // 容错降级
+    }
+
+    // 备用接口：近期考试
+    const recentRes = await request('student/exam/index.jsdo', { encoding: 'gbk' });
+    return parseExams(recentRes.html);
+  },
+
+  /**
+   * 获取教学周、学期及公告信息
+   */
+  async getCalendarInfo(week) {
+    const url = week ? `calendarinfo/viewCalendarInfo.do?week=${week}` : 'calendarinfo/viewCalendarInfo.do';
+    const res = await request(url, { encoding: 'utf-8' });
+    return parseCalendarInfo(res.html);
+  },
+
+  /**
+   * 获取培养方案及学分要求
+   */
+  async getCurriculumPlan() {
+    const res = await request('manager/studyschedule/studentScheduleShowByTerm.do', {
+      encoding: 'gbk'
+    });
+    return parseCurriculumPlan(res.html);
+  },
+
+  /**
+   * 获取教室占用选项
+   */
+  async getClassroomQueryOptions() {
+    const res = await request('teacher/teachresource/roomschedulequery.jsdo', {
+      encoding: 'gbk'
+    });
+    return parseClassroomQueryOptions(res.html);
+  }
+};
