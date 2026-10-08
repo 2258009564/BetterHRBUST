@@ -1,0 +1,3487 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+  <head>
+    <title>个人成绩查询</title>
+    <meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="cache-control" content="no-cache">
+    <meta http-equiv="expires" content="0">
+    <!-- Mimic Internet Explorer 7 -->
+      
+    <link href="/academic/styles/default/css/text.css" rel="stylesheet" type="text/css">
+    <link href="/academic/styles/default/css/main.css" rel="stylesheet" type="text/css">
+    <script type="text/javascript" language="javascript" src="/academic/styles/js/jquery.js" ></script>
+    <script type="text/javascript" language="javascript" src="/academic/styles/js/function.js" ></script>
+    <script type="text/javascript" language="javascript" src="/academic/styles/js/common.js" ></script>
+    <script type="text/javascript" language="javascript" src="/academic/styles/js/selectDate.js" ></script>
+    <script type="text/javascript" language="javascript" src="/academic/styles/js/selectTime.js" ></script>
+    <script type="text/javascript" language="javascript" src="/academic/styles/default/js/page.js" ></script>
+
+    <script type="text/javascript" language="javascript" src="/academic/styles/js/selectDateTime.js" ></script>
+       <script type="text/javascript" language="javascript" src="/academic/styles/js/j_common.js" ></script>
+      <script type="text/javascript" language="javascript" src="/academic/styles/js/depCommon.js" ></script>
+
+      
+
+      <!--[if lt IE 7]>
+
+      <script src="/academic/styles/js/jquery.bgiframe.min.js" type="text/javascript"></script>
+      <![endif]-->
+      <script type='text/javascript' src='/academic/dwr/engine.js'></script>
+      <script type='text/javascript' src='/academic/dwr/util.js'></script>
+      <script type='text/javascript' src='/academic/dwr/interface/pushStart.js'></script>
+      <script type="text/javascript">
+          function push(){
+              pushStart.sendMessageAuto("接收人ID","推送内容，可在java后台更改");
+          }
+      </script>
+  </head>                                
+  <body>
+    <center>
+         
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" src="../../styles/js/jquery.js"></script>
+<script type="text/javascript">
+    function changeYearTerm(year, term) {
+        $.ajax({
+            url:"/academic/calendar/showCalendarYearTerm.do?type=alias&yearId=" + year + "&termId=" + term,
+            success:function (htmlText) {
+                $("#alias").html(htmlText);
+            }
+        });
+    }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+    function sort(sortColumnValue) {
+        document.form1.sortColumn.value = sortColumnValue;
+        document.form1.submit();
+    }
+
+</script>
+
+
+<div class="title"><span class="left"><em>
+
+    个人成绩查询
+
+
+</em></span> <span class="right">&nbsp;</span></div>
+
+
+<form name="form1" method="post" action="">
+    <table class="form" cellspacing="0" cellpadding="0">
+        <tr>
+            <td width="35%">
+                学年学期
+                <select name="year" onchange="changeYearTerm(this.options[this.selectedIndex].value,
+                this.form.term.options[this.form.term.selectedIndex].value)">
+                    <option value="">
+                        全部
+                    </option>
+                    
+                    <option value="46" >2026
+                    </option>
+                    
+                    <option value="26" >2006
+                    </option>
+                    
+                    <option value="27" >2007
+                    </option>
+                    
+                    <option value="28" >2008
+                    </option>
+                    
+                    <option value="29" >2009
+                    </option>
+                    
+                    <option value="30" >2010
+                    </option>
+                    
+                    <option value="31" >2011
+                    </option>
+                    
+                    <option value="32" >2012
+                    </option>
+                    
+                    <option value="33" >2013
+                    </option>
+                    
+                    <option value="34" >2014
+                    </option>
+                    
+                    <option value="35" >2015
+                    </option>
+                    
+                    <option value="36" >2016
+                    </option>
+                    
+                    <option value="37" >2017
+                    </option>
+                    
+                    <option value="38" >2018
+                    </option>
+                    
+                    <option value="39" >2019
+                    </option>
+                    
+                    <option value="40" >2020
+                    </option>
+                    
+                    <option value="41" >2021
+                    </option>
+                    
+                    <option value="42" >2022
+                    </option>
+                    
+                    <option value="43" >2023
+                    </option>
+                    
+                    <option value="44" >2024
+                    </option>
+                    
+                    <option value="45" >2025
+                    </option>
+                    
+                    <option value="47" >2027
+                    </option>
+                    
+                    <option value="48" >2028
+                    </option>
+                    
+                    <option value="49" >2029
+                    </option>
+                    
+                    <option value="50" >2030
+                    </option>
+                    
+                    <option value="51" >2031
+                    </option>
+                    
+                    <option value="52" >2032
+                    </option>
+                    
+                    <option value="53" >2033
+                    </option>
+                    
+                    <option value="54" >2034
+                    </option>
+                    
+                    <option value="55" >2035
+                    </option>
+                    
+                    <option value="56" >2036
+                    </option>
+                    
+                    <option value="57" >2037
+                    </option>
+                    
+                    <option value="58" >2038
+                    </option>
+                    
+                    <option value="59" >2039
+                    </option>
+                    
+                    <option value="60" >2040
+                    </option>
+                    
+                    <option value="61" >2041
+                    </option>
+                    
+                    <option value="62" >2042
+                    </option>
+                    
+                    <option value="63" >2043
+                    </option>
+                    
+                    <option value="64" >2044
+                    </option>
+                    
+                    <option value="65" >2045
+                    </option>
+                    
+                    <option value="66" >2046
+                    </option>
+                    
+                </select>
+                <select name="term" onchange="changeYearTerm(this.form.year.options[this.form.year.selectedIndex].value,
+                this.options[this.selectedIndex].value)">
+                    <option value="">
+                        全部
+                    </option>
+                    
+                    <option value="2" >秋
+                    </option>
+
+                    
+                    <option value="1" >春
+                    </option>
+
+                    
+                </select>
+                <span id="alias">
+
+                </span>
+
+                <script type="text/javascript">
+                    changeYearTerm(document.form1.year.options[document.form1.year.selectedIndex].value,
+                            document.form1.term.options[document.form1.term.selectedIndex].value)
+                </script>
+            </td>
+
+            <td><input type="checkbox" name="failedStatus" value="1" />
+                未通过课程
+            </td>
+
+
+            <td><input type="checkbox" name="passedStatus" value="1" />
+                及格课程
+            </td>
+
+            <td><input type="checkbox" name="maxStatus" value="1" />
+                最高分
+            </td>
+
+
+            <td> 选课属性
+                <select name="prop">
+                    <option value="">
+                        全部
+                    </option>
+
+                    <option value="0"  >必修</option>
+                    <option value="1"  >限选</option>
+                    <option value="2"  >任选</option>
+
+                </select>
+
+            </td>
+
+
+            
+            <td> 课组
+                <select name="groupName">
+                    <option value="">
+                        全部
+                    </option>
+                     
+                    <option value="专业必修课（2023）">专业必修课（2023）</option>
+                    
+                    <option value="专业选修课（2023）">专业选修课（2023）</option>
+                    
+                    <option value="人文 、社科类（2023）">人文 、社科类（2023）</option>
+                    
+                    <option value="公共外语（小语种（2023）">公共外语（小语种（2023）</option>
+                    
+                    <option value="学科基础课程（2023）">学科基础课程（2023）</option>
+                    
+                    <option value="实践性教学环节（2023）">实践性教学环节（2023）</option>
+                    
+                    <option value="文明对话与世界视野通识任选课【2017】（简称C类）">文明对话与世界视野通识任选课【2017】（简称C类）</option>
+                    
+                    <option value="研究学习与实战体验通识任选课【2017】（简称D类）">研究学习与实战体验通识任选课【2017】（简称D类）</option>
+                    
+                    <option value="社会研究与当代中国通识任选课【2017】（简称B类）">社会研究与当代中国通识任选课【2017】（简称B类）</option>
+                    
+                    <option value="科学探索与技术创新通识任选课【2017】（简称A类）">科学探索与技术创新通识任选课【2017】（简称A类）</option>
+                    
+                    <option value="第二课堂（2023）">第二课堂（2023）</option>
+                    
+                    <option value="自然科学类（2023）">自然科学类（2023）</option>
+                    
+                    <option value="艺术创作与审美体验通识任选课【2017】（简称E类）">艺术创作与审美体验通识任选课【2017】（简称E类）</option>
+                    
+                    <option value="课程辅导">课程辅导</option>
+                    
+
+                </select>
+
+            </td>
+            
+
+            <td>
+                <input name="para" type="hidden" id="para" value="0"/>
+
+                <input name="sortColumn" type="hidden" id="sortColumn" value=""/>
+                <input type="submit" name="Submit" class="button" value="查询">
+            </td>
+        </tr>
+    </table>
+</form>
+
+<br>
+
+<table width="100%" class="datalist">
+
+    <tr>
+        
+
+        
+        <th>
+            
+            
+            学年
+            
+        </th>
+        
+        <th>
+            
+            
+            学期
+            
+        </th>
+        
+        <th>
+            
+            
+            课程号
+            
+        </th>
+        
+        <th>
+            
+            
+            课程名
+            
+        </th>
+        
+        <th>
+            
+            
+            课序号
+            
+        </th>
+        
+        <th>
+            
+            
+            课组
+            
+        </th>
+        
+        <th>
+            
+            
+            总评
+            
+        </th>
+        
+        <th>
+            
+            
+            学分
+            
+        </th>
+        
+        <th>
+            
+            
+            学时
+            
+        </th>
+        
+        <th>
+            
+            
+            选课属性
+            
+        </th>
+        
+        <th>
+            
+            
+            备注
+            
+        </th>
+        
+        <th>
+            
+            
+            考试性质
+            
+        </th>
+        
+        <th>
+            
+            
+            及格标志
+            
+        </th>
+        
+
+        
+            <th>过程性成绩</th>
+        
+    </tr>
+
+
+    
+    <tr>
+        
+
+        
+        <td>2023
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U040023XN01W1
+        </td>
+        
+        <td>程序设计基础
+        </td>
+        
+        <td>15
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td>80
+        </td>
+        
+        <td>4
+        </td>
+        
+        <td>64
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2023
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U080023TW01W1
+        </td>
+        
+        <td>高等数学（一）-I
+        </td>
+        
+        <td>9
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">36</span>
+        </td>
+        
+        <td>5
+        </td>
+        
+        <td>80
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2023
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U090523TW01W1
+        </td>
+        
+        <td>大学英语-I
+        </td>
+        
+        <td>30
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>60
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2023
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U110123TW01W1
+        </td>
+        
+        <td>思想道德与法治
+        </td>
+        
+        <td>27
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>80
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2023
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U730123TW01W1
+        </td>
+        
+        <td>体育-I
+        </td>
+        
+        <td>110
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>73
+        </td>
+        
+        <td>0.5
+        </td>
+        
+        <td>36
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2023
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U920123TW01W1
+        </td>
+        
+        <td>心理健康教育
+        </td>
+        
+        <td>7
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>75
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>32
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2023
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U920223TW01W1
+        </td>
+        
+        <td>军事理论
+        </td>
+        
+        <td>21
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>77
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>36
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2023
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U920223TW02W1
+        </td>
+        
+        <td>军事技能训练
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>良好
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>000115MO01N0
+        </td>
+        
+        <td>3D打印技术与应用（网络）（任选）
+        </td>
+        
+        <td>1
+        </td>
+        
+        <td>科学探索与技术创新通识任选课【2017】（简称A类）
+        </td>
+        
+        <td><span style=" color:#FF0000">0</span>
+        </td>
+        
+        <td>1.5
+        </td>
+        
+        <td>28
+        </td>
+        
+        <td>任选
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>040315MO01W0
+        </td>
+        
+        <td>2D/3D游戏设计与开发（任选）
+        </td>
+        
+        <td>1
+        </td>
+        
+        <td>科学探索与技术创新通识任选课【2017】（简称A类）
+        </td>
+        
+        <td>60
+        </td>
+        
+        <td>1.5
+        </td>
+        
+        <td>30
+        </td>
+        
+        <td>任选
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040023SN01W2
+        </td>
+        
+        <td>课程设计（程序设计基础）
+        </td>
+        
+        <td>15
+        </td>
+        
+        <td>实践性教学环节（2023）
+        </td>
+        
+        <td>良好
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040023TN01W2
+        </td>
+        
+        <td>离散数学
+        </td>
+        
+        <td>7
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">29</span>
+        </td>
+        
+        <td>5
+        </td>
+        
+        <td>80
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040023XN02W2
+        </td>
+        
+        <td>数字电路与逻辑
+        </td>
+        
+        <td>8
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">32</span>
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040323SN01W2
+        </td>
+        
+        <td>认识实习（软件）
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>实践性教学环节（2023）
+        </td>
+        
+        <td>及格
+        </td>
+        
+        <td>1
+        </td>
+        
+        <td>1
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U080023TW01W1
+        </td>
+        
+        <td>高等数学（一）-I
+        </td>
+        
+        <td>26
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td>78
+        </td>
+        
+        <td>5
+        </td>
+        
+        <td>80
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>重考
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U080023TW01W2
+        </td>
+        
+        <td>高等数学（一）-II
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">47</span>
+        </td>
+        
+        <td>6
+        </td>
+        
+        <td>96
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U080023TW04W2
+        </td>
+        
+        <td>线性代数
+        </td>
+        
+        <td>12
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">52</span>
+        </td>
+        
+        <td>3.5
+        </td>
+        
+        <td>56
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U080323TW02W2
+        </td>
+        
+        <td>大学物理（二）-I
+        </td>
+        
+        <td>7
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td>60
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>32
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U090523TW01W2
+        </td>
+        
+        <td>大学英语-II
+        </td>
+        
+        <td>30
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>61
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U110323TW01W2
+        </td>
+        
+        <td>中国近现代史纲要
+        </td>
+        
+        <td>13
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>75
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U110523TW01W2
+        </td>
+        
+        <td>习近平新时代中国特色社会主义思想概论
+        </td>
+        
+        <td>16
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>60
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U730123TW01W2
+        </td>
+        
+        <td>体育-II
+        </td>
+        
+        <td>110
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>76
+        </td>
+        
+        <td>0.5
+        </td>
+        
+        <td>36
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>000115LO06N0
+        </td>
+        
+        <td>互联网金融（网络）（任选）
+        </td>
+        
+        <td>1
+        </td>
+        
+        <td>社会研究与当代中国通识任选课【2017】（简称B类）
+        </td>
+        
+        <td>73
+        </td>
+        
+        <td>1.5
+        </td>
+        
+        <td>32
+        </td>
+        
+        <td>任选
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>130719IO68W0
+        </td>
+        
+        <td>中华风景名胜解析与观游攻略（任选）
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>艺术创作与审美体验通识任选课【2017】（简称E类）
+        </td>
+        
+        <td><span style=" color:#FF0000">0</span>
+        </td>
+        
+        <td>1.5
+        </td>
+        
+        <td>30
+        </td>
+        
+        <td>任选
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U040023SN02W3
+        </td>
+        
+        <td>课程设计（数据库）
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>实践性教学环节（2023）
+        </td>
+        
+        <td>中
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U040023TN01W2
+        </td>
+        
+        <td>离散数学
+        </td>
+        
+        <td>5
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">20</span>
+        </td>
+        
+        <td>5
+        </td>
+        
+        <td>80
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>重考
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U040023XN02W2
+        </td>
+        
+        <td>数字电路与逻辑
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">24</span>
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>重考
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U040023XN06W3
+        </td>
+        
+        <td>面向对象程序设计（Java）（双语）
+        </td>
+        
+        <td>7
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td>60
+        </td>
+        
+        <td>2.5
+        </td>
+        
+        <td>40
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U080023TW01W2
+        </td>
+        
+        <td>高等数学（一）-II
+        </td>
+        
+        <td>8
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">55</span>
+        </td>
+        
+        <td>6
+        </td>
+        
+        <td>96
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>重考
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2024
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U080023TW04W2
+        </td>
+        
+        <td>线性代数
+        </td>
+        
+        <td>30
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">57</span>
+        </td>
+        
+        <td>3.5
+        </td>
+        
+        <td>56
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>重考
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>000115NO25N0
+        </td>
+        
+        <td>逻辑学导论（网络）（任选）
+        </td>
+        
+        <td>1
+        </td>
+        
+        <td>社会研究与当代中国通识任选课【2017】（简称B类）
+        </td>
+        
+        <td><span style=" color:#FF0000">58</span>
+        </td>
+        
+        <td>1.5
+        </td>
+        
+        <td>30
+        </td>
+        
+        <td>任选
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>000115PO07N0
+        </td>
+        
+        <td>创业管理一一易学实用的创业真知网络）（任选）
+        </td>
+        
+        <td>1
+        </td>
+        
+        <td>研究学习与实战体验通识任选课【2017】（简称D类）
+        </td>
+        
+        <td><span style=" color:#FF0000">45</span>
+        </td>
+        
+        <td>1.5
+        </td>
+        
+        <td>30
+        </td>
+        
+        <td>任选
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040023TN01W2
+        </td>
+        
+        <td>离散数学
+        </td>
+        
+        <td>7
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td>60
+        </td>
+        
+        <td>5
+        </td>
+        
+        <td>80
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040023XN02W2
+        </td>
+        
+        <td>数字电路与逻辑
+        </td>
+        
+        <td>6
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td>60
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U080023TW01W2
+        </td>
+        
+        <td>高等数学（一）-II
+        </td>
+        
+        <td>16
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td>60
+        </td>
+        
+        <td>6
+        </td>
+        
+        <td>96
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U080023TW04W2
+        </td>
+        
+        <td>线性代数
+        </td>
+        
+        <td>14
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td>61
+        </td>
+        
+        <td>3.5
+        </td>
+        
+        <td>56
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>000115NO26N0
+        </td>
+        
+        <td>生命安全与救援（网络）（任选）
+        </td>
+        
+        <td>1
+        </td>
+        
+        <td>社会研究与当代中国通识任选课【2017】（简称B类）
+        </td>
+        
+        <td>81
+        </td>
+        
+        <td>1.5
+        </td>
+        
+        <td>19
+        </td>
+        
+        <td>任选
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U040023XN03W3
+        </td>
+        
+        <td>计算机组成原理
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">43</span>
+        </td>
+        
+        <td>3.5
+        </td>
+        
+        <td>56
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U040023XN04W3
+        </td>
+        
+        <td>数据结构
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td>62
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U040023XN05W3
+        </td>
+        
+        <td>数据库系统
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td>69
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U080023TW05W3
+        </td>
+        
+        <td>概率论与数理统计
+        </td>
+        
+        <td>13
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td>64
+        </td>
+        
+        <td>2.5
+        </td>
+        
+        <td>40
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U080123TW06W3
+        </td>
+        
+        <td>复变函数与积分变换
+        </td>
+        
+        <td>13
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">50</span>
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U080323TW02W3
+        </td>
+        
+        <td>大学物理（二）-II
+        </td>
+        
+        <td>11
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td>66
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>32
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U090523TW01W3
+        </td>
+        
+        <td>大学英语-III
+        </td>
+        
+        <td>34
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>63
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>32
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U100523EW99W0
+        </td>
+        
+        <td>精美PPT制作和AI辅助（任选）
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>艺术创作与审美体验通识任选课【2017】（简称E类）
+        </td>
+        
+        <td>95
+        </td>
+        
+        <td>1.5
+        </td>
+        
+        <td>30
+        </td>
+        
+        <td>任选
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U110223TW01W3
+        </td>
+        
+        <td>马克思主义基本原理
+        </td>
+        
+        <td>31
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>60
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2025
+        </td>
+        
+        <td>秋
+        </td>
+        
+        <td>U730123TW01W3
+        </td>
+        
+        <td>体育-III
+        </td>
+        
+        <td>127
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>84
+        </td>
+        
+        <td>0.5
+        </td>
+        
+        <td>36
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>000119NO33N0
+        </td>
+        
+        <td>脑洞大开背后的创新思维（网络）（任选）
+        </td>
+        
+        <td>1
+        </td>
+        
+        <td>科学探索与技术创新通识任选课【2017】（简称A类）
+        </td>
+        
+        <td>86
+        </td>
+        
+        <td>1.5
+        </td>
+        
+        <td>15
+        </td>
+        
+        <td>任选
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U000123TW01W4
+        </td>
+        
+        <td>创新创业基础
+        </td>
+        
+        <td>12
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>90
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>32
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040023XN03W3
+        </td>
+        
+        <td>计算机组成原理
+        </td>
+        
+        <td>10
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td>66
+        </td>
+        
+        <td>3.5
+        </td>
+        
+        <td>56
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>重考
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040023XN07W4
+        </td>
+        
+        <td>操作系统
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td>73
+        </td>
+        
+        <td>4
+        </td>
+        
+        <td>64
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040023XN08W4
+        </td>
+        
+        <td>计算机网络
+        </td>
+        
+        <td>6
+        </td>
+        
+        <td>学科基础课程（2023）
+        </td>
+        
+        <td>69
+        </td>
+        
+        <td>3.5
+        </td>
+        
+        <td>56
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040323SN04W4
+        </td>
+        
+        <td>课程设计（操作系统）
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>实践性教学环节（2023）
+        </td>
+        
+        <td>良好
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U040323ZN02W4
+        </td>
+        
+        <td>系统分析与设计
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>专业必修课（2023）
+        </td>
+        
+        <td>60
+        </td>
+        
+        <td>4
+        </td>
+        
+        <td>64
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U080123TW06W3
+        </td>
+        
+        <td>复变函数与积分变换
+        </td>
+        
+        <td>13
+        </td>
+        
+        <td>自然科学类（2023）
+        </td>
+        
+        <td><span style=" color:#FF0000">34</span>
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>重考
+        </td>
+        
+        <td>不及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U110423TW01W4
+        </td>
+        
+        <td>毛泽东思想和中国特色社会主义理论体系概论
+        </td>
+        
+        <td>34
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>72
+        </td>
+        
+        <td>3
+        </td>
+        
+        <td>48
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U110623TW01W4
+        </td>
+        
+        <td>形势与政策-IV
+        </td>
+        
+        <td>14
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>69
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>12
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U520123SW02W4
+        </td>
+        
+        <td>工程训练(2周）
+        </td>
+        
+        <td>1
+        </td>
+        
+        <td>实践性教学环节（2023）
+        </td>
+        
+        <td>87
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>2
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+    <tr>
+        
+
+        
+        <td>2026
+        </td>
+        
+        <td>春
+        </td>
+        
+        <td>U730123TW01W4
+        </td>
+        
+        <td>体育-IV
+        </td>
+        
+        <td>127
+        </td>
+        
+        <td>人文 、社科类（2023）
+        </td>
+        
+        <td>68
+        </td>
+        
+        <td>0.5
+        </td>
+        
+        <td>36
+        </td>
+        
+        <td>必修
+        </td>
+        
+        <td>正常
+        </td>
+        
+        <td>正常考试
+        </td>
+        
+        <td>及格
+        </td>
+        
+
+            
+               <td>
+                
+               </td>
+            
+    </tr>
+    
+
+</table>
+
+
+
+    </center>
+  </body>
+</html>

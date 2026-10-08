@@ -1,0 +1,261 @@
+package com.glassous.betterhrbust.feature.exams
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.*
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.glassous.betterhrbust.BetterHrbustApp
+import com.glassous.betterhrbust.core.model.ExamItem
+import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
+import com.glassous.betterhrbust.core.ui.components.EmptyView
+import com.glassous.betterhrbust.core.ui.components.LoadingView
+import com.glassous.betterhrbust.data.repository.Resource
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExamsScreen(
+    modifier: Modifier = Modifier
+) {
+    val app = remember { BetterHrbustApp.instance }
+    val academicRepo = remember { app.academicRepository }
+    val prefsManager = remember { app.preferencesManager }
+    val coroutineScope = rememberCoroutineScope()
+
+    val prefs by prefsManager.preferencesFlow.collectAsState(initial = null)
+    var isRefreshing by remember { mutableStateOf(false) }
+    var examList by remember { mutableStateOf<List<ExamItem>>(emptyList()) }
+
+    fun loadData(force: Boolean = false) {
+        val currentPrefs = prefs ?: return
+        coroutineScope.launch {
+            isRefreshing = true
+            academicRepo.getExams(currentPrefs.studentId, force).collect { res ->
+                if (res is Resource.Success) {
+                    examList = res.data
+                }
+            }
+            isRefreshing = false
+        }
+    }
+
+    LaunchedEffect(prefs?.studentId) {
+        if (prefs != null && prefs!!.studentId.isNotEmpty()) {
+            loadData(force = false)
+        }
+    }
+
+    val upcomingExams = remember(examList) {
+        examList.filter { (it.countdownDays ?: 0) >= 0 }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("考试日程", fontWeight = FontWeight.Bold) }
+            )
+        }
+    ) { padding ->
+        AppPullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { loadData(force = true) },
+            modifier = modifier.fillMaxSize().padding(padding)
+        ) {
+            if (examList.isEmpty() && isRefreshing) {
+                LoadingView(message = "正在获取考试安排...")
+            } else if (examList.isEmpty()) {
+                EmptyView(title = "暂无考试安排", description = "教务系统目前未公布您的考试日程")
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    // Carousel of upcoming exams if any
+                    if (upcomingExams.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "近期考试倒计时",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val carouselState = rememberCarouselState { upcomingExams.size }
+                            HorizontalMultiBrowseCarousel(
+                                state = carouselState,
+                                preferredItemWidth = 280.dp,
+                                itemSpacing = 12.dp,
+                                modifier = Modifier.fillMaxWidth().height(160.dp)
+                            ) { index ->
+                                val exam = upcomingExams[index]
+                                Card(
+                                    modifier = Modifier.fillMaxSize(),
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp).fillMaxSize(),
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = exam.courseName,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                maxLines = 1,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.primary
+                                            ) {
+                                                Text(
+                                                    text = "还有 ${exam.countdownDays} 天",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onPrimary,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = exam.time,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.Place, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = exam.location,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // All exams title
+                    item {
+                        Text(
+                            text = "全部考试 (${examList.size} 门)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Exam Cards List
+                    items(examList) { exam ->
+                        val isFinished = (exam.countdownDays ?: 0) < 0
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isFinished) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceContainer
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = exam.courseName,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = when {
+                                            isFinished -> MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                            (exam.countdownDays ?: 0) <= 3 -> MaterialTheme.colorScheme.errorContainer
+                                            else -> MaterialTheme.colorScheme.secondaryContainer
+                                        }
+                                    ) {
+                                        Text(
+                                            text = when {
+                                                isFinished -> "已结束"
+                                                exam.countdownDays != null -> "还有 ${exam.countdownDays} 天"
+                                                else -> exam.property
+                                            },
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = when {
+                                                isFinished -> MaterialTheme.colorScheme.outline
+                                                (exam.countdownDays ?: 0) <= 3 -> MaterialTheme.colorScheme.error
+                                                else -> MaterialTheme.colorScheme.onSecondaryContainer
+                                            },
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(text = "考试时间: ${exam.time}", style = MaterialTheme.typography.bodySmall)
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Place, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(text = "考场地点: ${exam.location}", style = MaterialTheme.typography.bodySmall)
+                                }
+
+                                if (exam.property.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "考试性质: ${exam.property} | 课程代码: ${exam.courseId}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -55,3 +55,27 @@ pnpm-debug.log*
 
 # 油猴脚本构建产物
 web/dist-userscript/
+
+# ---------- Android 构建与本地配置 ----------
+.gradle/
+**/build/
+build/
+local.properties
+**/local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+captures/
+.externalNativeBuild
+.cxx
+*.keystore
+*.jks
+*.hprof
+*.iml
+
+# ---------- AI 协作与智能体工作目录 ----------
+.agents/
+.gemini/
+.claude/

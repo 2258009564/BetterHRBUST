@@ -1,0 +1,167 @@
+
+
+
+<html>
+  <head>
+  <Meta http-equiv="Content-Type" Content="text/html; Charset=gbk">
+<Meta http-equiv="Content-Language" Content="zh-CN">
+<Meta http-equiv="MSThemeCompatible" Content="No">
+<Meta name="Description" Content="综合教务 教学设施管理">
+<Meta name="Author" Content="Educational Technology Institute, Tsinghua University">
+<Meta name="Copyright" Content="Copyright(c)2005 Educational Technology Institute, Tsinghua University">
+<link href="../../styles/css/content.css" rel="stylesheet" type="text/css">
+<script language="javascript" src="../../styles/js/common.js"></script>
+<script language="javascript" src="../../styles/js/general.js"></script>
+<script language="JavaScript" type="text/JavaScript">
+    function checkForm(){
+        if(form1.buildingid.value=="-1"){
+            alert("请选择教学楼");
+            return false;
+        }
+        else{
+			if(form1.room.value=="-1"){
+            	alert("请选择教室");
+            	return false;
+        	}
+			else{
+            	form1.action="./roomschedule.jsdo";
+			}
+        }
+    }
+
+	function checkWeekForm(){
+        if(form1.buildingid.value=="-1"){
+            alert("请选择教学楼");
+            return false;
+        }
+        if(form1.whichweek.value=="-1"){
+            alert("请选择第几周");
+            return false;
+        }
+        else{
+            form1.action="./roomschedule_week.jsdo";
+		}
+    }
+</script>
+</head>
+  <body>
+  <form name="form1" method="post" action="roomschedulequery.jsdo" >
+  <table cellspacing="0" cellpadding="0" id="title">
+    <tr>
+      <td nowrap="nowrap"><div>教室时间占用</div></td>
+    </tr>
+  </table>
+
+    <table cellpadding="0" cellspacing="0" class="broken_tab">
+        <tr>
+            <td>选择教学区</td>
+            <td><select name="aid" onChange="this.form.submit()">
+              <option value="-1">请选择</option>
+              
+              <option value="353" >西区</option>
+              
+              <option value="712" >南区</option>
+              
+              <option value="17491" >荣成校区</option>
+              
+            </select></td>
+            <td>选择教学楼</td>
+            <td><select name="buildingid" id="buildingid" onChange="this.form.submit()">
+              <option value="-1">请选择</option>
+              
+              <option value="1168" >国际</option>
+              
+              <option value="354" >金工实习</option>
+              
+              <option value="3428" >理工大厦</option>
+              
+              <option value="4470" >纳米楼</option>
+              
+              <option value="3792" >实训楼</option>
+              
+              <option value="356" >实验</option>
+              
+              <option value="1248" >体育馆</option>
+              
+              <option value="2388" >网络通识课</option>
+              
+              <option value="4198" >西区7号楼</option>
+              
+              <option value="703" >西区操场</option>
+              
+              <option value="358" >西区二号楼</option>
+              
+              <option value="692" >西区计算机楼</option>
+              
+              <option value="449" >西区三号楼</option>
+              
+              <option value="481" >西区四号楼</option>
+              
+              <option value="579" >西区图书馆</option>
+              
+              <option value="488" >西区五号楼</option>
+              
+              <option value="584" >西区一号楼</option>
+              
+              <option value="1688" >新教学楼</option>
+              
+            </select></td>
+        </tr>
+        <tr>
+            <td>教室</td>
+            <td colspan="3"><select name="room" >
+              <option value="-1">请选择</option>
+              
+            </select>&nbsp;&nbsp;
+              <input type="submit" name="Submit2" value="确 定" class="button" onClick="return checkForm()"></td>
+        </tr>
+        <tr>
+            <td align="left">选择时间            </td>
+            <td colspan="3" align="left">第
+              <select name="whichweek">
+                <option value="-1">请选择</option>
+                <option value="1" >1</option>
+<option value="2" >2</option>
+<option value="3" >3</option>
+<option value="4" >4</option>
+<option value="5" >5</option>
+<option value="6" >6</option>
+<option value="7" >7</option>
+<option value="8" >8</option>
+<option value="9" >9</option>
+<option value="10" >10</option>
+<option value="11" >11</option>
+<option value="12" >12</option>
+<option value="13" >13</option>
+<option value="14" >14</option>
+<option value="15" >15</option>
+<option value="16" >16</option>
+<option value="17" >17</option>
+<option value="18" >18</option>
+<option value="19" >19</option>
+<option value="20" >20</option>
+<option value="21" >21</option>
+<option value="22" >22</option>
+<option value="23" >23</option>
+<option value="24" >24</option>
+<option value="25" >25</option>
+<option value="26" >26</option>
+
+              </select>
+周&nbsp;&nbsp;&nbsp;&nbsp;
+<select name="week">
+  <option value="1" >周一</option>
+<option value="2" >周二</option>
+<option value="3" >周三</option>
+<option value="4" >周四</option>
+<option value="5" >周五</option>
+<option value="6" >周六</option>
+<option value="7" >周日</option>
+
+</select>
+&nbsp;&nbsp;<input type="submit" name="Submit" value="确 定" class="button" onClick="return checkWeekForm()"></td>
+        </tr>
+    </table>
+</form>
+  </body>
+</html>
