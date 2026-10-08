@@ -27,12 +27,18 @@
               >
                 <Icon name="chevron-left" customClass="w-4 h-4" />
               </button>
-              <div class="px-3 py-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100 min-w-24 text-center">
-                第 {{ selectedWeek }} 周
-                <span v-if="selectedWeek === currentWeek" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-normal block">
-                  (当前周)
+              <!-- 点击呼出周次选择卡片 -->
+              <button
+                type="button"
+                class="px-3 py-1 rounded-lg border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 cursor-pointer min-w-24 flex items-center justify-center gap-1"
+                title="点击选择教学周次"
+                @click="showWeekPicker = true"
+              >
+                <span class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  第 {{ selectedWeek }} 周
                 </span>
-              </div>
+                <Icon name="chevron-down" customClass="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
+              </button>
               <button
                 type="button"
                 class="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer text-zinc-600 dark:text-zinc-300"
@@ -41,15 +47,6 @@
                 <Icon name="chevron-right" customClass="w-4 h-4" />
               </button>
             </div>
-
-            <!-- Week Slider -->
-            <input
-              type="range"
-              min="1"
-              max="26"
-              v-model.number="selectedWeek"
-              class="w-32 sm:w-48 accent-zinc-900 dark:accent-zinc-100 cursor-pointer"
-            />
 
             <!-- Only This Week Toggle -->
             <button
@@ -63,6 +60,24 @@
               @click="onlyCurrentWeek = !onlyCurrentWeek"
             >
               仅看本周课程
+            </button>
+
+            <!-- 当前周标记 / 回到本周（互斥显示，同一位置且等高，无布局跳动） -->
+            <span
+              v-if="selectedWeek === currentWeek"
+              class="px-2.5 py-1 text-xs rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 flex items-center gap-1 select-none"
+            >
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              当前周
+            </span>
+            <button
+              v-else
+              type="button"
+              class="px-2.5 py-1 text-xs rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 cursor-pointer transition-colors flex items-center gap-1"
+              @click="backToCurrentWeek"
+            >
+              <Icon name="refresh" customClass="w-3 h-3" />
+              回到本周
             </button>
           </div>
 
@@ -107,12 +122,14 @@
               v-for="(dayName, dIdx) in daysOfWeek"
               :key="dayName"
               :class="[
-                'p-3 text-center border-r border-zinc-200/80 dark:border-zinc-800 last:border-r-0',
-                (dIdx + 1) === currentDayIndex ? 'text-zinc-900 dark:text-zinc-100 font-bold bg-zinc-100/60 dark:bg-zinc-800/40' : ''
+                'p-3 text-center border-r border-zinc-200/80 dark:border-zinc-800 last:border-r-0 transition-colors',
+                isTodayColumn(dIdx + 1)
+                  ? 'text-zinc-900 dark:text-zinc-100 font-bold bg-emerald-500/[0.1] dark:bg-emerald-400/[0.08]'
+                  : ''
               ]"
             >
               {{ dayName }}
-              <span v-if="(dIdx + 1) === currentDayIndex" class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 ml-1"></span>
+              <span v-if="isTodayColumn(dIdx + 1)" class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 ml-1"></span>
             </div>
           </div>
 
@@ -152,15 +169,19 @@
             <div
               v-for="dayNum in 7"
               :key="dayNum"
-              class="p-1.5 border-r border-zinc-100 dark:border-zinc-800/60 last:border-r-0 flex flex-col gap-1.5 relative min-w-0"
+              :class="[
+                'p-1.5 border-r border-zinc-100 dark:border-zinc-800/60 last:border-r-0 flex flex-col gap-1.5 relative min-w-0 transition-colors',
+                isTodayColumn(dayNum) ? 'bg-emerald-500/[0.07] dark:bg-emerald-400/[0.06]' : ''
+              ]"
             >
               <div
                 v-for="course in getVisibleCoursesForSlot(dayNum, slot.period)"
                 :key="course.courseName + course.id"
                 :class="[
                   'p-2.5 rounded-lg text-sm leading-tight transition-all duration-150 cursor-pointer border select-none h-full flex flex-col justify-between',
-                  isCourseActiveThisWeek(course) ? getCourseColor(course).solid : COURSE_MUTED
+                  isCourseActiveThisWeek(course) ? 'course-card' : COURSE_MUTED
                 ]"
+                :style="courseColorStyle(course)"
                 @click="openCourseDetail(course)"
               >
                 <div>
@@ -197,6 +218,38 @@
           </div>
         </div>
       </UiCard>
+
+      <!-- Week Picker Modal -->
+      <UiModal v-model="showWeekPicker" title="选择教学周次">
+        <div class="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+          共 26 个教学周，绿色标记为当前教学周
+        </div>
+        <div class="grid grid-cols-5 sm:grid-cols-7 gap-2">
+          <button
+            v-for="w in 26"
+            :key="w"
+            type="button"
+            :class="[
+              'h-12 rounded-lg border flex flex-col items-center justify-center gap-0.5 cursor-pointer select-none transition-colors',
+              w === selectedWeek
+                ? 'bg-zinc-900 text-white border-transparent dark:bg-zinc-100 dark:text-zinc-900'
+                : 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+            ]"
+            @click="pickWeek(w)"
+          >
+            <span class="text-sm font-bold leading-none">{{ w }}</span>
+            <span
+              v-if="w === currentWeek"
+              :class="[
+                'text-[9px] leading-none font-medium',
+                w === selectedWeek ? 'opacity-80' : 'text-emerald-600 dark:text-emerald-400'
+              ]"
+            >
+              本周
+            </span>
+          </button>
+        </div>
+      </UiModal>
 
       <!-- Course Detail Drawer -->
       <UiDrawer
@@ -241,6 +294,7 @@ import { ref, computed } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiTabs from '@/components/ui/UiTabs.vue';
+import UiModal from '@/components/ui/UiModal.vue';
 import UiDrawer from '@/components/ui/UiDrawer.vue';
 import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
@@ -273,6 +327,7 @@ const unarrangedCourses = computed(() => activeTimetable.value.unarranged || [])
 
 const showDrawer = ref(false);
 const selectedCourse = ref(null);
+const showWeekPicker = ref(false);
 
 const daysOfWeek = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
@@ -290,6 +345,30 @@ function nextWeek() {
 
 function isCourseActiveThisWeek(course) {
   return isCourseActiveInWeek(course, selectedWeek.value);
+}
+
+/** 点击周次选择卡片中的某一周 */
+function pickWeek(week) {
+  selectedWeek.value = week;
+  showWeekPicker.value = false;
+}
+
+/** 快速跳回当前教学周 */
+function backToCurrentWeek() {
+  selectedWeek.value = currentWeek.value;
+}
+
+/**
+ * 仅当正在浏览当前教学周时，"今天"所在的整列才高亮；
+ * 查看其他周次时不显示今天标记，避免误导。
+ */
+function isTodayColumn(dayNum) {
+  return selectedWeek.value === currentWeek.value && dayNum === currentDayIndex.value;
+}
+
+/** 课程卡片动态配色（非当前教学周返回 null，走中性灰 COURSE_MUTED 样式） */
+function courseColorStyle(course) {
+  return isCourseActiveThisWeek(course) ? getCourseColor(course).style : null;
 }
 
 // 当前筛选条件下实际展示的课程（"仅看本周" 关闭时为全部课程）

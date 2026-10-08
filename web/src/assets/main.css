@@ -23,6 +23,32 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ---------------- 课程动态配色 ----------------
+   色相由 courseColors.js 通过 CSS 变量 --course-h（0~360 无单位数字）注入，
+   每门课独占一个色相，颜色数量随课程数量增长，互不重复；
+   --course-h 为后备值 220（中性蓝），仅用于异常兜底。 */
+.course-card {
+  background-color: hsl(calc(var(--course-h, 220) * 1deg) 70% 92%);
+  color: hsl(calc(var(--course-h, 220) * 1deg) 45% 26%);
+  border-color: hsl(calc(var(--course-h, 220) * 1deg) 60% 80%);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.dark .course-card {
+  background-color: hsl(calc(var(--course-h, 220) * 1deg) 35% 20%);
+  color: hsl(calc(var(--course-h, 220) * 1deg) 55% 88%);
+  border-color: hsl(calc(var(--course-h, 220) * 1deg) 45% 60% / 0.35);
+  box-shadow: none;
+}
+
+.course-dot {
+  background-color: hsl(calc(var(--course-h, 220) * 1deg) 65% 55%);
+}
+
+.dark .course-dot {
+  background-color: hsl(calc(var(--course-h, 220) * 1deg) 70% 64%);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

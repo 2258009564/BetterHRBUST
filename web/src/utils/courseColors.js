@@ -1,65 +1,58 @@
 /**
- * 课程柔和配色
+ * 课程动态配色（每门课独占一种颜色）
  *
- * 以「课程名称」做稳定哈希取色：同一门课在课表、概览等页面颜色一致。
- * 色板为低饱和的淡彩（100 级底色 + 深色文字），避免高饱和撞色；
- * 12 个色相中冷、暖色调交错排列，绿色系仅保留 teal / emerald 两支。
+ * 策略：
+ * - 以「课程名称」为主键（同一门课在课表、概览等页面颜色一致，名称缺失时退回课序号 / 课程 ID / 排课 ID）；
+ * - 模块级注册表为每门课分配独立色相槽位，色相以黄金角 (137.508°) 序列展开，
+ *   槽位间隔最大化、互不重复 —— 有多少门课就有多少种颜色，不会出现不同课程共用同色；
+ * - 颜色通过 CSS 变量 --course-h 注入，样式规则见 assets/main.css 中的
+ *   .course-card / .course-dot（明暗两套主题自动适配），颜色数量不受固定色板限制。
+ *
+ * 建议在课表数据加载 / 同步完成后调用 registerCourseColors() 批量注册，
+ * 使颜色分配与数据源顺序无关且跨页面稳定。
  *
  * 非当前教学周的课程不参与取色，统一使用中性灰 COURSE_MUTED 弱化显示。
- *
- * 类名必须以完整字面量书写，Tailwind v4 源码扫描才能生成对应样式。
  */
 
-const COURSE_PALETTE = [
-  {
-    dot: 'bg-blue-400',
-    solid: 'bg-blue-100 text-blue-900 border-blue-300/70 dark:bg-blue-400/20 dark:text-blue-50 dark:border-blue-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-amber-400',
-    solid: 'bg-amber-100 text-amber-900 border-amber-300/70 dark:bg-amber-400/20 dark:text-amber-50 dark:border-amber-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-violet-400',
-    solid: 'bg-violet-100 text-violet-900 border-violet-300/70 dark:bg-violet-400/20 dark:text-violet-50 dark:border-violet-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-teal-400',
-    solid: 'bg-teal-100 text-teal-900 border-teal-300/70 dark:bg-teal-400/20 dark:text-teal-50 dark:border-teal-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-rose-400',
-    solid: 'bg-rose-100 text-rose-900 border-rose-300/70 dark:bg-rose-400/20 dark:text-rose-50 dark:border-rose-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-sky-400',
-    solid: 'bg-sky-100 text-sky-900 border-sky-300/70 dark:bg-sky-400/20 dark:text-sky-50 dark:border-sky-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-orange-400',
-    solid: 'bg-orange-100 text-orange-900 border-orange-300/70 dark:bg-orange-400/20 dark:text-orange-50 dark:border-orange-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-indigo-400',
-    solid: 'bg-indigo-100 text-indigo-900 border-indigo-300/70 dark:bg-indigo-400/20 dark:text-indigo-50 dark:border-indigo-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-pink-400',
-    solid: 'bg-pink-100 text-pink-900 border-pink-300/70 dark:bg-pink-400/20 dark:text-pink-50 dark:border-pink-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-emerald-400',
-    solid: 'bg-emerald-100 text-emerald-900 border-emerald-300/70 dark:bg-emerald-400/20 dark:text-emerald-50 dark:border-emerald-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-purple-400',
-    solid: 'bg-purple-100 text-purple-900 border-purple-300/70 dark:bg-purple-400/20 dark:text-purple-50 dark:border-purple-400/30 shadow-xs'
-  },
-  {
-    dot: 'bg-slate-400',
-    solid: 'bg-slate-100 text-slate-800 border-slate-300/70 dark:bg-slate-400/20 dark:text-slate-50 dark:border-slate-400/30 shadow-xs'
+const GOLDEN_ANGLE = 137.508;
+
+/** 课程主键 → 色相槽位序号（一旦分配即稳定不变，重新登录 / 刷新保持一致） */
+const slotRegistry = new Map();
+
+function courseKeyOf(course) {
+  return String(course?.courseName || course?.courseSeq || course?.courseId || course?.id || '')
+    .replace(/\s+/g, '')
+    .trim();
+}
+
+function slotOf(key) {
+  let slot = slotRegistry.get(key);
+  if (slot === undefined) {
+    slot = slotRegistry.size;
+    slotRegistry.set(key, slot);
   }
-];
+  return slot;
+}
+
+function hueOfSlot(slot) {
+  return Math.round((slot * GOLDEN_ANGLE) % 360);
+}
+
+/**
+ * 批量注册课程配色（在课表数据加载 / 同步完成后调用）。
+ * 按课程名称的码点顺序注册，使颜色分配与数据源顺序无关；已注册课程不受影响，可安全重复调用。
+ * @param {Array<{courseName?: string, courseSeq?: string, courseId?: string}>} courses
+ */
+export function registerCourseColors(courses) {
+  const keys = new Set();
+  for (const course of courses || []) {
+    const key = courseKeyOf(course);
+    if (key) keys.add(key);
+  }
+  [...keys]
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+    .forEach(slotOf);
+}
 
 /**
  * 非当前教学周课程的统一样式：中性灰 + 半透明，弱化但保持可点击。
@@ -67,24 +60,13 @@ const COURSE_PALETTE = [
 export const COURSE_MUTED =
   'bg-zinc-100 text-zinc-500 border-zinc-200/70 dark:bg-zinc-500/15 dark:text-zinc-400 dark:border-zinc-500/25 opacity-70 hover:opacity-100';
 
-function hashString(str) {
-  let h = 5381;
-  for (let i = 0; i < str.length; i++) {
-    h = (((h << 5) + h) + str.charCodeAt(i)) >>> 0;
-  }
-  return h;
-}
-
 /**
- * 取某门课程的配色方案。
- * 以课程名称为主键（同一门课颜色稳定）；名称为空时退回课序号、课程 ID。
+ * 取某门课程的配色。
  * @param {{ courseName?: string, courseSeq?: string, courseId?: string }} course
- * @returns {{ dot: string, solid: string }}
+ * @returns {{ hue: number, style: { '--course-h': string } }}
  */
 export function getCourseColor(course) {
-  const key = String(course?.courseName || course?.courseSeq || course?.courseId || '')
-    .replace(/\s+/g, '')
-    .trim();
-  if (!key) return COURSE_PALETTE[11];
-  return COURSE_PALETTE[hashString(key) % COURSE_PALETTE.length];
+  const key = courseKeyOf(course);
+  const hue = key ? hueOfSlot(slotOf(key)) : 0;
+  return { hue, style: { '--course-h': String(hue) } };
 }

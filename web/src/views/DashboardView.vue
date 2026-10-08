@@ -178,7 +178,7 @@
                   </div>
                   <div>
                     <div class="flex items-center gap-2">
-                      <span class="w-2 h-2 rounded-full shrink-0" :class="getCourseColor(item).dot"></span>
+                      <span class="w-2 h-2 rounded-full shrink-0 course-dot" :style="getCourseColor(item).style"></span>
                       <h4 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{{ item.courseName }}</h4>
                       <UiBadge v-if="item.courseSeq" size="sm" variant="outline">序号 {{ item.courseSeq }}</UiBadge>
                     </div>

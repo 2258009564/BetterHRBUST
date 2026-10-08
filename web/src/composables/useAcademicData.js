@@ -12,6 +12,7 @@ import { ref, reactive, computed } from 'vue';
 import { academicApi } from '@/services/academic/api.js';
 import { useSession } from '@/composables/useSession.js';
 import { registerDataCacheCleaner } from '@/composables/dataCacheBridge.js';
+import { registerCourseColors } from '@/utils/courseColors.js';
 
 const CACHE_KEYS = {
   meta: 'better_hrbust_cache_sync_meta',
@@ -87,6 +88,10 @@ function loadCache() {
     syncMeta.lastSyncDate = meta.lastSyncDate || '';
     syncMeta.lastError = meta.lastError || '';
   }
+
+  // 为缓存中的全部课程注册色相槽位：保证每门课颜色唯一，且课表/概览等页面取色一致
+  registerCourseColors(timetableCombine.value.cells);
+  registerCourseColors(timetableBase.value.cells);
 }
 
 loadCache();
@@ -242,6 +247,7 @@ async function syncAll({ markManual = false } = {}) {
         () => academicApi.getTimetable({ studentId: sid, yearId, termId, sectionType: 'COMBINE' }),
         res => {
           timetableCombine.value = { cells: res.cells || [], unarranged: res.unarranged || [] };
+          registerCourseColors(timetableCombine.value.cells);
           writeJson(CACHE_KEYS.timetableCombine, timetableCombine.value);
         }
       )
@@ -252,6 +258,7 @@ async function syncAll({ markManual = false } = {}) {
         () => academicApi.getTimetable({ studentId: sid, yearId, termId, sectionType: 'BASE' }),
         res => {
           timetableBase.value = { cells: res.cells || [], unarranged: res.unarranged || [] };
+          registerCourseColors(timetableBase.value.cells);
           writeJson(CACHE_KEYS.timetableBase, timetableBase.value);
         }
       )
