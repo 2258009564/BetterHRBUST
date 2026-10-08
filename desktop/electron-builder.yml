@@ -1,0 +1,37 @@
+appId: edu.hrbust.betterhrbust
+productName: BetterHRBUST
+copyright: BetterHRBUST
+
+directories:
+  output: release
+  buildResources: build
+
+# 只打包主进程源码（.mjs 主进程 + .cjs preload）；生产依赖（http-proxy）自动随包
+files:
+  - src/**/*
+  - package.json
+
+# 将 ../web/dist 构建产物复制进应用资源目录（运行时从 resources/webapp 读取）
+extraResources:
+  - from: ../web/dist
+    to: webapp
+    filter:
+      - '**/*'
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: zip
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  shortcutName: BetterHRBUST
+  artifactName: ${productName}-Setup-${version}.${ext}

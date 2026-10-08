@@ -1,13 +1,13 @@
 <template>
   <aside
     :class="[
-      'h-screen flex flex-col bg-white/95 dark:bg-[#191b20]/95 border-r border-zinc-200/80 dark:border-zinc-800/70 backdrop-blur-md select-none shadow-none',
-      // Desktop layout
-      'lg:sticky lg:top-0 lg:shrink-0 lg:z-30',
+      'h-[calc(100vh_-_var(--tb))] flex flex-col bg-white/95 dark:bg-[#191b20]/95 border-r border-zinc-200/80 dark:border-zinc-800/70 backdrop-blur-md select-none shadow-none',
+      // Desktop layout（sticky 顶部让出标题栏高度）
+      'lg:sticky lg:top-[var(--tb)] lg:shrink-0 lg:z-30',
       'lg:transition-[width] lg:duration-300 lg:ease-in-out',
       isCollapsedState ? 'lg:w-[76px]' : 'lg:w-[280px]',
-      // Mobile / Responsive overlay layout
-      'fixed inset-y-0 left-0 z-50 w-[280px] transition-transform duration-300 ease-in-out',
+      // Mobile / Responsive overlay layout（同样让出标题栏高度）
+      'fixed top-[var(--tb)] bottom-0 left-0 z-50 w-[280px] transition-transform duration-300 ease-in-out',
       mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
     ]"
   >

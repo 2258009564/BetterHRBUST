@@ -1,6 +1,6 @@
 <template>
   <header
-    class="h-14 px-6 sticky top-0 z-20 bg-transparent flex items-center justify-between pointer-events-none"
+    class="h-14 px-6 sticky top-[var(--tb)] z-20 bg-transparent flex items-center justify-between pointer-events-none"
   >
     <!-- Left: Plump Sidebar Toggle Button with Black/White Circular Background -->
     <div class="pointer-events-auto">

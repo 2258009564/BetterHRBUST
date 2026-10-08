@@ -10,7 +10,8 @@
 BetterHRBUST/
 ├── docs/api/        # 接口逆向文档（13 篇，手写整理，详细踩坑记录）
 ├── tools/probe/     # 接口探测与逆向工具（零依赖 Node.js CLI + 网页控制台）
-└── web/             # 现代化 Web 客户端（Vue 3 + Vite + Tailwind CSS）
+├── web/             # 现代化 Web 客户端（Vue 3 + Vite + Tailwind CSS）
+└── desktop/         # Windows 桌面端（Electron，内置本地反向代理）
 ```
 
 ---
@@ -85,7 +86,26 @@ https://raw.githubusercontent.com/Glassous/BetterHRBUST/dist/better-hrbust.user.
 
 ---
 
-### 3. 接口探测工具 (`tools/probe/`)
+### 3. Windows 桌面端 (`desktop/`)
+
+Electron 封装的桌面客户端：主进程内置仅监听 `127.0.0.1` 的本地反向代理
+（与开发代理同一套规则），静态托管 `web/dist`，前端代码零改动，
+教务会话 Cookie 持久化于用户目录。
+
+```powershell
+cd desktop
+npm install
+npm run dist    # 构建 web + 打包，产物位于 desktop/release/
+```
+
+产物为 NSIS 安装包（`BetterHRBUST-Setup-<版本>.exe`）+ 免安装 zip
+（`BetterHRBUST-<版本>-win.zip`；未签名，首次运行按 SmartScreen 提示
+「更多信息 → 仍要运行」）。架构、开发与分发细节见
+[`desktop/README.md`](./desktop/README.md)。
+
+---
+
+### 4. 接口探测工具 (`tools/probe/`)
 
 教务系统改版或需验证底层接口时，可直接运行逆向探测工具：
 
