@@ -1,0 +1,30 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "自定义标题栏窗口控制（仅远程本地源可用，权限最小化）",
+  "windows": ["main"],
+  "remote": {
+    "urls": [
+      "http://127.0.0.1:1950",
+      "http://127.0.0.1:1951",
+      "http://127.0.0.1:1952",
+      "http://127.0.0.1:1953",
+      "http://127.0.0.1:1954",
+      "http://127.0.0.1:1955",
+      "http://127.0.0.1:1956",
+      "http://127.0.0.1:1957",
+      "http://127.0.0.1:1958",
+      "http://127.0.0.1:1959",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173"
+    ]
+  },
+  "permissions": [
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-is-maximized",
+    "core:window:allow-start-dragging",
+    "core:event:default"
+  ]
+}

@@ -1,0 +1,39 @@
+[package]
+name = "betterhrbust-desktop"
+version = "1.0.0"
+description = "BetterHRBUST - 哈理工教务在线 Windows 桌面客户端（Tauri 封装 + Rust 内置本地反向代理）"
+authors = ["BetterHRBUST"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.90"
+
+[lib]
+name = "betterhrbust_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-opener = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "macros"] }
+http = "1"
+hyper = { version = "1", features = ["client", "http1"] }
+hyper-util = { version = "0.1", features = ["client", "client-legacy", "http1", "server", "server-auto", "tokio"] }
+http-body-util = "0.1"
+rust-embed = { version = "8", features = ["compression"] }
+mime_guess = "2"
+percent-encoding = "2"
+
+# 体积优先：LTO + 单编译单元 + 体积优化 + 符号剥离
+# （与 Electron 版的对比目标是：安装包 <= 10MB、Rust 主进程 RSS <= 25MB）
+[profile.release]
+codegen-units = 1
+lto = "thin"
+opt-level = "s"
+strip = true
+
+[profile.release.package."*"]
+opt-level = "s"

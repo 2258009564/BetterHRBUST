@@ -1,7 +1,7 @@
 <template>
   <aside
     :class="[
-      'h-[calc(100vh_-_var(--tb))] flex flex-col bg-white/95 dark:bg-[#191b20]/95 border-r border-zinc-200/80 dark:border-zinc-800/70 backdrop-blur-md select-none shadow-none',
+      'h-[calc(100vh_-_var(--tb))] flex flex-col bg-white/95 dark:bg-[#14161a]/95 border-r border-zinc-200/80 dark:border-zinc-800/70 backdrop-blur-md select-none shadow-none',
       // Desktop layout（sticky 顶部让出标题栏高度）
       'lg:sticky lg:top-[var(--tb)] lg:shrink-0 lg:z-30',
       'lg:transition-[width] lg:duration-300 lg:ease-in-out',

@@ -1,8 +1,9 @@
 <template>
-  <!-- 仅在桌面端（Electron preload 注入 window.desktopWindow）渲染；浏览器环境不出现 -->
+  <!-- 仅在桌面端（Electron preload / Tauri shim 注入 window.desktopWindow）渲染；浏览器环境不出现 -->
   <div
     v-if="available"
     class="tb-drag sticky top-0 z-[60] h-10 flex items-center justify-end px-3 select-none bg-[#f6f7f9]/95 dark:bg-[#14161a]/95 backdrop-blur-md"
+    @mousedown="onBarMouseDown"
   >
     <!-- 左侧留空：仅作为可拖拽区域（双击可切换最大化） -->
     <div class="flex-1 h-full"></div>
@@ -75,8 +76,18 @@ import { ref, onMounted, onUnmounted } from 'vue';
 
 const win = typeof window !== 'undefined' ? window.desktopWindow : null;
 const available = !!win;
+// Tauri 桌面端：WebView2 不认 -webkit-app-region，拖拽/双击最大化改由 mousedown 手动处理
+const isTauri = typeof window !== 'undefined' && !!window.__TAURI__;
 const isMaximized = ref(false);
 let unsubscribe = null;
+
+function onBarMouseDown(e) {
+  if (!isTauri || !win) return; // Electron：CSS 拖拽自动生效，无需处理
+  if (e.buttons !== 1) return; // 仅响应左键
+  if (e.target.closest('.tb-nodrag')) return; // 窗口控制按钮区域不参与拖拽
+  if (e.detail === 2) win.toggleMaximize();
+  else win.startDrag();
+}
 
 // 与 AppHeader 侧栏开关按钮同源的样式语言（圆形、白/黑底、细边框、按压缩放）
 const btnBase =
