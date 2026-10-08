@@ -1,14 +1,18 @@
-# BetterHRBUST
-
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6.svg)](./desktop-tauri/)
-[![Desktop](https://img.shields.io/badge/Desktop-Tauri%202-FFC131.svg)](./desktop-tauri/)
-[![Web](https://img.shields.io/badge/Web-Vue%203-42b883.svg)](./web/)
-[![Desktop CI](https://github.com/Glassous/BetterHRBUST/actions/workflows/build-desktop.yml/badge.svg)](https://github.com/Glassous/BetterHRBUST/actions/workflows/build-desktop.yml)
-[![Userscript CI](https://github.com/Glassous/BetterHRBUST/actions/workflows/build-userscript.yml/badge.svg)](https://github.com/Glassous/BetterHRBUST/actions/workflows/build-userscript.yml)
-
 <p align="center">
   <img src="docs/assets/mascot.png" width="200" alt="BetterHRBUST 吉祥物" />
+</p>
+
+<h1 align="center">BetterHRBUST ✨</h1>
+
+<p align="center">现代化哈理工教务在线 · 课程表 · 成绩 GPA · 考试日程 · Web / 油猴 / Windows 桌面端</p>
+
+<p align="center">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
+  <a href="./desktop-tauri/"><img src="https://img.shields.io/badge/Platform-Windows-0078D6.svg" alt="Platform" /></a>
+  <a href="./desktop-tauri/"><img src="https://img.shields.io/badge/Desktop-Tauri%202-FFC131.svg" alt="Desktop" /></a>
+  <a href="./web/"><img src="https://img.shields.io/badge/Web-Vue%203-42b883.svg" alt="Web" /></a>
+  <a href="https://github.com/Glassous/BetterHRBUST/actions/workflows/build-desktop.yml"><img src="https://github.com/Glassous/BetterHRBUST/actions/workflows/build-desktop.yml/badge.svg" alt="Desktop CI" /></a>
+  <a href="https://github.com/Glassous/BetterHRBUST/actions/workflows/build-userscript.yml"><img src="https://github.com/Glassous/BetterHRBUST/actions/workflows/build-userscript.yml/badge.svg" alt="Userscript CI" /></a>
 </p>
 
 自制的现代化哈尔滨理工大学教务在线（URP）网页客户端。
