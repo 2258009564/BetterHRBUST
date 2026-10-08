@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoursesScreen(
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val app = remember { BetterHrbustApp.instance }
@@ -62,7 +63,7 @@ fun CoursesScreen(
         )
     ) {
         // 页面标题（作为滚动内容，可穿透状态栏）
-        item { PageHeaderTitle("全校课程") }
+        item { PageHeaderTitle("全校课程", onBack = onBack) }
 
         item {
             OutlinedTextField(

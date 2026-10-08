@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val app = remember { BetterHrbustApp.instance }
@@ -92,7 +93,7 @@ fun ProfileScreen(
                     )
                 ) {
                     // 页面标题（作为滚动内容，可穿透状态栏）
-                    item { PageHeaderTitle("学籍档案") }
+                    item { PageHeaderTitle("学籍档案", onBack = onBack) }
 
                     // Profile Header Card
                     item {

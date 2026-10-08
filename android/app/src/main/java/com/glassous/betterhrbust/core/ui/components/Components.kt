@@ -2,6 +2,7 @@ package com.glassous.betterhrbust.core.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material.icons.outlined.ErrorOutline
@@ -25,20 +26,39 @@ import com.glassous.betterhrbust.core.ui.LocalTopContentInset
  * 作为滚动内容的一部分渲染（而非固定的 TopAppBar），
  * 使页面内容可以穿透状态栏区域滚动；
  * 顶部安全距离由列表的 contentPadding 统一提供。
+ *
+ * @param onBack 传入时在标题左侧显示返回按钮（二级页面用），点击回调用于关闭该页面
  */
 @Composable
 fun PageHeaderTitle(
     title: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null
 ) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold,
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 4.dp, bottom = 4.dp)
-    )
+            .padding(top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (onBack != null) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "返回"
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+    }
 }
 
 @Composable

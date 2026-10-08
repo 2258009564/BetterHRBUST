@@ -37,6 +37,7 @@ data class FreeRoomDisplayItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClassroomsScreen(
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val app = remember { BetterHrbustApp.instance }
@@ -92,7 +93,7 @@ fun ClassroomsScreen(
         )
     ) {
         // 页面标题（作为滚动内容，可穿透状态栏）
-        item { PageHeaderTitle("自习空教室") }
+        item { PageHeaderTitle("自习空教室", onBack = onBack) }
 
         // SearchBar
         item {

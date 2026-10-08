@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProgramScreen(
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val app = remember { BetterHrbustApp.instance }
@@ -112,12 +113,35 @@ fun ProgramScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             if (groups.isEmpty() && (isRefreshing || isSyncing)) {
-                LoadingView(message = "正在获取培养方案...")
+                // 加载态同样保留页头（含返回按钮），避免打开后无处退出
+                Column(modifier = Modifier.fillMaxSize()) {
+                    PageHeaderTitle(
+                        title = "培养方案",
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(top = LocalTopContentInset.current + 8.dp),
+                        onBack = onBack
+                    )
+                    LoadingView(
+                        message = "正在获取培养方案...",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             } else if (groups.isEmpty()) {
-                EmptyView(
-                    title = "暂无培养方案数据",
-                    description = cacheError.ifEmpty { "请下拉刷新加载方案" }
-                )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    PageHeaderTitle(
+                        title = "培养方案",
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(top = LocalTopContentInset.current + 8.dp),
+                        onBack = onBack
+                    )
+                    EmptyView(
+                        title = "暂无培养方案数据",
+                        description = cacheError.ifEmpty { "请下拉刷新加载方案" },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -128,7 +152,7 @@ fun ProgramScreen(
                     )
                 ) {
                     // 页面标题（作为滚动内容，可穿透状态栏）
-                    item { PageHeaderTitle("培养方案") }
+                    item { PageHeaderTitle("培养方案", onBack = onBack) }
 
                     // Summary Card
                     item {

@@ -3,8 +3,10 @@ package com.glassous.betterhrbust
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,7 +23,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
@@ -54,6 +59,7 @@ import com.glassous.betterhrbust.feature.scores.ScoresScreen
 import com.glassous.betterhrbust.feature.settings.NoticesSettingsScreen
 import com.glassous.betterhrbust.feature.timetable.TimetableScreen
 import com.glassous.betterhrbust.navigation.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -246,22 +252,6 @@ fun MainAppScaffold(
                             }
                         )
                     }
-
-                    composable<ProgramRoute> {
-                        ProgramScreen()
-                    }
-
-                    composable<ClassroomsRoute> {
-                        ClassroomsScreen()
-                    }
-
-                    composable<CoursesRoute> {
-                        CoursesScreen()
-                    }
-
-                    composable<ProfileRoute> {
-                        ProfileScreen()
-                    }
                 }
             }
         }
@@ -274,12 +264,35 @@ fun MainAppScaffold(
     }
 }
 
+/** 二级页面覆盖层的滑入 / 滑出时长（毫秒）。 */
+private const val SecondaryPageTransitionMillis = 320
+
+/**
+ * 不在导航坞直达、只能从「概览」快捷入口打开的二级页面。
+ *
+ * 这些页面以**覆盖层**形式打开：主页始终保持在组合中（不重建、不回到顶部），
+ * 页面自身从右侧滑入，关闭时向右侧滑出，主页全程固定不动。
+ */
+private enum class SecondaryPage(val route: Any, val key: String) {
+    PROGRAM(ProgramRoute, "program"),
+    CLASSROOMS(ClassroomsRoute, "classrooms"),
+    COURSES(CoursesRoute, "courses"),
+    PROFILE(ProfileRoute, "profile");
+
+    companion object {
+        fun fromRoute(route: Any): SecondaryPage? = entries.firstOrNull { it.route == route }
+
+        fun fromKey(key: String): SecondaryPage? = entries.firstOrNull { it.key == key }
+    }
+}
+
 /**
  * 承载 5 个一级导航 Tab 的主页面容器：
  * - 使用 [HorizontalPager] 承载，提供平滑左右滑动切换动画，[beyondViewportPageCount] 保活所有页面状态；
  * - [userScrollEnabled] 设为 false，禁止手势直接翻页，仅由导航坞驱动；
  * - 手机端：底部悬浮 [NavigationDock]，并在容器挂载滚动折叠监听（标签随页面滑动折叠）；
- * - 平板端：导航坞竖排悬浮在左侧，标签常驻可见、不随滚动折叠，页面内容整体左让位。
+ * - 平板端：导航坞竖排悬浮在左侧，标签常驻可见、不随滚动折叠，页面内容整体左让位；
+ * - 二级页面（[SecondaryPage]）：以覆盖层从右侧滑入 / 滑出，主页不重建、不移动，状态原样保留。
  */
 @Composable
 fun MainPagerScreen(
@@ -319,10 +332,58 @@ fun MainPagerScreen(
         }
     }
 
-    // 非「概览」标签时，系统返回键平滑回到「概览」
-    BackHandler(enabled = currentTab != 0) {
+    // ---- 二级页面覆盖层 ----
+    var secondaryKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val secondaryPage = secondaryKey?.let(SecondaryPage::fromKey)
+    // 与「是否打开」解耦：关闭时保留内容直到滑出动画结束，避免动画期间页面空白
+    var renderedPage by remember { mutableStateOf(secondaryPage) }
+    /** 覆盖层水平位移：0 = 完全显示，1 = 完全滑出到屏幕右侧之外。 */
+    val slide = remember { Animatable(if (secondaryPage == null) 1f else 0f) }
+    // 覆盖层完全展开后隐藏导航坞（此时已被完全遮挡）
+    var dockVisible by remember { mutableStateOf(secondaryPage == null) }
+    val closeSecondaryPage = { secondaryKey = null }
+
+    LaunchedEffect(secondaryPage) {
+        val page = secondaryPage
+        if (page != null) {
+            dockVisible = true
+            renderedPage = page
+            slide.animateTo(0f, tween(SecondaryPageTransitionMillis))
+            dockVisible = false
+        } else if (renderedPage != null) {
+            dockVisible = true
+            slide.animateTo(1f, tween(SecondaryPageTransitionMillis))
+            renderedPage = null
+        }
+    }
+
+    // 非「概览」标签时，系统返回键平滑回到「概览」（二级页面打开时由覆盖层优先处理）
+    BackHandler(enabled = currentTab != 0 && secondaryPage == null) {
         tabIndex = 0
         coroutineScope.launch { pagerState.animateScrollToPage(0) }
+    }
+
+    // 二级页面打开时：返回手势实时驱动覆盖层跟随手指滑出（预测性返回动画），
+    // 手势取消则滑回原位，手势完成则关闭页面
+    PredictiveBackHandler(enabled = secondaryPage != null) { progress ->
+        try {
+            // 页面开始滑出时露出下层导航坞
+            dockVisible = true
+            progress.collect { event ->
+                slide.snapTo(event.progress.coerceIn(0f, 1f))
+            }
+            // 手势完成：收尾剩余距离后关闭页面
+            val remainingMillis = (SecondaryPageTransitionMillis * (1f - slide.value))
+                .toInt()
+                .coerceAtLeast(1)
+            slide.animateTo(1f, tween(remainingMillis))
+            closeSecondaryPage()
+        } catch (cancellation: CancellationException) {
+            // 手势取消：滑回完全显示，并重新遮住导航坞
+            slide.animateTo(0f, tween(SecondaryPageTransitionMillis))
+            dockVisible = false
+            throw cancellation
+        }
     }
 
     val onDashboardNavigate: (Any) -> Unit = { route ->
@@ -338,7 +399,13 @@ fun MainPagerScreen(
             tabIndex = targetTab
             coroutineScope.launch { pagerState.animateScrollToPage(targetTab) }
         } else {
-            navController.navigate(route)
+            val page = SecondaryPage.fromRoute(route)
+            if (page != null) {
+                // 覆盖层打开：主页保持原状，不做任何重建或滚动
+                secondaryKey = page.key
+            } else {
+                navController.navigate(route)
+            }
         }
     }
 
@@ -351,12 +418,16 @@ fun MainPagerScreen(
             .nestedScroll(dockCollapseConnection)
     }
 
+    val pagerModifier = Modifier
+        .fillMaxSize()
+        .padding(start = dockStartInset)
+        // 覆盖层渲染期间冻结主页输入，避免触摸穿透（点击 / 滚动均不响应）
+        .then(if (renderedPage != null) Modifier.blockPointerInput() else Modifier)
+
     Box(modifier = containerModifier) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = dockStartInset),
+            modifier = pagerModifier,
             beyondViewportPageCount = 4,
             userScrollEnabled = false,
         ) { page ->
@@ -372,18 +443,57 @@ fun MainPagerScreen(
             }
         }
 
-        NavigationDock(
-            destinations = dockDestinations,
-            selectedIndex = currentTab,
-            onSelected = { index ->
-                tabIndex = index
-                coroutineScope.launch { pagerState.animateScrollToPage(index) }
-            },
-            collapseState = if (isTablet) null else dockCollapseState,
-            vertical = isTablet,
-            modifier = Modifier.align(
-                if (isTablet) Alignment.CenterStart else Alignment.BottomCenter
+        if (dockVisible) {
+            NavigationDock(
+                destinations = dockDestinations,
+                selectedIndex = currentTab,
+                onSelected = { index ->
+                    tabIndex = index
+                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                },
+                collapseState = if (isTablet) null else dockCollapseState,
+                vertical = isTablet,
+                modifier = Modifier.align(
+                    if (isTablet) Alignment.CenterStart else Alignment.BottomCenter
+                )
             )
-        )
+        }
+
+        // 二级页面：覆盖在主页之上，从右侧滑入 / 滑出；主页全程固定不动
+        renderedPage?.let { page ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationX = slide.value * size.width }
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                CompositionLocalProvider(
+                    // 覆盖层下没有导航坞，底部让位回归系统导航条
+                    LocalBottomContentInset provides WindowInsets.navigationBars
+                        .asPaddingValues()
+                        .calculateBottomPadding()
+                ) {
+                    when (page) {
+                        SecondaryPage.PROGRAM -> ProgramScreen(onBack = closeSecondaryPage)
+                        SecondaryPage.CLASSROOMS -> ClassroomsScreen(onBack = closeSecondaryPage)
+                        SecondaryPage.COURSES -> CoursesScreen(onBack = closeSecondaryPage)
+                        SecondaryPage.PROFILE -> ProfileScreen(onBack = closeSecondaryPage)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 屏蔽该节点及其子节点的手势：在 Initial 阶段吞掉所有指针事件。
+ *
+ * 用于二级页面覆盖层渲染期间冻结下层主页，避免触摸穿透。
+ */
+private fun Modifier.blockPointerInput(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+        }
     }
 }
