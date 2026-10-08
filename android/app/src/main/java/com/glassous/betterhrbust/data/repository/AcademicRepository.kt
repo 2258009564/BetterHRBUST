@@ -373,11 +373,37 @@ class AcademicRepository(
 
     fun getTeachingWeek(): Flow<Int> = flow {
         try {
-            val html = client.get("listLeft.do", preferredCharset = CharsetDecoderHelper.GBK)
-            val week = AcademicParsers.parseTeachingWeek(html)
-            prefs.setCurrentWeek(week)
-            emit(week)
+            val html = client.get("listLeft.do", preferredCharset = CharsetDecoderHelper.UTF_8)
+            var week = AcademicParsers.parseTeachingWeek(html)
+
+            // 若 listLeft.do 未能识别出有效周数（或为 1），尝试从 calendarinfo/viewCalendarInfo.do 双重校验
+            if (week <= 1) {
+                try {
+                    val calHtml = client.get("calendarinfo/viewCalendarInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
+                    val calWeek = AcademicParsers.parseCalendarInfo(calHtml).currentWeek
+                    if (calWeek > 1) {
+                        week = calWeek
+                    }
+                } catch (_: Exception) {}
+            }
+
+            if (week in 1..26) {
+                prefs.setCurrentWeek(week)
+                emit(week)
+            } else {
+                emit(1)
+            }
         } catch (_: Exception) {
+            // listLeft.do 异常时兜底使用 calendarinfo/viewCalendarInfo.do
+            try {
+                val calHtml = client.get("calendarinfo/viewCalendarInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
+                val calWeek = AcademicParsers.parseCalendarInfo(calHtml).currentWeek
+                if (calWeek in 1..26) {
+                    prefs.setCurrentWeek(calWeek)
+                    emit(calWeek)
+                    return@flow
+                }
+            } catch (_: Exception) {}
             emit(1)
         }
     }

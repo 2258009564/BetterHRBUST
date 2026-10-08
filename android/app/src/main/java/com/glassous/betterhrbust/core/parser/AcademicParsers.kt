@@ -660,10 +660,23 @@ object AcademicParsers {
     fun parseCalendarInfo(html: String): CalendarInfo {
         val doc: Document = Jsoup.parse(html)
         var currentWeek = 1
-        val curTd = doc.selectFirst(".week td.cur span") ?: doc.selectFirst(".curweek strong")
+        val curTd = doc.selectFirst(".week td.cur span")
+            ?: doc.selectFirst(".week td.cur")
+            ?: doc.selectFirst(".curweek strong")
+            ?: doc.selectFirst(".curweek")
         if (curTd != null) {
             val num = curTd.text().trim().toIntOrNull()
-            if (num != null) currentWeek = num
+                ?: Regex("""第\s*(\d+)\s*周""").find(curTd.text())?.groupValues?.get(1)?.toIntOrNull()
+                ?: Regex("""(\d+)""").find(curTd.text())?.groupValues?.get(1)?.toIntOrNull()
+            if (num != null && num in 1..26) currentWeek = num
+        }
+
+        // 双重校验：若解析出的周数为 1，尝试 parseTeachingWeek 全文解析
+        if (currentWeek <= 1) {
+            val parsedWeek = parseTeachingWeek(html)
+            if (parsedWeek in 1..26) {
+                currentWeek = parsedWeek
+            }
         }
 
         var semesterName = ""
@@ -699,12 +712,49 @@ object AcademicParsers {
     }
 
     fun parseTeachingWeek(html: String): Int {
-        val match = Regex("""第\s*(\d+)\s*周""").find(html)
-        if (match != null) {
-            return match.groupValues[1].toIntOrNull() ?: 1
-        }
         val doc = Jsoup.parse(html)
-        val curTd = doc.selectFirst(".week td.cur span") ?: doc.selectFirst("#date p span")
-        return curTd?.text()?.trim()?.toIntOrNull() ?: 1
+        val bodyText = doc.text()
+
+        // 1. 全文文本正则匹配 "第 N 周"（doc.text() 会剥离 <strong> 等所有 html 标签并合并空白）
+        val textMatch = Regex("""第\s*(\d+)\s*周""").find(bodyText)
+        if (textMatch != null) {
+            val num = textMatch.groupValues[1].toIntOrNull()
+            if (num != null && num in 1..26) return num
+        }
+
+        // 2. 原始 HTML 正则匹配（支持可能带有标签如 第<strong>6</strong>周）
+        val rawMatch = Regex("""第\s*(?:<[^>]+>)?\s*(\d+)\s*(?:<[^>]+>)?\s*周""").find(html)
+        if (rawMatch != null) {
+            val num = rawMatch.groupValues[1].toIntOrNull()
+            if (num != null && num in 1..26) return num
+        }
+
+        // 3. 检查 #date p span 或 #date 结构
+        val dateEl = doc.selectFirst("#date p span") ?: doc.selectFirst("#date span") ?: doc.selectFirst("#date")
+        if (dateEl != null) {
+            val dateText = dateEl.text()
+            val m = Regex("""第\s*(\d+)\s*周""").find(dateText) ?: Regex("""(\d+)""").find(dateText)
+            val num = m?.groupValues?.getOrNull(1)?.toIntOrNull()
+            if (num != null && num in 1..26) return num
+        }
+
+        // 4. 检查 .curweek 或 .curweek strong
+        val curWeekEl = doc.selectFirst(".curweek strong") ?: doc.selectFirst(".curweek")
+        if (curWeekEl != null) {
+            val curText = curWeekEl.text()
+            val m = Regex("""第\s*(\d+)\s*周""").find(curText) ?: Regex("""(\d+)""").find(curText)
+            val num = m?.groupValues?.getOrNull(1)?.toIntOrNull()
+            if (num != null && num in 1..26) return num
+        }
+
+        // 5. 检查 .week td.cur span 或 .week td.cur
+        val curTd = doc.selectFirst(".week td.cur span") ?: doc.selectFirst(".week td.cur")
+        if (curTd != null) {
+            val num = curTd.text().trim().toIntOrNull()
+                ?: Regex("""(\d+)""").find(curTd.text())?.groupValues?.get(1)?.toIntOrNull()
+            if (num != null && num in 1..26) return num
+        }
+
+        return 1
     }
 }

@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -65,6 +68,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -73,6 +77,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.glassous.betterhrbust.core.ui.isTabletDevice
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -128,6 +133,21 @@ object NavigationDockDefaults {
     /** 单个目的地的最大宽度。 */
     val MaxItemExtent = 56.dp
 
+    /** 竖排导航坞（平板左侧）的胶囊宽度。 */
+    val VerticalBarWidth = 128.dp
+
+    /** 竖排导航坞单个目的地的高度上限（高度不足时按可用空间收缩）。 */
+    val VerticalItemHeight = 52.dp
+
+    /** 竖排导航坞图标与标签之间的间距。 */
+    val VerticalLabelGap = 12.dp
+
+    /** 竖排导航坞标签字号（标签常驻可见）。 */
+    val VerticalLabelSize = 12.sp
+
+    /** 点击导航项落位时的触感反馈。 */
+    val ClickHaptic = HapticFeedbackType.TextHandleMove
+
     /** 按压时选中胶囊的膨胀量（半径方向）。 */
     val LensGrowth = 10.dp
 
@@ -177,6 +197,33 @@ fun navigationDockBottomMargin(): Dp {
 /** 导航坞占用的内容底部内边距 = 胶囊高度 + [navigationDockBottomMargin]。 */
 @Composable
 fun navigationDockInset(): Dp = NavigationDockDefaults.BarHeight + navigationDockBottomMargin()
+
+/**
+ * 竖排导航坞与屏幕左侧的安全距离 =
+ * `max(左右边距(21dp), 系统导航栏左侧 inset, 屏幕左侧刘海安全区)`。
+ */
+@Composable
+fun navigationDockStartMargin(): Dp {
+    val layoutDirection = LocalLayoutDirection.current
+    val navigationBarStart = WindowInsets.navigationBars
+        .asPaddingValues()
+        .calculateStartPadding(layoutDirection)
+    val cutoutStart = WindowInsets.displayCutout
+        .asPaddingValues()
+        .calculateStartPadding(layoutDirection)
+    return maxOf(NavigationDockDefaults.EdgeMargin, navigationBarStart, cutoutStart)
+}
+
+/**
+ * 竖排导航坞在页面左侧占用的总宽度 = [navigationDockStartMargin] + 胶囊宽度；
+ * 手机端（底部横排）无需左侧让位，返回 0。
+ */
+@Composable
+fun navigationDockStartInset(): Dp = if (isTabletDevice()) {
+    navigationDockStartMargin() + NavigationDockDefaults.VerticalBarWidth
+} else {
+    0.dp
+}
 
 /**
  * 导航坞折叠状态：`0` = 展开（图标 + 标签），`1` = 折叠（仅图标）。
@@ -269,19 +316,23 @@ private fun rubberBand(overshoot: Float, limit: Float): Float {
 }
 
 /**
- * 悬浮胶囊底部导航坞（Material3 纯色渲染）。
+ * 悬浮胶囊导航坞（Material3 纯色渲染）。
  *
  * 组成与行为：
  *  - 悬浮胶囊：`surfaceContainer` 表面 + 双层柔和投影，居中、宽度按目的地数量自适应收紧；
  *  - 选中高亮胶囊（lens）：由 [ResettableSpring] 驱动，移动时沿运动方向"果冻"拉伸，按压时在指尖下放大；
  *  - 图标/标签颜色：未被 lens 覆盖处渲染为 `onSurface`；被 lens 覆盖的部分渲染为主色 `primary`，lens 滑过时逐段变色；
- *  - 交互：按住可左右拖动 lens 滑过各目的地，经过时触发触感，松手切到该目的地；越界时整体橡皮筋拉伸；按压时整体膨胀；
- *  - 折叠：胶囊收缩为"仅图标"（标签淡出、高度变矮），展开时恢复图标 + 标签。
+ *  - 交互：按住可沿排列方向拖动 lens 滑过各目的地，经过时触发触感，松手切到该目的地；
+ *    点击（按下即抬起）时触发一次触感；越界时整体橡皮筋拉伸；按压时整体膨胀；
+ *  - 折叠：横排胶囊可收缩为"仅图标"（标签淡出、高度变矮），展开时恢复图标 + 标签；
+ *    竖排（平板左侧）时标签常驻可见，不参与折叠，lens 沿 Y 轴移动。
  *
  * @param destinations 目的地列表
  * @param selectedIndex 当前选中的索引
  * @param onSelected 选中回调（点击或拖拽释放到该目的地时触发）
- * @param collapseState 外部折叠状态（通常由页面滚动驱动）
+ * @param collapseState 外部折叠状态（通常由页面滚动驱动；竖排时忽略）
+ * @param itemExtent 横排时单个目的地的最大宽度
+ * @param vertical 是否竖排（平板左侧）
  */
 @Composable
 fun NavigationDock(
@@ -291,6 +342,7 @@ fun NavigationDock(
     modifier: Modifier = Modifier,
     collapseState: NavigationDockCollapseState? = null,
     itemExtent: Dp = NavigationDockDefaults.MaxItemExtent,
+    vertical: Boolean = false,
 ) {
     if (destinations.isEmpty()) return
 
@@ -308,6 +360,7 @@ fun NavigationDock(
     val shadowStrength = if (colorScheme.surface.luminance() < 0.5f) 3f else 1f
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val bottomMargin = maxOf(NavigationDockDefaults.EdgeMargin, navigationBarBottom)
+    val startMargin = navigationDockStartMargin()
     val barPaddingPx = with(density) { NavigationDockDefaults.BarPadding.toPx() }
     val lensGrowthPx = with(density) { NavigationDockDefaults.LensGrowth.toPx() }
     val barHeightPx = with(density) { NavigationDockDefaults.BarHeight.toPx() }
@@ -319,9 +372,9 @@ fun NavigationDock(
     val swell = rememberResettableSpring(0f)
     val stretch = rememberResettableSpring(0f)
 
-    /** 折叠进度：0 = 展开（图标 + 标签），1 = 折叠（仅图标）。 */
+    /** 折叠进度：0 = 展开（图标 + 标签），1 = 折叠（仅图标）；竖排导航坞不折叠，恒为 0。 */
     val localCollapse = rememberResettableSpring(0f)
-    val collapse = collapseState?.progress ?: localCollapse
+    val collapse = if (vertical) localCollapse else (collapseState?.progress ?: localCollapse)
     val dockTopInWindow = remember { floatArrayOf(0f) }
 
     var pressedIndex by remember { mutableStateOf<Int?>(null) }
@@ -337,24 +390,51 @@ fun NavigationDock(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                start = NavigationDockDefaults.EdgeMargin,
-                end = NavigationDockDefaults.EdgeMargin,
-                top = NavigationDockDefaults.ShadowRoom,
-                bottom = bottomMargin,
-            ),
+    BoxWithConstraints(
+        modifier = modifier.then(
+            if (vertical) {
+                // 竖排（平板左侧）：占满高度以便垂直居中，左侧留出安全距离
+                Modifier
+                    .fillMaxHeight()
+                    .padding(
+                        start = startMargin,
+                        top = NavigationDockDefaults.ShadowRoom,
+                        bottom = bottomMargin,
+                    )
+            } else {
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = NavigationDockDefaults.EdgeMargin,
+                        end = NavigationDockDefaults.EdgeMargin,
+                        top = NavigationDockDefaults.ShadowRoom,
+                        bottom = bottomMargin,
+                    )
+            }
+        ),
         contentAlignment = Alignment.Center,
     ) {
         Box(
             modifier = Modifier
-                .widthIn(
-                    max = itemExtent * destinations.size +
-                        NavigationDockDefaults.BarPadding * 2
+                .then(
+                    if (vertical) {
+                        // 竖排：高度按目的地数量自适应，可用高度不足时整体收缩
+                        val railHeight = (
+                            NavigationDockDefaults.VerticalItemHeight * destinations.size +
+                                NavigationDockDefaults.BarPadding * 2
+                            ).coerceAtMost(maxHeight)
+                        Modifier
+                            .width(NavigationDockDefaults.VerticalBarWidth)
+                            .height(railHeight)
+                    } else {
+                        Modifier
+                            .widthIn(
+                                max = itemExtent * destinations.size +
+                                    NavigationDockDefaults.BarPadding * 2
+                            )
+                            .dockBarHeight(collapse, barHeightPx, collapsedBarHeightPx)
+                    }
                 )
-                .dockBarHeight(collapse, barHeightPx, collapsedBarHeightPx)
                 .graphicsLayer {
                     if (size.width <= 0f || size.height <= 0f) return@graphicsLayer
                     val liftValue = swell.value.coerceAtLeast(0f)
@@ -362,11 +442,18 @@ fun NavigationDock(
                         NavigationDockDefaults.PressGrowth * 2f,
                         NavigationDockDefaults.MaxPressGrowth / size.maxDimension,
                     )
-                    val pullX = stretch.value
-                    scaleX = swellScale *
-                        (1f + abs(pullX) / size.width * NavigationDockDefaults.PullStretch)
-                    scaleY = swellScale
-                    translationX = pullX
+                    val pull = stretch.value
+                    if (vertical) {
+                        scaleX = swellScale
+                        scaleY = swellScale *
+                            (1f + abs(pull) / size.height * NavigationDockDefaults.PullStretch)
+                        translationY = pull
+                    } else {
+                        scaleX = swellScale *
+                            (1f + abs(pull) / size.width * NavigationDockDefaults.PullStretch)
+                        scaleY = swellScale
+                        translationX = pull
+                    }
                 }
                 .shadow(
                     elevation = 8.dp,
@@ -386,15 +473,24 @@ fun NavigationDock(
                 .onGloballyPositioned { coordinates ->
                     dockTopInWindow[0] = coordinates.positionInWindow().y
                 }
-                .pointerInput(destinations.size) {
+                .pointerInput(destinations.size, vertical) {
                     val count = destinations.size
                     val lastIndex = count - 1
+                    // 竖排导航坞标签常驻，不支持手动折叠 / 展开手势
+                    val canCollapse = !vertical
 
                     fun indexAt(position: Float): Int = position.roundToInt().coerceIn(0, lastIndex)
 
-                    fun positionAt(x: Float, width: Float): Float {
-                        val extent = (width - barPaddingPx * 2f) / count
-                        val raw = (x - barPaddingPx) / extent - 0.5f
+                    /** 沿排列轴取坐标：横排为 x，竖排为 y。 */
+                    fun along(offset: Offset): Float = if (vertical) offset.y else offset.x
+
+                    /** 取与排列轴垂直的坐标：横排为窗口 y（折叠手势用），竖排为控件内 x。 */
+                    fun cross(offset: Offset): Float =
+                        if (vertical) offset.x else dockTopInWindow[0] + offset.y
+
+                    fun positionAt(position: Float, length: Float): Float {
+                        val extent = (length - barPaddingPx * 2f) / count
+                        val raw = (position - barPaddingPx) / extent - 0.5f
                         return when {
                             raw < 0f -> rubberBand(raw, NavigationDockDefaults.OverDrag)
                             raw > lastIndex ->
@@ -422,16 +518,17 @@ fun NavigationDock(
                         while (true) {
                             val down: PointerInputChange = awaitFirstDown(requireUnconsumed = false)
                             down.consume()
-                            val barWidth = size.width.toFloat()
-                            val downX = down.position.x
-                            val downWindowY = dockTopInWindow[0] + down.position.y
+                            val barLength =
+                                if (vertical) size.height.toFloat() else size.width.toFloat()
+                            val downAlong = along(down.position)
+                            val downCross = cross(down.position)
                             val tracker = VelocityTracker()
                             tracker.addPosition(down.uptimeMillis, down.position)
                             var wasDragging = false
-                            var verticalDrag = false
+                            var collapseDrag = false
                             val collapseBase = collapse.value
 
-                            val pressIndex = indexAt(positionAt(downX, barWidth))
+                            val pressIndex = indexAt(positionAt(downAlong, barLength))
                             pressedIndex = pressIndex
                             dragging = false
                             lift.springTo(1f, NavigationDockDefaults.LiftSpring)
@@ -453,7 +550,7 @@ fun NavigationDock(
                                 val event = awaitPointerEvent()
                                 val change = event.changes.firstOrNull { it.id == down.id }
                                 if (change == null) {
-                                    if (verticalDrag) {
+                                    if (collapseDrag) {
                                         collapse.springTo(collapseBase, NavigationDockDefaults.SettleSpring)
                                     }
                                     settleReleasedLens(commit = false, wasDragging = wasDragging)
@@ -461,7 +558,7 @@ fun NavigationDock(
                                 }
                                 if (change.changedToUpIgnoreConsumed()) {
                                     tracker.addPosition(change.uptimeMillis, change.position)
-                                    if (verticalDrag) {
+                                    if (collapseDrag) {
                                         commitCollapse()
                                         change.consume()
                                         released = true
@@ -469,8 +566,13 @@ fun NavigationDock(
                                     }
                                     if (wasDragging) {
                                         val anchor = pressedIndex ?: pressIndex
-                                        val extent = (barWidth - barPaddingPx * 2f) / count
-                                        val lead = tracker.calculateVelocity().x / extent * 0.1f
+                                        val extent = (barLength - barPaddingPx * 2f) / count
+                                        val velocityAlong = if (vertical) {
+                                            tracker.calculateVelocity().y
+                                        } else {
+                                            tracker.calculateVelocity().x
+                                        }
+                                        val lead = velocityAlong / extent * 0.1f
                                         val projected = (lens.target + lead)
                                             .roundToInt()
                                             .coerceIn(anchor - 1, anchor + 1)
@@ -479,6 +581,9 @@ fun NavigationDock(
                                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             pressedIndex = projected
                                         }
+                                    } else {
+                                        // 每次点击（按下后直接抬起）都触发一次触感反馈
+                                        haptics.performHapticFeedback(NavigationDockDefaults.ClickHaptic)
                                     }
                                     settleReleasedLens(commit = true, wasDragging = wasDragging)
                                     change.consume()
@@ -486,7 +591,7 @@ fun NavigationDock(
                                     break
                                 }
                                 if (!change.pressed) {
-                                    if (verticalDrag) {
+                                    if (collapseDrag) {
                                         collapse.springTo(collapseBase, NavigationDockDefaults.SettleSpring)
                                         released = true
                                         break
@@ -495,13 +600,16 @@ fun NavigationDock(
                                     released = true
                                     break
                                 }
-                                val x = change.position.x
-                                val dy = (dockTopInWindow[0] + change.position.y) - downWindowY
+                                val positionAlong = along(change.position)
+                                val alongDelta = positionAlong - downAlong
+                                val crossDelta = cross(change.position) - downCross
                                 tracker.addPosition(change.uptimeMillis, change.position)
-                                if (!wasDragging && !verticalDrag) {
+                                if (!wasDragging && !collapseDrag) {
                                     val slop = viewConfiguration.touchSlop
-                                    if (abs(dy) > slop && abs(dy) > abs(x - downX)) {
-                                        verticalDrag = true
+                                    if (canCollapse && abs(crossDelta) > slop &&
+                                        abs(crossDelta) > abs(alongDelta)
+                                    ) {
+                                        collapseDrag = true
                                         pressedIndex = null
                                         dragging = false
                                         lift.springTo(0f, NavigationDockDefaults.SettleSpring)
@@ -511,21 +619,23 @@ fun NavigationDock(
                                             currentSelectedIndex.toFloat(),
                                             NavigationDockDefaults.SettleSpring,
                                         )
-                                    } else if (abs(x - downX) > slop) {
+                                    } else if (abs(alongDelta) > slop) {
                                         wasDragging = true
                                         dragging = true
                                     }
                                 }
-                                if (verticalDrag) {
+                                if (collapseDrag) {
                                     collapse.springTo(
-                                        (collapseBase + dy / collapseTravelPx).coerceIn(0f, 1f),
+                                        (collapseBase + crossDelta / collapseTravelPx)
+                                            .coerceIn(0f, 1f),
                                         NavigationDockDefaults.TrackSpring,
                                     )
                                     change.consume()
                                     continue
                                 }
                                 if (wasDragging) {
-                                    val overshoot = x - x.coerceIn(0f, barWidth)
+                                    val overshoot =
+                                        positionAlong - positionAlong.coerceIn(0f, barLength)
                                     stretch.springTo(
                                         rubberBand(
                                             overshoot,
@@ -534,7 +644,7 @@ fun NavigationDock(
                                         ),
                                         NavigationDockDefaults.TrackSpring,
                                     )
-                                    val position = positionAt(x, barWidth)
+                                    val position = positionAt(positionAlong, barLength)
                                     lens.springTo(position, NavigationDockDefaults.TrackSpring)
                                     val index = indexAt(position)
                                     if (index != pressedIndex) {
@@ -549,17 +659,28 @@ fun NavigationDock(
                 }
         ) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(NavigationDockDefaults.BarPadding)) {
-                val extent: Dp = maxWidth / destinations.size
+                // 沿排列轴的单项尺寸：横排为宽度，竖排为高度
+                val extent: Dp =
+                    if (vertical) maxHeight / destinations.size else maxWidth / destinations.size
                 val widestLabelPx = rememberWidestLabelPx(destinations)
-                val labelStyle = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = NavigationDockDefaults.LabelSize,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.sp,
-                )
+                val labelStyle = if (vertical) {
+                    // 竖排：标签常驻在图标右侧，使用可读性更好的字号
+                    MaterialTheme.typography.labelMedium.copy(
+                        fontSize = NavigationDockDefaults.VerticalLabelSize,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.sp,
+                    )
+                } else {
+                    MaterialTheme.typography.labelSmall.copy(
+                        fontSize = NavigationDockDefaults.LabelSize,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.sp,
+                    )
+                }
                 val extentPx = with(density) { extent.toPx() }
                 val labelInsetPx = with(density) { 2.dp.toPx() }
                 val room = extentPx - labelInsetPx * 2f
-                val labelScale = if (widestLabelPx <= room) {
+                val labelScale = if (vertical || widestLabelPx <= room) {
                     1f
                 } else {
                     maxOf(
@@ -572,7 +693,7 @@ fun NavigationDock(
                 // ① 选中胶囊（lens）：绘制在内容之下
                 Box(
                     modifier = Modifier
-                        .lensRectPlacement(lens, lift, extentPx, lensGrowthPx)
+                        .lensRectPlacement(lens, lift, extentPx, lensGrowthPx, vertical)
                         .drawBehind {
                             drawRoundRect(
                                 color = lerp(
@@ -580,26 +701,49 @@ fun NavigationDock(
                                     lensLiftColor,
                                     0.08f * lift.value.coerceIn(0f, 1f),
                                 ),
-                                cornerRadius = CornerRadius(size.height / 2f),
+                                cornerRadius = CornerRadius(minOf(size.width, size.height) / 2f),
                             )
                         }
                 )
 
                 // ② 各目的地（图标 + 标签），被 lens 覆盖的部分渲染为主色
-                Row(modifier = Modifier.fillMaxSize()) {
-                    destinations.forEachIndexed { index, destination ->
-                        DockItem(
-                            destination = destination,
-                            index = index,
-                            lens = lens,
-                            lift = lift,
-                            collapse = collapse,
-                            lensGrowthPx = lensGrowthPx,
-                            contentColor = contentColor,
-                            tintColor = tintColor,
-                            labelStyle = labelStyle.copy(fontSize = NavigationDockDefaults.LabelSize * labelScale),
-                            modifier = Modifier.weight(1f),
-                        )
+                if (vertical) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        destinations.forEachIndexed { index, destination ->
+                            DockItem(
+                                destination = destination,
+                                index = index,
+                                lens = lens,
+                                lift = lift,
+                                collapse = collapse,
+                                lensGrowthPx = lensGrowthPx,
+                                contentColor = contentColor,
+                                tintColor = tintColor,
+                                labelStyle = labelStyle,
+                                vertical = true,
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                            )
+                        }
+                    }
+                } else {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        destinations.forEachIndexed { index, destination ->
+                            DockItem(
+                                destination = destination,
+                                index = index,
+                                lens = lens,
+                                lift = lift,
+                                collapse = collapse,
+                                lensGrowthPx = lensGrowthPx,
+                                contentColor = contentColor,
+                                tintColor = tintColor,
+                                labelStyle = labelStyle.copy(
+                                    fontSize = NavigationDockDefaults.LabelSize * labelScale
+                                ),
+                                vertical = false,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }
@@ -626,6 +770,8 @@ private fun rememberWidestLabelPx(destinations: List<NavigationDockDestination>)
  *
  * 着色实现：内容按 lens 形状分区绘制两次 —— lens 之外用原色、
  * lens 之内用主色 SrcIn 滤镜，lens 滑过时图标/文字便逐段变色。
+ *
+ * @param vertical 竖排（平板左侧）：图标与标签并排，标签常驻可见、不参与折叠
  */
 @Composable
 private fun DockItem(
@@ -638,6 +784,7 @@ private fun DockItem(
     contentColor: Color,
     tintColor: Color,
     labelStyle: TextStyle,
+    vertical: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val tintPaint = remember { Paint() }
@@ -656,17 +803,33 @@ private fun DockItem(
                     return@drawWithContent
                 }
                 val position = lens.value - index
-                val rect = lensRect(
-                    position = position,
-                    velocity = lens.velocity,
-                    liftValue = lift.value,
-                    extentPx = width,
-                    heightPx = height,
-                    lensGrowthPx = lensGrowthPx,
-                )
+                val rect = if (vertical) {
+                    lensRectVertical(
+                        position = position,
+                        velocity = lens.velocity,
+                        liftValue = lift.value,
+                        extentPx = height,
+                        widthPx = width,
+                        lensGrowthPx = lensGrowthPx,
+                    )
+                } else {
+                    lensRect(
+                        position = position,
+                        velocity = lens.velocity,
+                        liftValue = lift.value,
+                        extentPx = width,
+                        heightPx = height,
+                        lensGrowthPx = lensGrowthPx,
+                    )
+                }
 
                 // 快速路径：lens 与本目的地不相交时按原样绘制一次
-                if (rect.left >= width || rect.left + rect.width <= 0f) {
+                val disjoint = if (vertical) {
+                    rect.top >= height || rect.top + rect.height <= 0f
+                } else {
+                    rect.left >= width || rect.left + rect.width <= 0f
+                }
+                if (disjoint) {
                     drawContent()
                     return@drawWithContent
                 }
@@ -681,7 +844,7 @@ private fun DockItem(
                             rect.left + rect.width,
                             rect.top + rect.height,
                         ),
-                        cornerRadius = CornerRadius(rect.height / 2f),
+                        cornerRadius = CornerRadius(minOf(rect.width, rect.height) / 2f),
                     )
                 )
 
@@ -717,26 +880,47 @@ private fun DockItem(
         contentAlignment = Alignment.Center,
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Icon(
-                    imageVector = destination.glyph,
-                    contentDescription = null,
-                    tint = contentColor,
-                    modifier = Modifier.size(NavigationDockDefaults.IconSize),
-                )
-                Spacer(Modifier.height(NavigationDockDefaults.LabelGap))
-                Text(
-                    text = destination.label,
-                    color = contentColor,
-                    style = labelStyle,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.dockLabelCollapse(collapse),
-                )
+            if (vertical) {
+                // 竖排：图标与标签并排，标签常驻可见
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = destination.glyph,
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(NavigationDockDefaults.IconSize),
+                    )
+                    Spacer(Modifier.width(NavigationDockDefaults.VerticalLabelGap))
+                    Text(
+                        text = destination.label,
+                        color = contentColor,
+                        style = labelStyle,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            } else {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = destination.glyph,
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(NavigationDockDefaults.IconSize),
+                    )
+                    Spacer(Modifier.height(NavigationDockDefaults.LabelGap))
+                    Text(
+                        text = destination.label,
+                        color = contentColor,
+                        style = labelStyle,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.dockLabelCollapse(collapse),
+                    )
+                }
             }
         }
     }
@@ -749,7 +933,7 @@ private class LensRect(
     val height: Float,
 )
 
-/** 由位置、速度（果冻拉伸）与抬起量（按压膨胀）推导 lens 的实时矩形。 */
+/** 由位置、速度（果冻拉伸）与抬起量（按压膨胀）推导横排 lens 的实时矩形。 */
 private fun lensRect(
     position: Float,
     velocity: Float,
@@ -771,21 +955,55 @@ private fun lensRect(
     )
 }
 
+/** 由位置、速度与抬起量推导竖排 lens 的实时矩形：沿 Y 轴移动 / 拉伸。 */
+private fun lensRectVertical(
+    position: Float,
+    velocity: Float,
+    liftValue: Float,
+    extentPx: Float,
+    widthPx: Float,
+    lensGrowthPx: Float,
+): LensRect {
+    val jelly = (abs(velocity) / NavigationDockDefaults.JellySpeed)
+        .coerceAtMost(1f) * NavigationDockDefaults.JellyStretch
+    val growth = lensGrowthPx * 2f * liftValue.coerceIn(0f, 1f)
+    val height = (extentPx + growth) * (1f + jelly)
+    val width = (widthPx + growth) * (1f - jelly / 2f)
+    return LensRect(
+        left = (widthPx - width) / 2f,
+        top = (position + 0.5f) * extentPx - height / 2f,
+        width = width,
+        height = height,
+    )
+}
+
 /** 选中胶囊高亮块的布局摆位。 */
 private fun Modifier.lensRectPlacement(
     lens: ResettableSpring,
     lift: ResettableSpring,
     extentPx: Float,
     lensGrowthPx: Float,
+    vertical: Boolean,
 ): Modifier = layout { measurable, constraints ->
-    val rect = lensRect(
-        position = lens.value,
-        velocity = lens.velocity,
-        liftValue = lift.value,
-        extentPx = extentPx,
-        heightPx = constraints.maxHeight.toFloat(),
-        lensGrowthPx = lensGrowthPx,
-    )
+    val rect = if (vertical) {
+        lensRectVertical(
+            position = lens.value,
+            velocity = lens.velocity,
+            liftValue = lift.value,
+            extentPx = extentPx,
+            widthPx = constraints.maxWidth.toFloat(),
+            lensGrowthPx = lensGrowthPx,
+        )
+    } else {
+        lensRect(
+            position = lens.value,
+            velocity = lens.velocity,
+            liftValue = lift.value,
+            extentPx = extentPx,
+            heightPx = constraints.maxHeight.toFloat(),
+            lensGrowthPx = lensGrowthPx,
+        )
+    }
     val placeable = measurable.measure(
         Constraints.fixed(
             width = rect.width.roundToInt().coerceAtLeast(0),

@@ -270,7 +270,7 @@ class AcademicParsersTest {
         val html = loadFixture("0051-notice.calendarInfo.html")
         val calendar = AcademicParsers.parseCalendarInfo(html)
 
-        assertTrue("Current week must be >= 1", calendar.currentWeek >= 1)
+        assertEquals("Current week should be 6", 6, calendar.currentWeek)
         assertTrue("Semester name should not be blank", calendar.semesterName.isNotBlank())
     }
 
@@ -279,6 +279,10 @@ class AcademicParsersTest {
         val html = loadFixture("0005-auth.listLeft.html")
         val week = AcademicParsers.parseTeachingWeek(html)
 
-        assertTrue("Teaching week must be between 1 and 26", week in 1..26)
+        assertEquals("Teaching week should be 6", 6, week)
+
+        val calHtml = loadFixture("0051-notice.calendarInfo.html")
+        val calWeek = AcademicParsers.parseTeachingWeek(calHtml)
+        assertEquals("Teaching week from calendarInfo fixture should be 6", 6, calWeek)
     }
 }

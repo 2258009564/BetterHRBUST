@@ -30,11 +30,15 @@ object CharsetDecoderHelper {
             }
         }
 
-        if (detectedCharsetName.isNullOrBlank() || detectedCharsetName.equals("ISO-8859-1", ignoreCase = true)) {
-            val headerSlice = String(bytes.take(2048).toByteArray(), StandardCharsets.ISO_8859_1)
-            val metaMatch = Regex("""<meta[^>]+charset=["']?([a-zA-Z0-9_\-]+)""", RegexOption.IGNORE_CASE).find(headerSlice)
-            if (metaMatch != null) {
-                detectedCharsetName = metaMatch.groupValues[1]
+        val headerSlice = String(bytes.take(2048).toByteArray(), StandardCharsets.ISO_8859_1)
+        val metaMatch = Regex("""<meta[^>]+charset=["']?([a-zA-Z0-9_\-]+)""", RegexOption.IGNORE_CASE).find(headerSlice)
+        val metaCharset = metaMatch?.groupValues?.get(1)
+
+        if (!metaCharset.isNullOrBlank()) {
+            if (metaCharset.contains("utf", ignoreCase = true)) {
+                detectedCharsetName = metaCharset
+            } else if (detectedCharsetName.isNullOrBlank() || detectedCharsetName.equals("ISO-8859-1", ignoreCase = true)) {
+                detectedCharsetName = metaCharset
             }
         }
 

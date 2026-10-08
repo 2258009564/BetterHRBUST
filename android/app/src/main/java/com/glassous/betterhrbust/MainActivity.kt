@@ -36,8 +36,10 @@ import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.NavigationDock
 import com.glassous.betterhrbust.core.ui.components.NavigationDockDestination
 import com.glassous.betterhrbust.core.ui.components.navigationDockInset
+import com.glassous.betterhrbust.core.ui.components.navigationDockStartInset
 import com.glassous.betterhrbust.core.ui.components.rememberNavigationDockCollapseConnection
 import com.glassous.betterhrbust.core.ui.components.rememberNavigationDockCollapseState
+import com.glassous.betterhrbust.core.ui.isTabletDevice
 import com.glassous.betterhrbust.core.ui.theme.BetterHRBUSTTheme
 import com.glassous.betterhrbust.feature.auth.AuthScreen
 import com.glassous.betterhrbust.feature.auth.ReLoginBottomSheet
@@ -162,8 +164,10 @@ fun MainAppScaffold(
 
     // 顶部让位：会话过期横幅已占据状态栏区域时不再重复让位
     val topContentInset = if (showSessionBanner) 0.dp else statusBarInset
-    // 底部让位：主界面为底部导航坞让位，其它二级页面直接让位给系统导航条
-    val bottomContentInset = if (isMainScreen) {
+    // 平板端导航坞竖排在左侧（见 [MainPagerScreen]），底部无需再为导航坞让位
+    val isTablet = isTabletDevice()
+    // 底部让位：主界面为底部导航坞让位，其它二级页面、平板端直接让位给系统导航条
+    val bottomContentInset = if (isMainScreen && !isTablet) {
         navigationDockInset()
     } else {
         navigationBarInset
@@ -273,8 +277,9 @@ fun MainAppScaffold(
 /**
  * 承载 5 个一级导航 Tab 的主页面容器：
  * - 使用 [HorizontalPager] 承载，提供平滑左右滑动切换动画，[beyondViewportPageCount] 保活所有页面状态；
- * - [userScrollEnabled] 设为 false，禁止手势直接翻页，仅由底部导航坞驱动；
- * - 底部悬浮 [NavigationDock]，并在容器挂载滚动折叠监听。
+ * - [userScrollEnabled] 设为 false，禁止手势直接翻页，仅由导航坞驱动；
+ * - 手机端：底部悬浮 [NavigationDock]，并在容器挂载滚动折叠监听（标签随页面滑动折叠）；
+ * - 平板端：导航坞竖排悬浮在左侧，标签常驻可见、不随滚动折叠，页面内容整体左让位。
  */
 @Composable
 fun MainPagerScreen(
@@ -288,6 +293,10 @@ fun MainPagerScreen(
     var tabIndex by rememberSaveable { mutableStateOf(0) }
     val currentTab = tabIndex
 
+    // 平板端：导航坞竖排在左侧（标签常驻），页面内容让位其宽度 + 左侧安全距离
+    val isTablet = isTabletDevice()
+    val dockStartInset = navigationDockStartInset()
+
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage to pagerState.isScrollInProgress }
             .collect { (page, scrolling) ->
@@ -297,6 +306,12 @@ fun MainPagerScreen(
 
     val dockCollapseState = rememberNavigationDockCollapseState()
     val dockCollapseConnection = rememberNavigationDockCollapseConnection(dockCollapseState)
+
+    // 竖排导航坞常驻展开：进入平板布局时恢复展开态，
+    // 避免手机布局遗留的折叠态在设备旋转后继续生效
+    LaunchedEffect(isTablet) {
+        if (isTablet) dockCollapseState.expand()
+    }
 
     val dockDestinations = remember {
         TopLevelDestination.entries.map {
@@ -327,14 +342,21 @@ fun MainPagerScreen(
         }
     }
 
-    Box(
-        modifier = modifier
+    val containerModifier = if (isTablet) {
+        // 竖排导航坞不随页面滚动折叠，无需转发滚动量
+        modifier.fillMaxSize()
+    } else {
+        modifier
             .fillMaxSize()
             .nestedScroll(dockCollapseConnection)
-    ) {
+    }
+
+    Box(modifier = containerModifier) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = dockStartInset),
             beyondViewportPageCount = 4,
             userScrollEnabled = false,
         ) { page ->
@@ -357,8 +379,11 @@ fun MainPagerScreen(
                 tabIndex = index
                 coroutineScope.launch { pagerState.animateScrollToPage(index) }
             },
-            collapseState = dockCollapseState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            collapseState = if (isTablet) null else dockCollapseState,
+            vertical = isTablet,
+            modifier = Modifier.align(
+                if (isTablet) Alignment.CenterStart else Alignment.BottomCenter
+            )
         )
     }
 }

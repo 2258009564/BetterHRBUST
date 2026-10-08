@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.model.ExamItem
@@ -150,7 +151,9 @@ fun ExamsScreen(
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                maxLines = 1,
+                                                // 允许折行完整显示科目名，超长时省略号收尾，避免硬截断
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
                                                 modifier = Modifier.weight(1f)
                                             )
                                             Surface(

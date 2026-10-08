@@ -116,12 +116,6 @@ fun DashboardScreen(
         scoreResult?.scores?.let { AcademicParsers.calculateGpaStats(it) }
     }
 
-    // 与"培养方案与学分"页共用同一口径，保证概览页与方案页数据完全一致
-    val creditsProgress = remember(scoreResult, plan) {
-        scoreResult?.scores?.let { scores ->
-            GpaCalculator.computeCreditsProgress(scores, plan?.groups ?: emptyList())
-        }
-    }
 
     // Today's courses
     val today = remember { LocalDate.now() }
@@ -165,66 +159,7 @@ fun DashboardScreen(
                     bottom = LocalBottomContentInset.current + 24.dp
                 )
             ) {
-            // Student Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column {
-                                // 姓名来源优先级：档案缓存 → DataStore 持久化姓名 → 账号兜底，
-                                // 避免档案缓存被清理后回退为占位文案
-                                val displayName = profile?.realName?.takeIf { it.isNotBlank() }
-                                    ?: prefs?.realName?.takeIf { it.isNotBlank() }
-                                    ?: prefs?.username?.takeIf { it.isNotBlank() }
-                                    ?: "哈理工同学"
-                                Text(
-                                    text = displayName,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "学号: ${profile?.studentNumber?.ifEmpty { prefs?.username } ?: prefs?.username ?: "未知"}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                )
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.primary
-                            ) {
-                                Text(
-                                    text = "第 $currentWeek 周",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
-                        }
-                        if (!profile?.college.isNullOrBlank() || !profile?.major.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "${profile?.college ?: ""} ${profile?.major ?: ""}".trim(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Key Stats Card
+            // 关键统计卡片：显示 GPA 与 今日课程安排（n节）
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -237,65 +172,81 @@ fun DashboardScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onNavigate(com.glassous.betterhrbust.navigation.ScoresRoute) }
+                        ) {
                             Text(
                                 text = stats?.gpa?.let { String.format("%.2f", it) } ?: "--",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                            Text(text = "五分制 GPA（必修）", style = MaterialTheme.typography.labelSmall)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "GPA",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
                         }
                         VerticalDivider(modifier = Modifier.height(40.dp))
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            // 已获得学分：与"培养方案与学分"页同口径（必修课去重后通过学分）
-                            val earned = creditsProgress?.earnedTotal ?: stats?.earnedCredits
-                            val required = creditsProgress?.requiredTotal
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onNavigate(com.glassous.betterhrbust.navigation.TimetableRoute) }
+                        ) {
                             Text(
-                                text = earned?.let { "${trimNumber(it)}/${required?.let { r -> trimNumber(r) } ?: "--"}" } ?: "--",
+                                text = "${todayCourses.size} 节",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.secondary
                             )
-                            Text(text = "已获学分 / 方案总学分", style = MaterialTheme.typography.labelSmall)
-                        }
-                        VerticalDivider(modifier = Modifier.height(40.dp))
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "${stats?.failedCount ?: 0}",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = if ((stats?.failedCount ?: 0) > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                                text = "今日课程安排",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
                             )
-                            Text(text = "未通过门数", style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
             }
 
-            // 特色学业算法：学位证 / 推免 / 学业风险预警 / 提前毕业
+            // 成绩卡片：点击跳转至成绩页，移除副标题与底部小字，数值不显示红色
             item {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigate(com.glassous.betterhrbust.navigation.ScoresRoute) },
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "特色学业算法",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = GpaCalculator.STATS_SCOPE_NOTE,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "成绩",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "查看成绩",
+                                tint = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -303,32 +254,19 @@ fun DashboardScreen(
                         ) {
                             MiniStatColumn(
                                 label = "学位绩点",
-                                value = stats?.degree?.gpa?.let { String.format("%.2f", it) } ?: "--",
-                                highlight = stats?.degree?.qualified == true
+                                value = stats?.degree?.gpa?.let { String.format("%.2f", it) } ?: "--"
                             )
                             MiniStatColumn(
                                 label = "补考/重修",
-                                value = stats?.recommend?.let { "${it.retakeCount}/${it.retakeLimit}" } ?: "--",
-                                highlight = stats?.recommend?.qualified == true
+                                value = stats?.recommend?.let { "${it.retakeCount}/${it.retakeLimit}" } ?: "--"
                             )
                             MiniStatColumn(
                                 label = "挂科学分",
-                                value = stats?.risk?.failedCredits?.let { trimNumber(it) } ?: "--",
-                                highlight = stats?.risk?.level == "none"
+                                value = stats?.risk?.failedCredits?.let { trimNumber(it) } ?: "--"
                             )
                             MiniStatColumn(
                                 label = "提前毕业",
-                                value = if (stats?.earlyGraduation?.qualified == true) "达标" else "未达标",
-                                highlight = stats?.earlyGraduation?.qualified == true
-                            )
-                        }
-                        val riskDescription = stats?.risk?.description
-                        if (!riskDescription.isNullOrEmpty()) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text = riskDescription,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline
+                                value = if (stats?.earlyGraduation?.qualified == true) "达标" else "未达标"
                             )
                         }
                     }
@@ -540,19 +478,18 @@ fun DashboardScreen(
 private fun trimNumber(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else String.format("%.1f", value)
 
-/** 概览页特色算法迷你指标列 */
+/** 概览页指标迷你列（统一使用主题色，不再显示红色） */
 @Composable
 private fun MiniStatColumn(
     label: String,
-    value: String,
-    highlight: Boolean
+    value: String
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = if (highlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
