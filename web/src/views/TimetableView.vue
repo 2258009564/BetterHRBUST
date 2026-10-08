@@ -96,9 +96,12 @@
 
       <!-- Timetable Grid -->
       <div v-else class="rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#111316] overflow-x-auto shadow-xs">
-        <div class="min-w-[800px]">
+        <div class="min-w-[1040px]">
           <!-- Table Header (Days of week) -->
-          <div class="grid grid-cols-8 border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/60 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+          <div
+            class="grid border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/60 text-sm font-semibold text-zinc-700 dark:text-zinc-300"
+            :style="{ gridTemplateColumns: gridTemplate }"
+          >
             <div class="p-3 text-center text-zinc-400 dark:text-zinc-500 border-r border-zinc-200/80 dark:border-zinc-800">
               节次 / 时间
             </div>
@@ -120,46 +123,58 @@
             v-for="slot in activeSlots"
             :key="slot.period"
             :class="[
-              'grid grid-cols-8 border-b border-zinc-100 dark:border-zinc-800/60 last:border-b-0 min-h-[72px]',
+              'grid border-b border-zinc-100 dark:border-zinc-800/60 last:border-b-0',
+              isRowOccupied(slot.period) ? 'min-h-[118px]' : 'min-h-[44px]',
               slot.period % 2 === 0 ? 'bg-zinc-50/30 dark:bg-zinc-900/10' : ''
             ]"
+            :style="{ gridTemplateColumns: gridTemplate }"
           >
             <!-- Period Header -->
-            <div class="p-2 border-r border-zinc-100 dark:border-zinc-800/60 flex flex-col justify-center items-center text-center">
-              <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+            <div
+              :class="[
+                'p-2 border-r border-zinc-100 dark:border-zinc-800/60 flex flex-col justify-center items-center text-center',
+                isRowOccupied(slot.period) ? '' : 'opacity-70'
+              ]"
+            >
+              <span
+                :class="isRowOccupied(slot.period) ? 'text-sm' : 'text-xs'"
+                class="font-bold text-zinc-800 dark:text-zinc-200"
+              >
                 {{ viewMode === 'combine' ? `第 ${slot.period} 大节` : `第 ${slot.period} 节` }}
               </span>
-              <span class="text-[10px] text-zinc-400 font-mono mt-0.5">{{ slot.time }}</span>
+              <span
+                :class="isRowOccupied(slot.period) ? 'text-xs' : 'text-[10px]'"
+                class="text-zinc-400 font-mono mt-0.5"
+              >
+                {{ slot.time }}
+              </span>
             </div>
 
             <!-- 7 Days Slots -->
             <div
               v-for="dayNum in 7"
               :key="dayNum"
-              class="p-1 border-r border-zinc-100 dark:border-zinc-800/60 last:border-r-0 flex flex-col gap-1 relative"
+              class="p-1.5 border-r border-zinc-100 dark:border-zinc-800/60 last:border-r-0 flex flex-col gap-1.5 relative min-w-0"
             >
-              <template v-for="course in getCoursesForSlot(dayNum, slot.period)" :key="course.courseName + course.id">
-                <div
-                  v-if="!onlyCurrentWeek || isCourseActiveThisWeek(course)"
-                  :class="[
-                    'p-2 rounded-lg text-xs leading-tight transition-all duration-150 cursor-pointer border select-none h-full flex flex-col justify-between',
-                    isCourseActiveThisWeek(course)
-                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-xs'
-                      : 'bg-zinc-100/70 text-zinc-400 dark:bg-zinc-800/40 dark:text-zinc-500 border-transparent hover:border-zinc-300 dark:hover:border-zinc-700'
-                  ]"
-                  @click="openCourseDetail(course)"
-                >
-                  <div>
-                    <div class="font-bold line-clamp-2 tracking-tight">{{ course.courseName }}</div>
-                    <div class="text-[10px] opacity-80 mt-1 flex items-center gap-1 truncate">
-                      <span>{{ course.location || '待定' }}</span>
-                    </div>
-                  </div>
-                  <div class="text-[9px] opacity-75 mt-1 truncate">
-                    {{ course.teacher }} · {{ course.weeks }}
+              <div
+                v-for="course in getVisibleCoursesForSlot(dayNum, slot.period)"
+                :key="course.courseName + course.id"
+                :class="[
+                  'p-2.5 rounded-lg text-sm leading-tight transition-all duration-150 cursor-pointer border select-none h-full flex flex-col justify-between',
+                  isCourseActiveThisWeek(course) ? getCourseColor(course).solid : getCourseColor(course).soft
+                ]"
+                @click="openCourseDetail(course)"
+              >
+                <div>
+                  <div class="font-bold line-clamp-2 tracking-tight">{{ course.courseName }}</div>
+                  <div class="text-xs opacity-80 mt-1.5 flex items-center gap-1">
+                    <span class="truncate">{{ course.location || '待定' }}</span>
                   </div>
                 </div>
-              </template>
+                <div class="text-[11px] opacity-75 mt-1.5 truncate">
+                  {{ course.teacher }} · {{ course.weeks }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -234,6 +249,7 @@ import { useSession } from '@/composables/useSession.js';
 import { useToast } from '@/composables/useToast.js';
 import { academicApi } from '@/services/academic/api.js';
 import { BASE_SLOT_TIMES, COMBINE_SLOT_TIMES } from '@/utils/periodTimes.js';
+import { getCourseColor } from '@/utils/courseColors.js';
 
 const { isLoggedIn, studentId, currentWeek, currentSemester, openLoginModal } = useSession();
 const { showToast } = useToast();
@@ -283,8 +299,34 @@ function isCourseActiveThisWeek(course) {
   return parts.length === 0;
 }
 
-function getCoursesForSlot(day, period) {
-  return courses.value.filter(c => c.day === day && c.sectionIndex === period);
+// 当前筛选条件下实际展示的课程（"仅看本周" 关闭时为全部课程）
+const visibleCourses = computed(() =>
+  courses.value.filter(c => !onlyCurrentWeek.value || isCourseActiveThisWeek(c))
+);
+
+const hasAnyCourse = computed(() => visibleCourses.value.length > 0);
+const occupiedSections = computed(() => new Set(visibleCourses.value.map(c => c.sectionIndex)));
+const occupiedDays = computed(() => new Set(visibleCourses.value.map(c => c.day)));
+
+// 整行 / 整列无课时压缩，把空间让给有课的格子
+function isRowOccupied(period) {
+  return !hasAnyCourse.value || occupiedSections.value.has(period);
+}
+
+function isDayOccupied(day) {
+  return !hasAnyCourse.value || occupiedDays.value.has(day);
+}
+
+// 有课列宽 > 108px 并均分剩余空间，无课列收窄
+const gridTemplate = computed(() => {
+  const dayCols = daysOfWeek.map((_, idx) =>
+    isDayOccupied(idx + 1) ? 'minmax(132px, 1fr)' : 'minmax(56px, 0.28fr)'
+  );
+  return `96px ${dayCols.join(' ')}`;
+});
+
+function getVisibleCoursesForSlot(day, period) {
+  return visibleCourses.value.filter(c => c.day === day && c.sectionIndex === period);
 }
 
 function openCourseDetail(course) {

@@ -23,6 +23,45 @@ export function stripHtmlComments(html) {
 }
 
 /**
+ * 常见命名实体映射
+ */
+const NAMED_ENTITIES = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  copy: '©', reg: '®', trade: '™', hellip: '…',
+  mdash: '—', ndash: '–', middot: '·', deg: '°',
+  laquo: '«', raquo: '»',
+  ldquo: '“', rdquo: '”', lsquo: '‘', rsquo: '’'
+};
+
+function fromCodePoint(num, fallback) {
+  return Number.isFinite(num) && num > 0 && num <= 0x10ffff ? String.fromCodePoint(num) : fallback;
+}
+
+/**
+ * 解码 HTML 实体（支持命名实体与十进制/十六进制数字实体）。
+ * 教务系统部分页面存在双重编码（源码为 &amp;lt;，textContent/innerHTML
+ * 提取后仍是 "&lt;"），因此循环解码直到结果稳定（最多 3 轮）。
+ * @param {string} text
+ * @returns {string}
+ */
+export function decodeEntities(text) {
+  if (!text || !text.includes('&')) return text || '';
+  const pattern = /&(?:#x([0-9a-fA-F]+)|#([0-9]+)|([a-zA-Z][a-zA-Z0-9]*));/g;
+  let out = text;
+  for (let i = 0; i < 3; i++) {
+    const next = out.replace(pattern, (raw, hex, dec, name) => {
+      if (hex) return fromCodePoint(parseInt(hex, 16), raw);
+      if (dec) return fromCodePoint(parseInt(dec, 10), raw);
+      const mapped = NAMED_ENTITIES[name.toLowerCase()];
+      return mapped !== undefined ? mapped : raw;
+    });
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+}
+
+/**
  * 解析学生上下文（/academic/student/currcourse/currcourse.jsdo）
  */
 export function parseStudentContext(html) {
@@ -272,7 +311,9 @@ export function parseTimetable(html) {
     const rows = table.querySelectorAll('tr.infolist_hr_common');
     rows.forEach((tr, rowIndex) => {
       const th = tr.querySelector('th');
-      const sectionLabel = th ? th.textContent.replace(/<br>/g, '').trim() : `第${rowIndex + 1}大节`;
+      const sectionLabel = th
+        ? decodeEntities(th.textContent.replace(/<br>/g, '').trim())
+        : `第${rowIndex + 1}大节`;
 
       const tds = tr.querySelectorAll('td');
       tds.forEach((td, dayIndex) => {
@@ -283,8 +324,11 @@ export function parseTimetable(html) {
           return;
         }
 
-        // 以 <br> 分割课程详情
-        const lines = rawHtml.split(/<br\s*\/?>/i).map(l => l.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+        // 以 <br> 分割课程详情，先剥残留标签再解码 HTML 实体（&lt; 等）
+        const lines = rawHtml
+          .split(/<br\s*\/?>/i)
+          .map(l => decodeEntities(l.replace(/<[^>]+>/g, '')).trim())
+          .filter(Boolean);
         if (lines.length === 0) return;
 
         // 第一行通常是 <<课程名>>;课序号
@@ -302,16 +346,19 @@ export function parseTimetable(html) {
         const weeks = lines[3] || '';
         const hoursType = lines[4] || '';
 
-        // id 格式形如 "1-4367" 或 "1-1"，前缀为星期几 (1~7)
+        // id 格式形如 "1-4367" 或 "1-1"，前缀为星期几 (1~7)，后缀为课程排课 ID
         let day = dayIndex + 1;
+        let courseId = '';
         if (id) {
           const parts = id.split('-');
           const parsedDay = parseInt(parts[0], 10);
           if (parsedDay >= 1 && parsedDay <= 7) day = parsedDay;
+          if (parts[1] && /^\d+$/.test(parts[1])) courseId = parts[1];
         }
 
         cells.push({
           id,
+          courseId,
           day, // 1~7 (周一到周日)
           sectionIndex: rowIndex + 1, // 1~6 大节
           sectionLabel,
@@ -335,14 +382,14 @@ export function parseTimetable(html) {
       const tds = rows[i].querySelectorAll('td');
       if (tds.length >= 8) {
         unarranged.push({
-          courseId: tds[0]?.textContent.trim() || '',
-          courseName: tds[1]?.textContent.trim() || '',
-          courseSeq: tds[2]?.textContent.trim() || '',
-          teacher: tds[3]?.textContent.trim() || '',
-          mergeClass: tds[4]?.textContent.trim() || '',
-          weeks: tds[5]?.textContent.trim() || '',
-          day: tds[6]?.textContent.trim() || '',
-          location: tds[7]?.textContent.trim() || ''
+          courseId: decodeEntities(tds[0]?.textContent.trim()) || '',
+          courseName: decodeEntities(tds[1]?.textContent.trim()) || '',
+          courseSeq: decodeEntities(tds[2]?.textContent.trim()) || '',
+          teacher: decodeEntities(tds[3]?.textContent.trim()) || '',
+          mergeClass: decodeEntities(tds[4]?.textContent.trim()) || '',
+          weeks: decodeEntities(tds[5]?.textContent.trim()) || '',
+          day: decodeEntities(tds[6]?.textContent.trim()) || '',
+          location: decodeEntities(tds[7]?.textContent.trim()) || ''
         });
       }
     }
