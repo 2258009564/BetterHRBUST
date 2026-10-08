@@ -16,12 +16,19 @@ class AuthRepository(
     private val prefs: UserPreferencesManager,
     private val database: AppDatabase
 ) {
+    private val _isSessionExpired = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isSessionExpired: kotlinx.coroutines.flow.StateFlow<Boolean> = _isSessionExpired
+
     val authState: Flow<AuthState> = prefs.preferencesFlow.map { pref ->
         if (pref.username.isNotEmpty() && pref.studentId.isNotEmpty()) {
             AuthState.Authenticated(username = pref.username, studentId = pref.studentId)
         } else {
             AuthState.Unauthenticated
         }
+    }
+
+    fun markSessionExpired(expired: Boolean = true) {
+        _isSessionExpired.value = expired
     }
 
     suspend fun getCaptcha(): ByteArray {
@@ -63,6 +70,7 @@ class AuthRepository(
                 year = studentContext.year,
                 term = studentContext.term
             )
+            _isSessionExpired.value = false
 
             emit(Resource.Success(studentContext))
         } catch (e: Exception) {
@@ -72,6 +80,7 @@ class AuthRepository(
 
     fun logout(): Flow<Resource<Unit>> = flow {
         emit(Resource.Loading)
+        _isSessionExpired.value = false
         try {
             client.logout()
             prefs.clearSession()

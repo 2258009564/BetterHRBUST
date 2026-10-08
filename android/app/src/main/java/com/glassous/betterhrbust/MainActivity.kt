@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
@@ -23,6 +23,8 @@ import androidx.navigation.compose.rememberNavController
 import com.glassous.betterhrbust.core.model.AuthState
 import com.glassous.betterhrbust.core.ui.theme.BetterHRBUSTTheme
 import com.glassous.betterhrbust.feature.auth.AuthScreen
+import com.glassous.betterhrbust.feature.auth.ReLoginBottomSheet
+import com.glassous.betterhrbust.feature.auth.SessionExpiredBanner
 import com.glassous.betterhrbust.feature.classrooms.ClassroomsScreen
 import com.glassous.betterhrbust.feature.courses.CoursesScreen
 import com.glassous.betterhrbust.feature.dashboard.DashboardScreen
@@ -43,6 +45,7 @@ class MainActivity : ComponentActivity() {
             val app = remember { BetterHrbustApp.instance }
             val prefs by app.preferencesManager.preferencesFlow.collectAsState(initial = null)
             val authState by app.authRepository.authState.collectAsState(initial = AuthState.Unauthenticated)
+            val isSessionExpired by app.authRepository.isSessionExpired.collectAsState()
 
             val isSystemDark = isSystemInDarkTheme()
             val useDarkTheme = prefs?.darkTheme ?: isSystemDark
@@ -54,7 +57,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 MainAppScaffold(
                     authState = authState,
-                    offlineMode = prefs?.offlineMode ?: false
+                    isSessionExpired = isSessionExpired
                 )
             }
         }
@@ -64,14 +67,16 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppScaffold(
     authState: AuthState,
-    offlineMode: Boolean
+    isSessionExpired: Boolean
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
+    var showReLoginSheet by remember { mutableStateOf(false) }
+
     val isAuthScreen = currentDestination?.hasRoute(AuthRoute::class) == true
-    val startDestination = if (authState is AuthState.Authenticated || offlineMode) {
+    val startDestination = if (authState is AuthState.Authenticated) {
         DashboardRoute
     } else {
         AuthRoute
@@ -118,71 +123,93 @@ fun MainAppScaffold(
         },
         modifier = Modifier.fillMaxSize()
     ) {
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            composable<AuthRoute> {
-                AuthScreen(
-                    onLoginSuccess = {
-                        navController.navigate(DashboardRoute) {
-                            popUpTo(AuthRoute) { inclusive = true }
-                        }
-                    },
-                    onOfflineMode = {
-                        navController.navigate(DashboardRoute) {
-                            popUpTo(AuthRoute) { inclusive = true }
-                        }
-                    }
+        Column(modifier = Modifier.fillMaxSize()) {
+            // 当会话已过期且在应用内主界面时，在顶部显示重新登录提示条（类似 Web 端 AppHeader）
+            if (!isAuthScreen && isSessionExpired) {
+                SessionExpiredBanner(
+                    onReLoginClick = { showReLoginSheet = true },
+                    modifier = Modifier.statusBarsPadding()
                 )
             }
 
-            composable<DashboardRoute> {
-                DashboardScreen(
-                    onNavigate = { route ->
-                        navController.navigate(route)
-                    }
-                )
+            val navHostModifier = if (!isAuthScreen && isSessionExpired) {
+                Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+                    .consumeWindowInsets(WindowInsets.statusBars)
+            } else {
+                Modifier
+                    .fillMaxSize()
+                    .weight(1f)
             }
 
-            composable<TimetableRoute> {
-                TimetableScreen()
-            }
-
-            composable<ScoresRoute> {
-                ScoresScreen()
-            }
-
-            composable<ExamsRoute> {
-                ExamsScreen()
-            }
-
-            composable<ProgramRoute> {
-                ProgramScreen()
-            }
-
-            composable<ClassroomsRoute> {
-                ClassroomsScreen()
-            }
-
-            composable<CoursesRoute> {
-                CoursesScreen()
-            }
-
-            composable<ProfileRoute> {
-                ProfileScreen()
-            }
-
-            composable<SettingsRoute> {
-                NoticesSettingsScreen(
-                    onLogout = {
-                        navController.navigate(AuthRoute) {
-                            popUpTo(DashboardRoute) { inclusive = true }
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+                modifier = navHostModifier
+            ) {
+                composable<AuthRoute> {
+                    AuthScreen(
+                        onLoginSuccess = {
+                            navController.navigate(DashboardRoute) {
+                                popUpTo(AuthRoute) { inclusive = true }
+                            }
                         }
-                    }
-                )
+                    )
+                }
+
+                composable<DashboardRoute> {
+                    DashboardScreen(
+                        onNavigate = { route ->
+                            navController.navigate(route)
+                        }
+                    )
+                }
+
+                composable<TimetableRoute> {
+                    TimetableScreen()
+                }
+
+                composable<ScoresRoute> {
+                    ScoresScreen()
+                }
+
+                composable<ExamsRoute> {
+                    ExamsScreen()
+                }
+
+                composable<ProgramRoute> {
+                    ProgramScreen()
+                }
+
+                composable<ClassroomsRoute> {
+                    ClassroomsScreen()
+                }
+
+                composable<CoursesRoute> {
+                    CoursesScreen()
+                }
+
+                composable<ProfileRoute> {
+                    ProfileScreen()
+                }
+
+                composable<SettingsRoute> {
+                    NoticesSettingsScreen(
+                        onLogout = {
+                            navController.navigate(AuthRoute) {
+                                popUpTo(DashboardRoute) { inclusive = true }
+                            }
+                        }
+                    )
+                }
             }
+        }
+
+        if (showReLoginSheet) {
+            ReLoginBottomSheet(
+                onDismiss = { showReLoginSheet = false }
+            )
         }
     }
 }

@@ -49,10 +49,13 @@ class AcademicHttpClient(
         }
     }
 
+    var onSessionExpired: (() -> Unit)? = null
+
     private fun checkSessionExpiration(url: String, html: String) {
         val isAuthEndpoint = url.contains("login") || url.contains("getCaptcha") || url.contains("j_acegi_security_check")
         if (!isAuthEndpoint) {
             if (html.contains("j_acegi_security_check") || (html.contains("getCaptcha.do") && html.contains("j_captcha"))) {
+                onSessionExpired?.invoke()
                 throw SessionExpiredException("会话已过期，请重新登录")
             }
         }

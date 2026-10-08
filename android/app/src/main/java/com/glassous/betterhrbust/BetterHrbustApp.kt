@@ -32,6 +32,9 @@ class BetterHrbustApp : Application() {
         preferencesManager = UserPreferencesManager(this)
         httpClient = AcademicHttpClient()
         authRepository = AuthRepository(httpClient, preferencesManager, database)
+        httpClient.onSessionExpired = {
+            authRepository.markSessionExpired(true)
+        }
         academicRepository = AcademicRepository(httpClient, database, preferencesManager)
     }
 

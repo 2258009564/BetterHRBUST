@@ -122,18 +122,24 @@ fun DashboardScreen(
         QuickNavGridItem("通知与设置", Icons.Default.Settings, com.glassous.betterhrbust.navigation.SettingsRoute)
     )
 
-    AppPullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = { refreshData(force = true) },
-        modifier = modifier.fillMaxSize()
-    ) {
-        LazyColumn(
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets.statusBars
+    ) { padding ->
+        AppPullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { refreshData(force = true) },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
+                .padding(padding)
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+            ) {
             // Student Card
             item {
                 Card(
@@ -434,3 +440,5 @@ fun DashboardScreen(
         }
     }
 }
+}
+

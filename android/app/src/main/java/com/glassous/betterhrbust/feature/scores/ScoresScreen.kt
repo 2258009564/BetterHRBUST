@@ -96,6 +96,7 @@ fun ScoresScreen(
     ListDetailPaneScaffold(
         directive = navigator.scaffoldDirective,
         value = navigator.scaffoldValue,
+        modifier = modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
         listPane = {
             AppPullToRefreshBox(
                 isRefreshing = isRefreshing,
@@ -411,8 +412,7 @@ fun ScoresScreen(
                     )
                 }
             }
-        },
-        modifier = modifier
+        }
     )
 }
 
