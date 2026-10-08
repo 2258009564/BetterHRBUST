@@ -1,11 +1,12 @@
-﻿import { createApp } from 'vue'
-import App from './App.vue'
-import './assets/main.css'
+// 应用入口：先完成平台存储初始化，再加载应用主体。
+//
+// 桌面端的持久化数据在 Rust 后端（本地服务 /__app/storage），水合是异步的；
+// 而 useSession / useTheme 等业务模块在模块顶层就读取存储，因此必须等
+// initStorage() 完成后再动态加载 boot.js（连带整个应用模块图）。
+// Web / 油猴环境的存储是同步的（localStorage / GM 存储），initStorage()
+// 立即返回，不改变原有加载路径。
+import { initStorage } from './services/storage.js';
 
-// 桌面端（Tauri shim 注入 window.desktopWindow）环境标记：
-// 挂到 <html> 上驱动自定义标题栏与 --tb 高度变量
-if (typeof window !== 'undefined' && window.desktopWindow) {
-  document.documentElement.classList.add('desktop-chrome')
-}
-
-createApp(App).mount('#app')
+initStorage()
+  .catch(() => {}) // 水合失败由 storage.js 内部回落 localStorage，此处不再上抛
+  .then(() => import('./boot.js'));

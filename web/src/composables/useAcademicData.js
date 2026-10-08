@@ -2,7 +2,7 @@
  * 教务数据集中层（全量加载 + 本地持久化）
  *
  * 策略（与用户约定一致）：
- * 1. 登录成功后一次性全量拉取（上下文 / 档案 / 校历 / 课表 / 成绩 / 考试 / 培养方案 / 公告）并持久化到 localStorage；
+ * 1. 登录成功后一次性全量拉取（上下文 / 档案 / 校历 / 课表 / 成绩 / 考试 / 培养方案 / 公告）并持久化到本地存储；
  * 2. 之后进入任何页面只读本地缓存，不再自动联网；
  * 3. 仅在【每天首次打开】与【用户手动刷新】两种情况下触网；
  * 4. 手动刷新时若会话已失效，则要求用户重新登录（交由 useSession 的节流判定处理）。
@@ -13,6 +13,7 @@ import { academicApi } from '@/services/academic/api.js';
 import { useSession } from '@/composables/useSession.js';
 import { registerDataCacheCleaner } from '@/composables/dataCacheBridge.js';
 import { registerCourseColors } from '@/utils/courseColors.js';
+import { storageGetItem, storageSetItem, storageRemoveItem } from '@/services/storage.js';
 
 const CACHE_KEYS = {
   meta: 'better_hrbust_cache_sync_meta',
@@ -36,7 +37,7 @@ function todayKey() {
 
 function readJson(key, fallback) {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = storageGetItem(key);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
     return parsed === null || parsed === undefined ? fallback : parsed;
@@ -47,7 +48,7 @@ function readJson(key, fallback) {
 
 function writeJson(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    storageSetItem(key, JSON.stringify(value));
   } catch {
     // 存储配额不足时静默忽略，不影响内存态
   }
@@ -336,7 +337,7 @@ async function loadNoticesForWeek(week) {
 function clearDataCache() {
   Object.values(CACHE_KEYS).forEach(key => {
     try {
-      localStorage.removeItem(key);
+      storageRemoveItem(key);
     } catch {
       // 忽略
     }

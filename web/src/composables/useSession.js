@@ -1,6 +1,7 @@
 import { ref, reactive, computed } from 'vue';
 import { academicApi } from '@/services/academic/api.js';
 import { clearRegisteredDataCaches } from '@/composables/dataCacheBridge.js';
+import { storageGetItem, storageSetItem, storageRemoveItem } from '@/services/storage.js';
 
 const SESSION_FLAG_KEY = 'better_hrbust_has_session';
 const SESSION_CACHE_KEY = 'better_hrbust_cached_profile';
@@ -18,14 +19,14 @@ const SESSION_EXPIRED_KEY = 'better_hrbust_session_expired';
 const PROMPT_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function readNumber(key) {
-  const n = Number(localStorage.getItem(key));
+  const n = Number(storageGetItem(key));
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-const hasSavedSession = localStorage.getItem(SESSION_FLAG_KEY) === 'true';
+const hasSavedSession = storageGetItem(SESSION_FLAG_KEY) === 'true';
 const savedProfile = (() => {
   try {
-    return JSON.parse(localStorage.getItem(SESSION_CACHE_KEY) || 'null');
+    return JSON.parse(storageGetItem(SESSION_CACHE_KEY) || 'null');
   } catch {
     return null;
   }
@@ -33,7 +34,7 @@ const savedProfile = (() => {
 
 const isLoggedIn = ref(hasSavedSession);
 // 会话失效状态持久化：冷启动后仍能展示"登录状态已失效"与按周节流后的横幅
-const isSessionExpired = ref(localStorage.getItem(SESSION_EXPIRED_KEY) === 'true');
+const isSessionExpired = ref(storageGetItem(SESSION_EXPIRED_KEY) === 'true');
 const authChecked = ref(false);
 const isCheckingAuth = ref(false);
 const isLoggingIn = ref(false);
@@ -51,11 +52,11 @@ const lastPromptAt = ref(readNumber(LAST_PROMPT_KEY));
 const promptActive = ref(false);
 /** 用户已忽略本轮失效提示（收起横幅） */
 const sessionPromptDismissed = ref(false);
-/** 本次运行期间是否已对当前这一轮失效做过节流判定（重新打开页面后归零） */
+/** 本次运行期间是否已对当前这一轮失效做过节流判定（重新打开应用后归零） */
 let promptDecided = false;
 
 const studentId = ref(savedProfile?.internalId || ''); // 教务内部学生 ID
-const studentNumber = ref(localStorage.getItem('saved_student_number') || savedProfile?.studentNumber || '');
+const studentNumber = ref(storageGetItem('saved_student_number') || savedProfile?.studentNumber || '');
 
 const activeTab = ref('dashboard');
 const previousTab = ref('dashboard');
@@ -113,8 +114,8 @@ function resetProfile() {
   userProfile.address = '';
   userProfile.photoUrl = '';
   userProfile.changes = [];
-  localStorage.removeItem(SESSION_CACHE_KEY);
-  localStorage.removeItem(SESSION_FLAG_KEY);
+  storageRemoveItem(SESSION_CACHE_KEY);
+  storageRemoveItem(SESSION_FLAG_KEY);
 }
 
 /** 会话已失效但本地仍有缓存数据 → 进入离线只读模式 */
@@ -142,8 +143,8 @@ function markSessionExpired(options = {}) {
   const manual = options.manual === true;
   isSessionExpired.value = true;
   isLoggedIn.value = false;
-  localStorage.setItem(SESSION_EXPIRED_KEY, 'true');
-  localStorage.removeItem(SESSION_FLAG_KEY);
+  storageSetItem(SESSION_EXPIRED_KEY, 'true');
+  storageRemoveItem(SESSION_FLAG_KEY);
 
   // 本次运行期间本轮失效已判定过 → 不重复评估，避免提示时间被后续请求不断后推；
   // 重新打开应用后 promptDecided 归零，故"再过一周再提示"仍能生效
@@ -157,7 +158,7 @@ function markSessionExpired(options = {}) {
     // 触发一次提示：记录提示时间，作为下一次提示的起点
     promptActive.value = true;
     lastPromptAt.value = now;
-    localStorage.setItem(LAST_PROMPT_KEY, String(now));
+    storageSetItem(LAST_PROMPT_KEY, String(now));
     // 新的一次提示：重新展示横幅（覆盖上一次的"忽略"）
     sessionPromptDismissed.value = false;
   } else {
@@ -172,13 +173,13 @@ function clearSessionExpired() {
   sessionPromptDismissed.value = false;
   promptDecided = false;
   lastPromptAt.value = 0;
-  localStorage.removeItem(LAST_PROMPT_KEY);
-  localStorage.removeItem(SESSION_EXPIRED_KEY);
+  storageRemoveItem(LAST_PROMPT_KEY);
+  storageRemoveItem(SESSION_EXPIRED_KEY);
 }
 
 function recordLoginTime() {
   lastLoginAt.value = Date.now();
-  localStorage.setItem(LAST_LOGIN_KEY, String(lastLoginAt.value));
+  storageSetItem(LAST_LOGIN_KEY, String(lastLoginAt.value));
 }
 
 /**
@@ -200,7 +201,7 @@ async function checkAuth(options = {}) {
       if (ctx.year) currentSemester.yearId = ctx.year;
       if (ctx.term) currentSemester.termId = ctx.term;
 
-      localStorage.setItem(SESSION_FLAG_KEY, 'true');
+      storageSetItem(SESSION_FLAG_KEY, 'true');
 
       if (!light) {
         // 顺带拉取个人基本信息与周次
@@ -209,7 +210,7 @@ async function checkAuth(options = {}) {
           Object.assign(userProfile, info);
           userProfile.internalId = ctx.studentId;
           if (info.studentNumber) studentNumber.value = info.studentNumber;
-          localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(userProfile));
+          storageSetItem(SESSION_CACHE_KEY, JSON.stringify(userProfile));
         } catch {
           // 忽略局部非关键错误
         }
@@ -260,9 +261,9 @@ async function login({ username, password, captcha, remember = true }) {
     }
 
     if (remember) {
-      localStorage.setItem('saved_student_number', username);
+      storageSetItem('saved_student_number', username);
     } else {
-      localStorage.removeItem('saved_student_number');
+      storageRemoveItem('saved_student_number');
     }
     studentNumber.value = username;
 
@@ -280,8 +281,8 @@ async function login({ username, password, captcha, remember = true }) {
     recordLoginTime();
     authChecked.value = true;
     showLoginModal.value = false;
-    localStorage.setItem(SESSION_FLAG_KEY, 'true');
-    localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(userProfile));
+    storageSetItem(SESSION_FLAG_KEY, 'true');
+    storageSetItem(SESSION_CACHE_KEY, JSON.stringify(userProfile));
     return { success: true, message: '登录成功' };
   } catch (err) {
     loginError.value = err.message || '登录异常';
@@ -308,9 +309,9 @@ async function logout() {
   lastLoginAt.value = 0;
   lastPromptAt.value = 0;
   studentId.value = '';
-  localStorage.removeItem(LAST_LOGIN_KEY);
-  localStorage.removeItem(LAST_PROMPT_KEY);
-  localStorage.removeItem(SESSION_EXPIRED_KEY);
+  storageRemoveItem(LAST_LOGIN_KEY);
+  storageRemoveItem(LAST_PROMPT_KEY);
+  storageRemoveItem(SESSION_EXPIRED_KEY);
   resetProfile();
 
   // 通过桥接模块清理集中式数据缓存，避免与 useAcademicData 形成循环依赖

@@ -162,7 +162,9 @@ https://raw.githubusercontent.com/Glassous/BetterHRBUST/dist/better-hrbust.user.
 
 Tauri（Rust）封装的桌面客户端：主进程内置仅监听 `127.0.0.1` 的本地反向代理
 （与开发代理同一套规则），静态托管 `web/dist`，前端代码零改动，
-教务会话 Cookie 持久化于 WebView2 用户数据目录。体量轻量：安装包 ≤ 10MB、
+教务会话 Cookie 持久化于 WebView2 用户数据目录；教务数据缓存与会话元数据
+经 Rust 后端 `/__app/storage` 端点落盘（`storage.json` 原子写），端口漂移或
+WebView 数据被清理均不丢。体量轻量：安装包 ≤ 10MB、
 单 exe 绿色版（前端资产嵌入二进制）、主进程为 Rust 实现（无 Node 运行时）、
 渲染采用系统 WebView2，并有 mock 教务系统的 Rust 集成测试完整覆盖。
 
@@ -241,7 +243,9 @@ node tools/probe/probe.mjs --user 你的学号
 - **构建工具**：Vite 5
 - **样式方案**：Tailwind CSS v4
 - **工具链**：Node.js 原生 ES Modules
-- **持久化**：localStorage（教务数据缓存 + 会话与时间戳）
+- **持久化**：存储门面 `services/storage.js` 按环境自动选择——Web 版 localStorage /
+  油猴版 GM 扩展存储（`GM_getValue` 等，清理站点数据不丢）/ 桌面版 Rust 后端
+  落盘 `storage.json`（经本地服务 `/__app/storage` 端点）；承载教务数据缓存 + 会话与时间戳
 
 ### Android 端 (`android/`)
 
