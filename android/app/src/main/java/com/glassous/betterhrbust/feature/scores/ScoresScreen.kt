@@ -23,6 +23,8 @@ import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.model.ScoreItem
 import com.glassous.betterhrbust.core.model.ScoreResult
 import com.glassous.betterhrbust.core.parser.AcademicParsers
+import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
+import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.EmptyView
 import com.glassous.betterhrbust.core.ui.components.LoadingView
@@ -96,7 +98,7 @@ fun ScoresScreen(
     ListDetailPaneScaffold(
         directive = navigator.scaffoldDirective,
         value = navigator.scaffoldValue,
-        modifier = modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
+        modifier = modifier.fillMaxSize(),
         listPane = {
             AppPullToRefreshBox(
                 isRefreshing = isRefreshing,
@@ -106,7 +108,10 @@ fun ScoresScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(vertical = 16.dp)
+                    contentPadding = PaddingValues(
+                        top = LocalTopContentInset.current + 8.dp,
+                        bottom = LocalBottomContentInset.current + 16.dp
+                    )
                 ) {
                     // GPA Stats Summary
                     item {
@@ -309,7 +314,12 @@ fun ScoresScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp),
+                        .padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = LocalTopContentInset.current + 16.dp,
+                            bottom = LocalBottomContentInset.current + 16.dp
+                        ),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer

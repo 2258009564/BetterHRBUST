@@ -19,8 +19,11 @@ import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.model.ClassroomQueryOptions
 import com.glassous.betterhrbust.core.model.NamedOption
+import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
+import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.EmptyView
 import com.glassous.betterhrbust.core.ui.components.LoadingView
+import com.glassous.betterhrbust.core.ui.components.PageHeaderTitle
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 
@@ -76,21 +79,23 @@ fun ClassroomsScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("空闲自习教室检索", fontWeight = FontWeight.Bold) }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // SearchBar
+    // 整页为单一滚动列表：顶部内容（标题/检索/筛选）随滚动穿透状态栏，
+    // 初始与末尾内容由 contentPadding 保证不被系统栏与悬浮导航坞遮挡。
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(
+            top = LocalTopContentInset.current + 8.dp,
+            bottom = LocalBottomContentInset.current + 24.dp
+        )
+    ) {
+        // 页面标题（作为滚动内容，可穿透状态栏）
+        item { PageHeaderTitle("空闲自习教室检索") }
+
+        // SearchBar
+        item {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -100,8 +105,10 @@ fun ClassroomsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp)
             )
+        }
 
-            // Campus Chips
+        // Campus Chips
+        item {
             val campusOptions = listOf("全部", "西区", "南区")
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(campusOptions) { campus ->
@@ -112,71 +119,76 @@ fun ClassroomsScreen(
                     )
                 }
             }
+        }
 
+        item {
             Text(
                 text = "推算空闲教室 (${filteredRooms.size} 间可用)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+        }
 
-            if (filteredRooms.isEmpty()) {
-                EmptyView(title = "未检索到匹配空教室", description = "请更换校区或搜索关键字")
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+        if (filteredRooms.isEmpty()) {
+            item {
+                EmptyView(
+                    title = "未检索到匹配空教室",
+                    description = "请更换校区或搜索关键字",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp)
+                )
+            }
+        } else {
+            items(filteredRooms) { room ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                 ) {
-                    items(filteredRooms) { room ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(46.dp)
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        modifier = Modifier.size(46.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Default.MeetingRoom,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.width(14.dp))
-                                    Column {
-                                        Text(text = room.roomName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(text = room.buildingName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                                    }
-                                }
-
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = MaterialTheme.colorScheme.tertiaryContainer
-                                    ) {
-                                        Text(
-                                            text = room.freeSlot,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(text = "容量约 ${room.seats} 人", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.MeetingRoom,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
                                 }
                             }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text(text = room.roomName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(text = room.buildingName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            }
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.tertiaryContainer
+                            ) {
+                                Text(
+                                    text = room.freeSlot,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(text = "容量约 ${room.seats} 人", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                         }
                     }
                 }

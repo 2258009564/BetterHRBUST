@@ -15,8 +15,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.model.CourseSearchItem
+import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
+import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.EmptyView
 import com.glassous.betterhrbust.core.ui.components.LoadingView
+import com.glassous.betterhrbust.core.ui.components.PageHeaderTitle
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 
@@ -46,20 +49,22 @@ fun CoursesScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("全校开课与课程检索", fontWeight = FontWeight.Bold) }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
+    // 整页为单一滚动列表：顶部内容（标题/检索框）随滚动穿透状态栏，
+    // 初始与末尾内容由 contentPadding 保证不被系统栏与悬浮导航坞遮挡。
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(
+            top = LocalTopContentInset.current + 8.dp,
+            bottom = LocalBottomContentInset.current + 24.dp
+        )
+    ) {
+        // 页面标题（作为滚动内容，可穿透状态栏）
+        item { PageHeaderTitle("全校开课与课程检索") }
+
+        item {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = {
@@ -72,63 +77,73 @@ fun CoursesScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp)
             )
+        }
 
-            if (isLoading) {
-                LoadingView(message = "正在检索课程目录...")
-            } else if (searchResults.isEmpty()) {
-                EmptyView(title = "未检索到课程", description = "请在上方输入课程关键词或代码查询")
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+        if (isLoading) {
+            item {
+                LoadingView(
+                    message = "正在检索课程目录...",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp)
+                )
+            }
+        } else if (searchResults.isEmpty()) {
+            item {
+                EmptyView(
+                    title = "未检索到课程",
+                    description = "请在上方输入课程关键词或代码查询",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp)
+                )
+            }
+        } else {
+            items(searchResults) { course ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                 ) {
-                    items(searchResults) { course ->
-                        Card(
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = course.courseName,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer
-                                    ) {
-                                        Text(
-                                            text = "${course.credit} 学分",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = course.courseName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
                                 Text(
-                                    text = "课程编号: ${course.courseId} | 开课院系: ${course.department.ifEmpty { "哈尔滨理工大学" }}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = "${course.credit} 学分",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
-
-                                if (course.hours > 0 || course.examWay.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "学时: ${course.hours} | 考核方式: ${course.examWay.ifEmpty { "考试" }}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline
-                                    )
-                                }
                             }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "课程编号: ${course.courseId} | 开课院系: ${course.department.ifEmpty { "哈尔滨理工大学" }}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        if (course.hours > 0 || course.examWay.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "学时: ${course.hours} | 考核方式: ${course.examWay.ifEmpty { "考试" }}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
                         }
                     }
                 }

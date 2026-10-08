@@ -19,9 +19,12 @@ import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.model.CurriculumGroup
 import com.glassous.betterhrbust.core.model.CurriculumPlanResult
+import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
+import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.EmptyView
 import com.glassous.betterhrbust.core.ui.components.LoadingView
+import com.glassous.betterhrbust.core.ui.components.PageHeaderTitle
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 
@@ -61,17 +64,11 @@ fun ProgramScreen(
     val groups = planResult?.groups ?: emptyList()
     val totalRequiredCredits = remember(groups) { groups.sumOf { it.requiredCredits } }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("培养方案与毕业审核", fontWeight = FontWeight.Bold) }
-            )
-        }
-    ) { padding ->
+    Box(modifier = modifier.fillMaxSize()) {
         AppPullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { loadData(force = true) },
-            modifier = modifier.fillMaxSize().padding(padding)
+            modifier = Modifier.fillMaxSize()
         ) {
             if (groups.isEmpty() && isRefreshing) {
                 LoadingView(message = "正在获取培养方案...")
@@ -81,8 +78,14 @@ fun ProgramScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+                    contentPadding = PaddingValues(
+                        top = LocalTopContentInset.current + 8.dp,
+                        bottom = LocalBottomContentInset.current + 24.dp
+                    )
                 ) {
+                    // 页面标题（作为滚动内容，可穿透状态栏）
+                    item { PageHeaderTitle("培养方案与毕业审核") }
+
                     // Summary Card
                     item {
                         Card(

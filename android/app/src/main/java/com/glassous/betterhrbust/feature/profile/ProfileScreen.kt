@@ -16,8 +16,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.model.PersonalInfo
+import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
+import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.LoadingView
+import com.glassous.betterhrbust.core.ui.components.PageHeaderTitle
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 
@@ -54,17 +57,11 @@ fun ProfileScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("学籍档案与基本资料", fontWeight = FontWeight.Bold) }
-            )
-        }
-    ) { padding ->
+    Box(modifier = modifier.fillMaxSize()) {
         AppPullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { loadData(force = true) },
-            modifier = modifier.fillMaxSize().padding(padding)
+            modifier = Modifier.fillMaxSize()
         ) {
             val p = profile
             if (p == null && isRefreshing) {
@@ -73,8 +70,14 @@ fun ProfileScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+                    contentPadding = PaddingValues(
+                        top = LocalTopContentInset.current + 8.dp,
+                        bottom = LocalBottomContentInset.current + 24.dp
+                    )
                 ) {
+                    // 页面标题（作为滚动内容，可穿透状态栏）
+                    item { PageHeaderTitle("学籍档案与基本资料") }
+
                     // Profile Header Card
                     item {
                         Card(

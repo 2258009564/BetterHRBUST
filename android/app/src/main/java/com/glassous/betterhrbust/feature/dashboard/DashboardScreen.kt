@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.model.*
 import com.glassous.betterhrbust.core.parser.AcademicParsers
+import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
+import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.LoadingView
 import com.glassous.betterhrbust.data.repository.Resource
@@ -122,23 +124,21 @@ fun DashboardScreen(
         QuickNavGridItem("通知与设置", Icons.Default.Settings, com.glassous.betterhrbust.navigation.SettingsRoute)
     )
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        contentWindowInsets = WindowInsets.statusBars
-    ) { padding ->
+    Box(modifier = modifier.fillMaxSize()) {
         AppPullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { refreshData(force = true) },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier = Modifier.fillMaxSize()
         ) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+                contentPadding = PaddingValues(
+                    top = LocalTopContentInset.current + 8.dp,
+                    bottom = LocalBottomContentInset.current + 24.dp
+                )
             ) {
             // Student Card
             item {
