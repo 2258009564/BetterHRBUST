@@ -299,6 +299,7 @@ import { useSession } from '@/composables/useSession.js';
 import { academicApi } from '@/services/academic/api.js';
 import { getCombineSlotTime } from '@/utils/periodTimes.js';
 import { getCourseColor } from '@/utils/courseColors.js';
+import { isCourseActiveInWeek } from '@/utils/courseWeeks.js';
 
 defineEmits(['navigate']);
 
@@ -368,7 +369,9 @@ const currentDayIndex = new Date().getDay() || 7; // 1~7
 const currentDayName = computed(() => dayMap[new Date().getDay()]);
 
 const todayCourses = computed(() => {
-  return allCourses.value.filter(c => c.day === currentDayIndex);
+  return allCourses.value.filter(
+    c => c.day === currentDayIndex && isCourseActiveInWeek(c, currentWeek.value)
+  );
 });
 
 async function fetchStats() {

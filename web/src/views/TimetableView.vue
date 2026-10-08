@@ -161,7 +161,7 @@
                 :key="course.courseName + course.id"
                 :class="[
                   'p-2.5 rounded-lg text-sm leading-tight transition-all duration-150 cursor-pointer border select-none h-full flex flex-col justify-between',
-                  isCourseActiveThisWeek(course) ? getCourseColor(course).solid : getCourseColor(course).soft
+                  isCourseActiveThisWeek(course) ? getCourseColor(course).solid : COURSE_MUTED
                 ]"
                 @click="openCourseDetail(course)"
               >
@@ -249,7 +249,8 @@ import { useSession } from '@/composables/useSession.js';
 import { useToast } from '@/composables/useToast.js';
 import { academicApi } from '@/services/academic/api.js';
 import { BASE_SLOT_TIMES, COMBINE_SLOT_TIMES } from '@/utils/periodTimes.js';
-import { getCourseColor } from '@/utils/courseColors.js';
+import { getCourseColor, COURSE_MUTED } from '@/utils/courseColors.js';
+import { isCourseActiveInWeek } from '@/utils/courseWeeks.js';
 
 const { isLoggedIn, studentId, currentWeek, currentSemester, openLoginModal } = useSession();
 const { showToast } = useToast();
@@ -281,22 +282,7 @@ function nextWeek() {
 }
 
 function isCourseActiveThisWeek(course) {
-  const expr = course.weeks || '';
-  if (!expr) return true;
-  const isOdd = expr.includes('单');
-  const isEven = expr.includes('双');
-  const cur = selectedWeek.value;
-
-  if (isOdd && cur % 2 === 0) return false;
-  if (isEven && cur % 2 !== 0) return false;
-
-  const parts = expr.match(/\d+(?:-\d+)?/g) || [];
-  for (const p of parts) {
-    const [start, end] = p.split('-').map(Number);
-    const to = end || start;
-    if (cur >= start && cur <= to) return true;
-  }
-  return parts.length === 0;
+  return isCourseActiveInWeek(course, selectedWeek.value);
 }
 
 // 当前筛选条件下实际展示的课程（"仅看本周" 关闭时为全部课程）
