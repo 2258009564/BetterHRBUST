@@ -121,7 +121,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Icon from '@/components/icons/Icon.vue';
-import logoUrl from '@/assets/HRBUST.png';
+import logoUrl from '@/assets/BetterHRBUST.png';
 import { useSession } from '@/composables/useSession.js';
 
 const { isLoggedIn, userProfile, studentNumber, openLoginModal } = useSession();
