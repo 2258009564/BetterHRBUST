@@ -4,6 +4,13 @@
 
 :root {
   color-scheme: light;
+  /* 自定义标题栏占位高度：浏览器环境为 0，布局零影响 */
+  --tb: 0px;
+}
+
+/* 桌面端（Electron）：main.js 检测到 window.desktopWindow 时挂 desktop-chrome */
+html.desktop-chrome {
+  --tb: 40px;
 }
 
 .dark {

@@ -21,6 +21,9 @@ dist-ssr/
 .vite/
 *.local
 
+# 桌面端打包产物
+desktop/release/
+
 # ---------- 编辑器与 IDE ----------
 .vscode/*
 !.vscode/extensions.json

@@ -1,5 +1,8 @@
 <template>
-  <div class="min-h-screen flex bg-[#f6f7f9] dark:bg-[#14161a] text-zinc-900 dark:text-zinc-100 antialiased selection:bg-zinc-200 selection:text-zinc-900 dark:selection:bg-zinc-800 dark:selection:text-zinc-100">
+  <div class="min-h-screen flex flex-col bg-[#f6f7f9] dark:bg-[#14161a] text-zinc-900 dark:text-zinc-100 antialiased selection:bg-zinc-200 selection:text-zinc-900 dark:selection:bg-zinc-800 dark:selection:text-zinc-100">
+    <!-- 桌面端自定义标题栏（浏览器环境不渲染，占位高度由 --tb 驱动） -->
+    <DesktopTitleBar />
+
     <!-- Responsive Backdrop: Click outside sidebar to close -->
     <Transition
       enter-active-class="transition-opacity duration-250 ease-out"
@@ -16,24 +19,26 @@
       />
     </Transition>
 
-    <!-- Collapsible / Responsive Overlay Sidebar -->
-    <AppSidebar
-      :isCollapsed="isCollapsed"
-      :mobileOpen="mobileOpen"
-      :activeTab="activeTab"
-      @update:activeTab="handleTabSelect($event)"
-      @close="mobileOpen = false"
-    />
-
     <!-- Main Content Flow -->
-    <div class="flex-1 flex flex-col min-w-0">
-      <AppHeader
+    <div class="flex-1 flex">
+      <!-- Collapsible / Responsive Overlay Sidebar -->
+      <AppSidebar
         :isCollapsed="isCollapsed"
-        @toggle-sidebar="handleToggleSidebar"
+        :mobileOpen="mobileOpen"
+        :activeTab="activeTab"
+        @update:activeTab="handleTabSelect($event)"
+        @close="mobileOpen = false"
       />
-      <main class="flex-1 px-4 sm:px-6 lg:px-8 pb-10 max-w-[1600px] w-full mx-auto">
-        <slot />
-      </main>
+
+      <div class="flex-1 flex flex-col min-w-0">
+        <AppHeader
+          :isCollapsed="isCollapsed"
+          @toggle-sidebar="handleToggleSidebar"
+        />
+        <main class="flex-1 px-4 sm:px-6 lg:px-8 pb-10 max-w-[1600px] w-full mx-auto">
+          <slot />
+        </main>
+      </div>
     </div>
 
     <!-- Global Toast Container -->
@@ -45,6 +50,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import AppSidebar from './AppSidebar.vue';
 import AppHeader from './AppHeader.vue';
+import DesktopTitleBar from './DesktopTitleBar.vue';
 import UiToast from '@/components/ui/UiToast.vue';
 
 defineProps({
