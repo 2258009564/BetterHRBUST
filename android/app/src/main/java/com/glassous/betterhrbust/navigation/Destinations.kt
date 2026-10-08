@@ -10,6 +10,9 @@ import kotlinx.serialization.Serializable
 data object AuthRoute
 
 @Serializable
+data object MainRoute
+
+@Serializable
 data object DashboardRoute
 
 @Serializable
