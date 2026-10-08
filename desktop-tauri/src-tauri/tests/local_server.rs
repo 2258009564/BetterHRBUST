@@ -251,9 +251,10 @@ async fn academic_redirect_location_and_cookie_domain_rewritten() {
         res.headers()[header::LOCATION].to_str().unwrap(),
         "/academic/index.jsp"
     );
+    // Domain 剥离 + 会话 Cookie 注入 Max-Age（跨冷启动持久化的关键）
     assert_eq!(
         res.headers()[header::SET_COOKIE].to_str().unwrap(),
-        "JSESSIONID=mock123; Path=/academic"
+        "JSESSIONID=mock123; Path=/academic; Max-Age=604800"
     );
 }
 

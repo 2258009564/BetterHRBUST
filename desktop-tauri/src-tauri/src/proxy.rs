@@ -118,12 +118,16 @@ fn rewrite_response(mut res: Response<Incoming>) -> Response<AppBody> {
     // 让 hyper 按流式 body 重新分帧
     headers.remove(header::CONTENT_LENGTH);
 
-    // Set-Cookie: 剥离 Domain 属性（等价 node http-proxy cookieDomainRewrite: ''）
+    // Set-Cookie: 剥离 Domain 属性（等价 node http-proxy cookieDomainRewrite: ''），
+    // 并给无过期属性的会话 Cookie 注入 Max-Age——教务 JSESSIONID 是无 Expires/Max-Age
+    // 的会话 Cookie，Chromium 系（含 Electron/WebView2）默认不跨重启保存，会导致
+    // 每次重启应用都要重新登录；注入持久化时限后落到用户数据目录，重启仍有效，
+    // 直至教务侧会话过期（前端 isLoginPage 判定兜底）
     let cookies: Vec<HeaderValue> = headers
         .get_all(header::SET_COOKIE)
         .iter()
         .filter_map(|v| v.to_str().ok())
-        .map(strip_cookie_domain)
+        .map(rewrite_cookie)
         .filter_map(|s| HeaderValue::from_str(&s).ok())
         .collect();
     if !cookies.is_empty() {
@@ -146,14 +150,33 @@ fn rewrite_response(mut res: Response<Incoming>) -> Response<AppBody> {
     Response::from_parts(parts, body.map_err(GatewayError::Body).boxed())
 }
 
-/// 从单个 Set-Cookie 值中移除 Domain=... 属性（大小写不敏感）。
-/// 例：`JSESSIONID=x; Domain=hrbust.edu.cn; Path=/academic` → `JSESSIONID=x; Path=/academic`
-fn strip_cookie_domain(cookie: &str) -> String {
-    cookie
-        .split(';')
-        .filter(|part| !part.trim_start().to_ascii_lowercase().starts_with("domain="))
-        .collect::<Vec<&str>>()
-        .join(";")
+/// 无过期属性的会话 Cookie 注入的持久化时限（7 天）。
+/// 客户端保留时限只是上限，实际有效性以教务侧会话生命周期为准。
+const SESSION_COOKIE_MAX_AGE: &str = "604800";
+
+/// 改写单个 Set-Cookie：剥离 Domain=... 属性（大小写不敏感），
+/// 无 Expires/Max-Age 时追加 Max-Age 使其可跨冷启动持久化。
+/// 例：`JSESSIONID=abc; Domain=hrbust.edu.cn; Path=/academic`
+///   → `JSESSIONID=abc; Path=/academic; Max-Age=604800`
+fn rewrite_cookie(cookie: &str) -> String {
+    let mut has_expiry = false;
+    let mut kept: Vec<&str> = Vec::new();
+    for part in cookie.split(';') {
+        let lower = part.trim_start().to_ascii_lowercase();
+        if lower.starts_with("domain=") {
+            continue; // 剥离 Domain，使 Cookie 落在 127.0.0.1
+        }
+        if lower.starts_with("expires=") || lower.starts_with("max-age=") {
+            has_expiry = true; // 教务侧显式删除（Max-Age=0 等）原样保留
+        }
+        kept.push(part);
+    }
+    let mut rewritten = kept.join(";");
+    if !has_expiry {
+        rewritten.push_str("; Max-Age=");
+        rewritten.push_str(SESSION_COOKIE_MAX_AGE);
+    }
+    rewritten
 }
 
 /// 判断绝对地址是否指向教务系统的 /academic 路径，是则改写为相对路径。
@@ -186,16 +209,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn cookie_domain_stripped() {
+    fn cookie_domain_stripped_and_session_persisted() {
+        // 教务典型会话 Cookie：剥 Domain + 注入 Max-Age
         assert_eq!(
-            strip_cookie_domain("JSESSIONID=abc; Domain=hrbust.edu.cn; Path=/academic"),
-            "JSESSIONID=abc; Path=/academic"
+            rewrite_cookie("JSESSIONID=abc; Domain=hrbust.edu.cn; Path=/academic"),
+            "JSESSIONID=abc; Path=/academic; Max-Age=604800"
         );
         assert_eq!(
-            strip_cookie_domain("JSESSIONID=abc; domain=HRBUST.edu.cn; HttpOnly"),
-            "JSESSIONID=abc; HttpOnly"
+            rewrite_cookie("JSESSIONID=abc; domain=HRBUST.edu.cn; HttpOnly"),
+            "JSESSIONID=abc; HttpOnly; Max-Age=604800"
         );
-        assert_eq!(strip_cookie_domain("JSESSIONID=abc"), "JSESSIONID=abc");
+        assert_eq!(rewrite_cookie("JSESSIONID=abc"), "JSESSIONID=abc; Max-Age=604800");
+    }
+
+    #[test]
+    fn cookie_with_explicit_expiry_left_alone() {
+        // 已有 Max-Age/Expires 的不改写（教务侧显式删除 Cookie 的路径保持原语义）
+        assert_eq!(
+            rewrite_cookie("JSESSIONID=abc; Max-Age=0; Path=/"),
+            "JSESSIONID=abc; Max-Age=0; Path=/"
+        );
+        assert_eq!(
+            rewrite_cookie("JSESSIONID=abc; expires=Thu, 01 Jan 1970 00:00:00 GMT"),
+            "JSESSIONID=abc; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+        );
+        // 大小写不敏感
+        assert_eq!(
+            rewrite_cookie("JSESSIONID=abc; MAX-AGE=3600"),
+            "JSESSIONID=abc; MAX-AGE=3600"
+        );
     }
 
     #[test]
