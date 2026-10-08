@@ -3,10 +3,11 @@
 > 调研日期：2026-10-08 ｜ 背景：上游已合入 Electron 桌面端（`desktop/`，commit `1d264aa`/`f07fce4`），
 > 评估以 Tauri（Rust）重构的可行性；反代层要求尽量复用现有项目。
 >
-> **实施状态（2026-10-08）**：已落地为 `desktop-tauri/`（与 Electron 版并存过渡），
-> Rust 集成测试 12/12 全绿。实施中的偏离：反代层最终未引 axum/axum-reverse-proxy，
-> 改为直接基于 hyper 手写转发（约 300 行）——为实现「上游故障断连而非 502」的精确语义，
-> 同时砍掉两棵依赖树以守住体积目标（详见 `desktop-tauri/src-tauri/src/proxy.rs` 头注释）。
+> **实施状态（2026-10-08）**：已落地为 `desktop-tauri/`，Rust 集成测试 12/12 全绿；
+> Electron 版（`desktop/`）已按迁移路线下线移除。实施中的偏离：反代层最终未引
+> axum/axum-reverse-proxy，改为直接基于 hyper 手写转发（约 300 行）——为实现
+> 「上游故障断连而非 502」的精确语义，同时砍掉两棵依赖树以守住体积目标（详见
+> `desktop-tauri/src-tauri/src/proxy.rs` 头注释）。
 
 ## 一、结论（TL;DR）
 

@@ -1,6 +1,6 @@
 //! 本地 HTTP 服务（仅监听 127.0.0.1）
 //!
-//! 架构与 desktop/src/main.mjs（Electron 版）1:1 对应：
+//! 架构：
 //!  - 静态文件：web/dist 构建产物（release 经 rust-embed 嵌入二进制，
 //!    debug 模式直接读磁盘），SPA 回退、/assets 长缓存、路径穿越防护
 //!  - /academic/* → 反向代理 → http://jwzx.hrbust.edu.cn（见 proxy.rs）
@@ -223,7 +223,6 @@ async fn handle(state: AppState, req: Request<Incoming>) -> Result<Response<AppB
 }
 
 /// 静态托管：MIME、缓存策略、SPA 回退、路径穿越防护
-/// （行为对齐 desktop/src/local-server.mjs）
 fn static_response(req: &Request<Incoming>) -> Response<AppBody> {
     if !matches!(*req.method(), Method::GET | Method::HEAD) {
         return plain(StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed");

@@ -1,7 +1,7 @@
 /**
  * 便携版打包：将构建好的 BetterHRBUST.exe（前端资产已嵌入二进制，
  * 单文件即可运行）压缩为 release/BetterHRBUST-<版本>-win.zip，
- * 产物形态与 Electron 版（desktop/）的免安装 zip 对齐。
+ * 解压即用的绿色免安装版。
  *
  * 依赖：系统自带 PowerShell（Compress-Archive），零 npm 依赖。
  */

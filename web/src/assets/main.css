@@ -8,7 +8,7 @@
   --tb: 0px;
 }
 
-/* 桌面端（Electron）：main.js 检测到 window.desktopWindow 时挂 desktop-chrome */
+/* 桌面端（Tauri）：main.js 检测到 window.desktopWindow 时挂 desktop-chrome */
 html.desktop-chrome {
   --tb: 40px;
 }

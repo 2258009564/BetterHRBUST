@@ -1,23 +1,23 @@
 # BetterHRBUST Desktop (Tauri)
 
 Windows 桌面客户端：Tauri（Rust）封装 `web/` 前端，主进程内置本地反向代理，
-双击即用，无需浏览器环境。与 `desktop/`（Electron 版）功能对等，作为其轻量重构方向：
+双击即用，无需浏览器环境。主进程为 Rust 二进制（无 Node 运行时），渲染采用
+系统 WebView2，安装体量小（实测 1.0.0）：
 
-| 指标 | Electron 版 | Tauri 版（实测 1.0.0） |
-| --- | --- | --- |
-| 安装包体积 | ~80MB（典型值） | **2.6MB**（NSIS） |
-| 免安装 zip | ~80MB（典型值） | **3.3MB** |
-| 安装后占用 | ~250MB（自带 Chromium+Node） | **9.3MB**（单 exe，前端资产已嵌入） |
-| 主进程私有内存 | Node 运行时 80-150MB | **15.8MB**（Rust 二进制） |
-| 渲染引擎 | 自带 Chromium | 系统 WebView2（Win10/11 自带） |
+| 指标 | 实测 1.0.0 |
+| --- | --- |
+| 安装包体积 | **2.6MB**（NSIS） |
+| 免安装 zip | **3.3MB** |
+| 安装后占用 | **9.3MB**（单 exe，前端资产已嵌入） |
+| 主进程私有内存 | **15.8MB**（Rust 二进制） |
+| 渲染引擎 | 系统 WebView2（Win10/11 自带） |
 
-> 渲染进程两边同为 Chromium 内核，内存基本持平（WebView2 各子进程 WS 合计
-> 约 380MB，其中大量为跨进程共享页重复计算）；优势来自主进程与安装体量。
+> WebView2 渲染进程各子进程 WS 合计约 380MB，其中大量为跨进程共享页重复计算。
 
 ## 架构
 
 ```
-WebView2 窗口 → http://127.0.0.1:1950（固定端口，占用向后顺延，同 Electron 策略）
+WebView2 窗口 → http://127.0.0.1:1950（固定端口，占用向后顺延）
   ├─ 静态文件     web/dist（rust-embed 嵌入二进制，debug 模式读磁盘）
   └─ /academic/* → http://jwzx.hrbust.edu.cn（hyper 流式转发）
        ├─ Host/Referer 注入（教务系统校验这两个请求头）
@@ -28,9 +28,9 @@ WebView2 窗口 → http://127.0.0.1:1950（固定端口，占用向后顺延，
           复用 client.js 既有的「网络连接失败……请确认是否处于校园网或VPN环境」提示
 ```
 
-前端代码近乎零改动：所有请求走相对路径 `/academic/` + Cookie 会话，代理行为与
-`web/vite.config.mjs` 的开发代理完全一致。窗口控制经 `shim.js` 注入与 Electron 版
-同签名的 `window.desktopWindow`（桥接 Tauri 的 `window.__TAURI__`），权限由
+所有请求走相对路径 `/academic/` + Cookie 会话，代理行为与
+`web/vite.config.mjs` 的开发代理完全一致。窗口控制经 `shim.js` 注入
+`window.desktopWindow`（桥接 Tauri 的 `window.__TAURI__`），权限由
 `capabilities/main.json` 的 `remote.urls` 白名单授予（仅窗口控制最小集）。
 
 会话 Cookie 由 WebView2 用户数据目录（按 bundle identifier 固定）持久保存，

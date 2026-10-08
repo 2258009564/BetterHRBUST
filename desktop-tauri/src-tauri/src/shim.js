@@ -1,12 +1,11 @@
 /**
  * window.desktopWindow 兼容 shim（Tauri 端）
  *
- * Electron 版由 preload.cjs 通过 contextBridge 注入同名对象；Tauri 版由
- * initialization_script 在页面脚本运行前注入本 shim，桥接到 withGlobalTauri
+ * 由 initialization_script 在页面脚本运行前注入本 shim，桥接到 withGlobalTauri
  * 暴露的 window.__TAURI__，从而让前端 main.js / DesktopTitleBar.vue 的
- * 现有检测逻辑零改动生效。
+ * 检测逻辑生效。
  *
- * API 契约与 desktop/src/preload.cjs 一致：
+ * API 契约：
  *  - minimize() / toggleMaximize() / close()        fire-and-forget
  *  - isMaximized()                                   → Promise<boolean>
  *  - onMaximizeChange(cb)                            → 取消订阅函数

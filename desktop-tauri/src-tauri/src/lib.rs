@@ -21,7 +21,7 @@ const SHIM: &str = include_str!("shim.js");
 
 pub fn run() {
     tauri::Builder::default()
-        // 单实例：二次启动时聚焦既有窗口（等价 Electron requestSingleInstanceLock）
+        // 单实例：二次启动时聚焦既有窗口
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 if window.is_minimized().unwrap_or(false) {
@@ -31,9 +31,9 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
-        // 外链转系统浏览器（等价 Electron shell.openExternal）
+        // 外链转系统浏览器
         .plugin(tauri_plugin_opener::init())
-        // 页面加载完成后再显示主窗口，避免白屏闪烁（等价 ready-to-show）
+        // 页面加载完成后再显示主窗口，避免白屏闪烁
         .on_page_load(|webview, payload| {
             if payload.event() == tauri::webview::PageLoadEvent::Finished && webview.label() == "main"
             {
@@ -45,8 +45,8 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                // 开发模式直连 Vite dev server（其自带 /academic 代理，热更新），
-                // 等价 Electron 版的 ELECTRON_START_URL；生产启动内置本地服务
+                // 开发模式直连 Vite dev server（其自带 /academic 代理，热更新）；
+                // 生产启动内置本地服务
                 let url = if tauri::is_dev() {
                     "http://localhost:5173/".to_string()
                 } else {

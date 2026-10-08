@@ -1,5 +1,5 @@
 <template>
-  <!-- 仅在桌面端（Electron preload / Tauri shim 注入 window.desktopWindow）渲染；浏览器环境不出现 -->
+  <!-- 仅在桌面端（Tauri shim 注入 window.desktopWindow）渲染；浏览器环境不出现 -->
   <div
     v-if="available"
     class="tb-drag sticky top-0 z-[60] h-10 flex items-center justify-end px-3 select-none bg-[#f6f7f9]/95 dark:bg-[#14161a]/95 backdrop-blur-md"
@@ -82,7 +82,7 @@ const isMaximized = ref(false);
 let unsubscribe = null;
 
 function onBarMouseDown(e) {
-  if (!isTauri || !win) return; // Electron：CSS 拖拽自动生效，无需处理
+  if (!isTauri || !win) return; // 无窗口控制 API（非桌面端）时不处理拖拽
   if (e.buttons !== 1) return; // 仅响应左键
   if (e.target.closest('.tb-nodrag')) return; // 窗口控制按钮区域不参与拖拽
   if (e.detail === 2) win.toggleMaximize();
@@ -113,7 +113,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Electron 窗口拖拽：整条标题栏可拖动窗口（双击切换最大化），按钮区域排除 */
+/* 桌面端窗口拖拽样式：整条标题栏可拖动窗口（双击切换最大化），按钮区域排除 */
 .tb-drag {
   -webkit-app-region: drag;
 }

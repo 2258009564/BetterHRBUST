@@ -1,6 +1,6 @@
 //! 教务系统反向代理（/academic/* → http://jwzx.hrbust.edu.cn）
 //!
-//! 规则 1:1 平移自 web/vite.config.mjs 的 academicProxy 与 desktop/src/academic-proxy.mjs：
+//! 规则与 web/vite.config.mjs 的 academicProxy 1:1 对应：
 //!  - Host 声明为教务系统域名（等价 node http-proxy 的 changeOrigin）
 //!  - Referer 注入：教务系统校验该请求头
 //!  - Set-Cookie 剥离 Domain 属性，使会话 Cookie 落在 127.0.0.1
@@ -14,7 +14,6 @@
 //! 错误语义（关键）：上游连接失败/超时时返回 Err 而非 502 响应，
 //! hyper 会直接断开 TCP 连接 → 前端 fetch reject → 复用 client.js
 //! 既有的「网络连接失败……请确认是否处于校园网或VPN环境」提示路径。
-//! （Electron 版通过 res.destroy(err) 达到同样效果）
 
 use std::time::Duration;
 
@@ -118,9 +117,8 @@ fn rewrite_response(mut res: Response<Incoming>) -> Response<AppBody> {
     // 让 hyper 按流式 body 重新分帧
     headers.remove(header::CONTENT_LENGTH);
 
-    // Set-Cookie: 剥离 Domain 属性（等价 node http-proxy cookieDomainRewrite: ''），
-    // 并给无过期属性的会话 Cookie 注入 Max-Age——教务 JSESSIONID 是无 Expires/Max-Age
-    // 的会话 Cookie，Chromium 系（含 Electron/WebView2）默认不跨重启保存，会导致
+    // Set-Cookie: 剥离 Domain 属性，并给无过期属性的会话 Cookie 注入 Max-Age——
+    // 教务 JSESSIONID 是无 Expires/Max-Age 的会话 Cookie，WebView2 默认不跨重启保存，会导致
     // 每次重启应用都要重新登录；注入持久化时限后落到用户数据目录，重启仍有效，
     // 直至教务侧会话过期（前端 isLoginPage 判定兜底）
     let cookies: Vec<HeaderValue> = headers

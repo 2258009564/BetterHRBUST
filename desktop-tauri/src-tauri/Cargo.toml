@@ -28,7 +28,7 @@ mime_guess = "2"
 percent-encoding = "2"
 
 # 体积优先：LTO + 单编译单元 + 体积优化 + 符号剥离
-# （与 Electron 版的对比目标是：安装包 <= 10MB、Rust 主进程 RSS <= 25MB）
+# （体积与内存目标：安装包 <= 10MB、Rust 主进程 RSS <= 25MB）
 [profile.release]
 codegen-units = 1
 lto = "thin"
