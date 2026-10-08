@@ -1,0 +1,18 @@
+{
+  "name": "better-hrbust-desktop-tauri",
+  "productName": "BetterHRBUST",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BetterHRBUST - 哈理工教务在线 Windows 桌面客户端（Tauri 封装 + Rust 内置本地反向代理）",
+  "scripts": {
+    "build:web": "npm run build --prefix ../web",
+    "icon": "tauri icon ../desktop/build/icon-source.png",
+    "dev": "tauri dev",
+    "pack": "tauri build --no-bundle",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "dist": "npm run build:web && tauri build && node scripts/make-portable.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
