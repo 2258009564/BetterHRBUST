@@ -3,10 +3,46 @@
 #
 # For more details, see
 #   https://d.android.com/r/tools/r8/keep-rules
+#
+# 裁剪策略：保守优先
+# 1. 仅保留应用自身入口与运行期确实依赖的库，不开启激进优化（如 -dontoptimize 或
+#    额外的 allowobfuscation 规则），其余交给各库自带的 consumer rules。
+# 2. 反射入口只做「成员保留」，避免过度 keep 造成体积反弹。
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ---------------------------------------------------------------
+# 应用入口（AndroidManifest 中声明，R8 无法感知 manifest 引用）
+# ---------------------------------------------------------------
+-keep class com.glassous.betterhrbust.BetterHrbustApp { *; }
+-keep class com.glassous.betterhrbust.MainActivity { *; }
+
+# ---------------------------------------------------------------
+# Room：保留数据库与 DAO 实现，实体字段名对应 SQLite 列名
+# ---------------------------------------------------------------
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+-keep @androidx.room.Entity class * { *; }
+-keep class * extends androidx.room.RoomDatabase_Impl { *; }
+-dontwarn androidx.room.paging.**
+
+# ---------------------------------------------------------------
+# kotlinx.serialization：保留编译器插件生成的 serializer 入口
+# ---------------------------------------------------------------
+-keepclassmembers @kotlinx.serialization.Serializable class * {
+    *** Companion;
+    *** serializer(...);
+    *** write$Self(...);
+    *** read$Self(...);
+}
+
+# ---------------------------------------------------------------
+# OkHttp：保留内部平台抽象（运行期按类名探测）
+# ---------------------------------------------------------------
+-dontwarn okhttp3.internal.platform.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
+
+# ---------------------------------------------------------------
+# 调试信息：保留行号，便于线上崩溃栈还原
+# ---------------------------------------------------------------
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

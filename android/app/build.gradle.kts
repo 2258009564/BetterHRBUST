@@ -21,11 +21,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            // 依赖裁剪：R8 代码压缩 + 资源压缩（保守策略，见 src/main/keepRules/rules.keep）
+            isMinifyEnabled = true
+            isShrinkResources = true
+            // src/main/keepRules/ 下的规则文件由 AGP 自动合并进 R8
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
     }
 
@@ -52,8 +52,6 @@ android {
 dependencies {
     // AndroidX Core & Base
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
 
     // Compose BOM & Core UI
     implementation(platform(libs.androidx.compose.bom))
@@ -82,7 +80,6 @@ dependencies {
 
     // Network & HTML Parsing
     implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
     implementation(libs.jsoup)
 
     // Persistence: Room & DataStore
