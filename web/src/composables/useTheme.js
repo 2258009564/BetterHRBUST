@@ -1,8 +1,9 @@
 import { ref, computed } from 'vue';
+import { storageGetItem, storageSetItem } from '@/services/storage.js';
 
 const THEME_KEY = 'better_hrbust_theme';
 
-const currentTheme = ref(localStorage.getItem(THEME_KEY) || 'system');
+const currentTheme = ref(storageGetItem(THEME_KEY) || 'system');
 
 function applyTheme(theme) {
   const root = document.documentElement;
@@ -37,7 +38,7 @@ export function useTheme() {
 
   function setTheme(theme) {
     currentTheme.value = theme;
-    localStorage.setItem(THEME_KEY, theme);
+    storageSetItem(THEME_KEY, theme);
     applyTheme(theme);
   }
 

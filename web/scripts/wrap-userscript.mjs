@@ -46,6 +46,9 @@ const header = `// ==UserScript==
 // @noframes
 // @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_deleteValue
 // @grant        unsafeWindow
 // @connect      jwzx.hrbust.edu.cn
 // @homepageURL  https://github.com/Glassous/BetterHRBUST
