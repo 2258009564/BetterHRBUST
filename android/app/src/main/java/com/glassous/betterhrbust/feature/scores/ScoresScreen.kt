@@ -28,6 +28,7 @@ import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.EmptyView
 import com.glassous.betterhrbust.core.ui.components.LoadingView
+import com.glassous.betterhrbust.core.util.GpaCalculator
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 
@@ -38,12 +39,16 @@ fun ScoresScreen(
 ) {
     val app = remember { BetterHrbustApp.instance }
     val academicRepo = remember { app.academicRepository }
+    val authRepo = remember { app.authRepository }
     val prefsManager = remember { app.preferencesManager }
+    val syncManager = remember { app.syncManager }
     val coroutineScope = rememberCoroutineScope()
 
     val prefs by prefsManager.preferencesFlow.collectAsState(initial = null)
+    val isSyncing by syncManager.isSyncing.collectAsState()
     var isRefreshing by remember { mutableStateOf(false) }
     var scoreResult by remember { mutableStateOf<ScoreResult?>(null) }
+    var cacheError by remember { mutableStateOf("") }
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedProperty by remember { mutableStateOf("全部") } // 全部, 必修, 限选, 任选
@@ -52,22 +57,40 @@ fun ScoresScreen(
     var selectedItem by remember { mutableStateOf<ScoreItem?>(null) }
     val navigator = rememberListDetailPaneScaffoldNavigator<ScoreItem>()
 
-    fun loadData(force: Boolean = false) {
+    /** 读取本地缓存（离线只读，不联网） */
+    fun loadCache() {
         val currentPrefs = prefs ?: return
         coroutineScope.launch {
-            isRefreshing = true
-            academicRepo.getScores(currentPrefs.studentId, force).collect { res ->
-                if (res is Resource.Success) {
-                    scoreResult = res.data
+            academicRepo.getScores(currentPrefs.studentId, cacheOnly = true).collect { res ->
+                when (res) {
+                    is Resource.Success -> {
+                        scoreResult = res.data
+                        cacheError = ""
+                    }
+                    is Resource.Error -> cacheError = res.message
+                    else -> Unit
                 }
             }
-            isRefreshing = false
         }
     }
 
-    LaunchedEffect(prefs?.studentId) {
+    /** 手动全量刷新：会话失效时要求重新登录 */
+    fun refreshAll() {
+        coroutineScope.launch {
+            isRefreshing = true
+            val outcome = syncManager.syncAll(manual = true)
+            isRefreshing = false
+            if (outcome.expired) {
+                authRepo.markSessionExpired(true)
+            } else {
+                loadCache()
+            }
+        }
+    }
+
+    LaunchedEffect(prefs?.studentId, prefs?.lastFullSyncDate) {
         if (prefs != null && prefs!!.studentId.isNotEmpty()) {
-            loadData(force = false)
+            loadCache()
         }
     }
 
@@ -75,8 +98,17 @@ fun ScoresScreen(
         scoreResult?.scores?.let { AcademicParsers.calculateGpaStats(it) }
     }
 
-    val filteredScores = remember(scoreResult, searchQuery, selectedProperty, selectedPassStatus) {
-        val all = scoreResult?.scores ?: emptyList()
+    // 同一门课的重修/补考记录合并去重后展示
+    val dedupedScores = remember(scoreResult) {
+        scoreResult?.scores?.let { GpaCalculator.dedupeScores(it) } ?: emptyList()
+    }
+    // 键规则与 GpaCalculator.courseKey 保持一致（courseId 为空时回退 courseName）
+    val recordCountMap = remember(dedupedScores) {
+        dedupedScores.associate { it.item.courseId.ifEmpty { it.item.courseName } to it.recordCount }
+    }
+
+    val filteredScores = remember(dedupedScores, searchQuery, selectedProperty, selectedPassStatus) {
+        val all = dedupedScores.map { it.item }
         all.filter { item ->
             val matchQuery = searchQuery.isBlank() || item.courseName.contains(searchQuery, ignoreCase = true) || item.courseId.contains(searchQuery, ignoreCase = true)
             val matchProp = selectedProperty == "全部" || item.property.contains(selectedProperty)
@@ -101,8 +133,8 @@ fun ScoresScreen(
         modifier = modifier.fillMaxSize(),
         listPane = {
             AppPullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = { loadData(force = true) },
+                isRefreshing = isRefreshing || isSyncing,
+                onRefresh = { refreshAll() },
                 modifier = Modifier.fillMaxSize()
             ) {
                 LazyColumn(
@@ -136,16 +168,16 @@ fun ScoresScreen(
                                 ) {
                                     Column {
                                         Text(
-                                            text = "${stats?.gpa ?: 0.0}",
+                                            text = stats?.gpa?.let { String.format("%.2f", it) } ?: "0.00",
                                             style = MaterialTheme.typography.headlineMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary
                                         )
-                                        Text(text = "累计 GPA (4.0)", style = MaterialTheme.typography.labelSmall)
+                                        Text(text = "累计 GPA (五分制)", style = MaterialTheme.typography.labelSmall)
                                     }
                                     Column {
                                         Text(
-                                            text = "${stats?.weightedAvg ?: 0.0}",
+                                            text = stats?.weightedAvg?.let { String.format("%.1f", it) } ?: "0.0",
                                             style = MaterialTheme.typography.headlineMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.secondary
@@ -162,6 +194,72 @@ fun ScoresScreen(
                                         Text(text = "已获/总学分", style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = GpaCalculator.EARNED_CREDITS_NOTE,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
+
+                    // 特色学业算法：学位证 / 推免 / 学业风险预警 / 提前毕业
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "特色学业算法（哈理工口径，门槛以教务处文件为准）",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = GpaCalculator.STATS_SCOPE_NOTE,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                FeatureAlgorithmRow(
+                                    title = "① 学位证算法",
+                                    value = stats?.degree?.gpa?.let { String.format("%.2f", it) } ?: "--",
+                                    qualified = stats?.degree?.qualified == true,
+                                    detail = stats?.degree?.let {
+                                        "学位课（必修课口径）绩点，门槛 ${it.threshold}" +
+                                            if (it.allPassed) "，已全部通过" else "，存在未通过必修课"
+                                    } ?: "暂无数据"
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                                FeatureAlgorithmRow(
+                                    title = "② 推免资格自检",
+                                    value = stats?.recommend?.let { "${it.retakeCount}/${it.retakeLimit}" } ?: "--",
+                                    qualified = stats?.recommend?.qualified == true,
+                                    detail = stats?.recommend?.let {
+                                        "仅统计必修课的补考 + 重修累计门数，上限 ${it.retakeLimit} 门"
+                                    } ?: "暂无数据"
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                                FeatureAlgorithmRow(
+                                    title = "③ 学业风险预警",
+                                    value = stats?.risk?.label ?: "--",
+                                    qualified = stats?.risk?.level == "none",
+                                    detail = stats?.risk?.description ?: "暂无数据"
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                                FeatureAlgorithmRow(
+                                    title = "④ 提前毕业判定",
+                                    value = if (stats?.earlyGraduation?.qualified == true) "达标" else "未达标",
+                                    qualified = stats?.earlyGraduation?.qualified == true,
+                                    detail = stats?.earlyGraduation?.let {
+                                        "需全部课程平均学分绩点 ≥ ${it.threshold}"
+                                    } ?: "暂无数据"
+                                )
                             }
                         }
                     }
@@ -229,7 +327,15 @@ fun ScoresScreen(
 
                     if (filteredScores.isEmpty()) {
                         item {
-                            EmptyView(title = "未找到成绩记录", description = "请尝试更换筛选条件或下拉刷新")
+                            EmptyView(
+                                title = "未找到成绩记录",
+                                // 仅当本地确实没有成绩缓存时才提示刷新引导，避免筛选无结果时误报
+                                description = if (dedupedScores.isEmpty() && cacheError.isNotEmpty()) {
+                                    cacheError
+                                } else {
+                                    "请尝试更换筛选条件"
+                                }
+                            )
                         }
                     } else {
                         items(filteredScores) { item ->
@@ -276,6 +382,22 @@ fun ScoresScreen(
                                                         text = "未通过",
                                                         style = MaterialTheme.typography.labelSmall,
                                                         color = MaterialTheme.colorScheme.onErrorContainer,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                            val recordCount =
+                                                recordCountMap[item.courseId.ifEmpty { item.courseName }] ?: 1
+                                            if (recordCount > 1) {
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                                ) {
+                                                    Text(
+                                                        text = "补考/重修已合并",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                     )
                                                 }
@@ -434,5 +556,48 @@ private fun ScoreDetailItem(label: String, value: String) {
     ) {
         Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
         Text(text = value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+    }
+}
+
+/** 特色算法条目：标题 + 关键指标 + 达标状态 + 说明 */
+@Composable
+private fun FeatureAlgorithmRow(
+    title: String,
+    value: String,
+    qualified: Boolean,
+    detail: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (qualified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+            Text(
+                text = if (qualified) "达标 / 符合" else "未达标 / 需注意",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
     }
 }

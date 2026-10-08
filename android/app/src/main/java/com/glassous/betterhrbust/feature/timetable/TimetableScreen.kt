@@ -50,14 +50,18 @@ fun TimetableScreen(
 ) {
     val app = remember { BetterHrbustApp.instance }
     val academicRepo = remember { app.academicRepository }
+    val authRepo = remember { app.authRepository }
     val prefsManager = remember { app.preferencesManager }
+    val syncManager = remember { app.syncManager }
     val coroutineScope = rememberCoroutineScope()
     // 使用应用内主题的明暗状态（而非系统主题），保证手动切换主题时课程配色同步
     val isDark = LocalDarkTheme.current
 
     val prefs by prefsManager.preferencesFlow.collectAsState(initial = null)
+    val isSyncing by syncManager.isSyncing.collectAsState()
     var isRefreshing by remember { mutableStateOf(false) }
     var timetableResult by remember { mutableStateOf<TimetableResult?>(null) }
+    var cacheError by remember { mutableStateOf("") }
     var selectedWeek by remember { mutableStateOf(1) }
 
     val today = remember { LocalDate.now() }
@@ -73,34 +77,62 @@ fun TimetableScreen(
         }
     }
 
-    fun loadData(force: Boolean = false) {
+    /** 读取本地缓存（离线只读，不联网） */
+    fun loadCache() {
         val currentPrefs = prefs ?: return
         coroutineScope.launch {
-            isRefreshing = true
-            academicRepo.getTimetable(currentPrefs.studentId, currentPrefs.year, currentPrefs.term, force).collect { res ->
-                if (res is Resource.Success) {
-                    timetableResult = res.data
+            academicRepo.getTimetable(
+                currentPrefs.studentId,
+                currentPrefs.year,
+                currentPrefs.term,
+                cacheOnly = true
+            ).collect { res ->
+                when (res) {
+                    is Resource.Success -> {
+                        timetableResult = res.data
+                        cacheError = ""
+                    }
+                    is Resource.Error -> cacheError = res.message
+                    else -> Unit
                 }
             }
-            isRefreshing = false
         }
     }
 
-    LaunchedEffect(prefs?.studentId) {
+    /** 手动全量刷新：会话失效时要求重新登录 */
+    fun refreshAll() {
+        coroutineScope.launch {
+            isRefreshing = true
+            val outcome = syncManager.syncAll(manual = true)
+            isRefreshing = false
+            if (outcome.expired) {
+                authRepo.markSessionExpired(true)
+            } else {
+                loadCache()
+            }
+        }
+    }
+
+    LaunchedEffect(prefs?.studentId, prefs?.lastFullSyncDate) {
         if (prefs != null && prefs!!.studentId.isNotEmpty()) {
-            loadData(force = false)
+            loadCache()
         }
     }
 
     // 全屏穿透：顶部控制区吸顶于状态栏下方（初始安全间距），列表内容可滚动穿透状态栏；
     // 底部由 contentPadding 预留小白条 + 悬浮导航坞的安全距离。
     AppPullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = { loadData(force = true) },
+        isRefreshing = isRefreshing || isSyncing,
+        onRefresh = { refreshAll() },
         modifier = modifier.fillMaxSize()
     ) {
-        if (timetableResult == null && isRefreshing) {
+        if (timetableResult == null && (isRefreshing || isSyncing)) {
             LoadingView(message = "正在加载课表...")
+        } else if (timetableResult == null) {
+            EmptyView(
+                title = "暂无课表数据",
+                description = cacheError.ifEmpty { "请下拉或使用「更多」页首行按钮手动刷新数据" }
+            )
         } else {
             val dayCells = remember(timetableResult, selectedDay) {
                 timetableResult?.cells?.filter { it.day == selectedDay } ?: emptyList()

@@ -98,21 +98,22 @@ class AdversarialParserTest {
     }
 
     // =========================================================================
-    // 2. Piecewise GPA Calculation (calculateGpaStats)
-    // Formula: min(4.0, (score - 50) / 10) for score >= 60, and 0.0 otherwise.
+    // 2. 五分制 GPA Calculation (calculateGpaStats)
+    // 哈理工官方口径：60 分 = 1 绩点，每增 1 分 +0.1，
+    // 即 (score - 50) / 10（上限 5.0）for score >= 60, and 0.0 otherwise.
     // =========================================================================
 
     @Test
     fun testGpa_ExactPiecewiseFormula_UpperBounds() {
-        // Score = 100 -> (100 - 50) / 10 = 5.0 -> strictly capped to min(4.0, 5.0) = 4.0
+        // Score = 100 -> (100 - 50) / 10 = 5.0（五分制不再封顶 4.0）
         val s100 = listOf(createScoreItem("100", 3.0, true))
         val stats100 = AcademicParsers.calculateGpaStats(s100)
-        assertEquals(4.0, stats100.gpa, 0.0001)
+        assertEquals(5.0, stats100.gpa, 0.0001)
 
-        // Score = 95 -> (95 - 50) / 10 = 4.5 -> strictly capped to min(4.0, 4.5) = 4.0
+        // Score = 95 -> (95 - 50) / 10 = 4.5
         val s95 = listOf(createScoreItem("95", 3.0, true))
         val stats95 = AcademicParsers.calculateGpaStats(s95)
-        assertEquals(4.0, stats95.gpa, 0.0001)
+        assertEquals(4.5, stats95.gpa, 0.0001)
 
         // Score = 90 -> (90 - 50) / 10 = 4.0 -> exact 4.0
         val s90 = listOf(createScoreItem("90", 3.0, true))
@@ -153,8 +154,9 @@ class AdversarialParserTest {
 
     @Test
     fun testGpa_LetterGradeMapping() {
+        // 官方五级记分制折算：优秀 4.5 / 良好 3.5 / 中等 2.5 / 及格 1.5 / 不及格 0
         val sExc = listOf(createScoreItem("优秀", 3.0, true))
-        assertEquals(4.0, AcademicParsers.calculateGpaStats(sExc).gpa, 0.0001)
+        assertEquals(4.5, AcademicParsers.calculateGpaStats(sExc).gpa, 0.0001)
 
         val sGood = listOf(createScoreItem("良好", 3.0, true))
         assertEquals(3.5, AcademicParsers.calculateGpaStats(sGood).gpa, 0.0001)
@@ -171,22 +173,37 @@ class AdversarialParserTest {
 
     @Test
     fun testGpa_WeightedAverageAndCredits() {
+        // 三门不同课程（courseId 不同，避免被合并去重）
         val scores = listOf(
-            createScoreItem("100", 4.0, true), // gp = 4.0, weight = 16.0
-            createScoreItem("80", 2.0, true),  // gp = 3.0, weight = 6.0
-            createScoreItem("50", 4.0, false)  // gp = 0.0, weight = 0.0
+            createScoreItem("100", 4.0, true, courseId = "CS101"), // gp = 5.0, weight = 20.0
+            createScoreItem("80", 2.0, true, courseId = "CS102"),  // gp = 3.0, weight = 6.0
+            createScoreItem("50", 4.0, false, courseId = "CS103")  // gp = 0.0, weight = 0.0
         )
         val stats = AcademicParsers.calculateGpaStats(scores)
-        // totalCredits = 10.0, earnedCredits = 6.0, failedCount = 1
-        // totalGpaWeight = 16.0 + 6.0 + 0 = 22.0 -> gpa = 22.0 / 10.0 = 2.2
+        // 必修课去重后：totalCredits = 10.0, earnedCredits = 6.0, failedCount = 1
+        // totalGpaWeight = 20.0 + 6.0 + 0 = 26.0 -> gpa = 26.0 / 10.0 = 2.6
         // totalScoreWeight = 100*4 + 80*2 + 50*4 = 400 + 160 + 200 = 760 -> weightedAvg = 76.0
-        // excellentRate = 1 / 3 = 33.3%
+        // excellentRate = 1 / 3 ≈ 33.3%
         assertEquals(10.0, stats.totalCredits, 0.01)
         assertEquals(6.0, stats.earnedCredits, 0.01)
         assertEquals(1, stats.failedCount)
-        assertEquals(2.2, stats.gpa, 0.01)
+        assertEquals(2.6, stats.gpa, 0.01)
         assertEquals(76.0, stats.weightedAvg, 0.01)
         assertEquals(33.3, stats.excellentRate, 0.1)
+    }
+
+    @Test
+    fun testGpa_MergesRetakeRecordsOfSameCourse() {
+        // 同一门必修课的正常考试 + 补考记录，应合并为一门，取通过（最高）成绩，且学分只计一次
+        val scores = listOf(
+            createScoreItem("45", 3.0, false, courseId = "CS201", examType = "正常考试"),
+            createScoreItem("82", 3.0, true, courseId = "CS201", examType = "补考")
+        )
+        val stats = AcademicParsers.calculateGpaStats(scores)
+        assertEquals(3.0, stats.totalCredits, 0.01)
+        assertEquals(3.0, stats.earnedCredits, 0.01)
+        assertEquals(0, stats.failedCount)
+        assertEquals(3.2, stats.gpa, 0.01)
     }
 
     @Test
@@ -468,12 +485,18 @@ class AdversarialParserTest {
     }
 
     // Helper
-    private fun createScoreItem(score: String, credit: Double, passed: Boolean): ScoreItem {
+    private fun createScoreItem(
+        score: String,
+        credit: Double,
+        passed: Boolean,
+        courseId: String = "CS101",
+        examType: String = "期末考试"
+    ): ScoreItem {
         return ScoreItem(
             year = "2024",
             term = "秋",
-            courseId = "CS101",
-            courseName = "测试课程",
+            courseId = courseId,
+            courseName = "测试课程$courseId",
             courseSeq = "01",
             courseGroup = "必修",
             score = score,
@@ -481,7 +504,7 @@ class AdversarialParserTest {
             hours = 48,
             property = "必修",
             remark = "",
-            examType = "期末考试",
+            examType = examType,
             passMark = if (passed) "及格" else "不及格",
             passed = passed
         )

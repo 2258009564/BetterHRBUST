@@ -31,40 +31,56 @@ fun ProfileScreen(
 ) {
     val app = remember { BetterHrbustApp.instance }
     val academicRepo = remember { app.academicRepository }
+    val authRepo = remember { app.authRepository }
     val prefsManager = remember { app.preferencesManager }
+    val syncManager = remember { app.syncManager }
     val coroutineScope = rememberCoroutineScope()
 
     val prefs by prefsManager.preferencesFlow.collectAsState(initial = null)
+    val isSyncing by syncManager.isSyncing.collectAsState()
     var isRefreshing by remember { mutableStateOf(false) }
     var profile by remember { mutableStateOf<PersonalInfo?>(null) }
 
-    fun loadData(force: Boolean = false) {
+    /** 读取本地缓存（离线只读，不联网） */
+    fun loadCache() {
         val currentPrefs = prefs ?: return
         coroutineScope.launch {
-            isRefreshing = true
-            academicRepo.getPersonalInfo(currentPrefs.username, force).collect { res ->
+            academicRepo.getPersonalInfo(currentPrefs.username, cacheOnly = true).collect { res ->
                 if (res is Resource.Success) {
                     profile = res.data
                 }
             }
-            isRefreshing = false
         }
     }
 
-    LaunchedEffect(prefs?.username) {
+    /** 手动全量刷新：会话失效时要求重新登录 */
+    fun refreshAll() {
+        coroutineScope.launch {
+            isRefreshing = true
+            val outcome = syncManager.syncAll(manual = true)
+            isRefreshing = false
+            if (outcome.expired) {
+                authRepo.markSessionExpired(true)
+            } else {
+                loadCache()
+            }
+        }
+    }
+
+    LaunchedEffect(prefs?.username, prefs?.lastFullSyncDate) {
         if (prefs != null && prefs!!.username.isNotEmpty()) {
-            loadData(force = false)
+            loadCache()
         }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
         AppPullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = { loadData(force = true) },
+            isRefreshing = isRefreshing || isSyncing,
+            onRefresh = { refreshAll() },
             modifier = Modifier.fillMaxSize()
         ) {
             val p = profile
-            if (p == null && isRefreshing) {
+            if (p == null && (isRefreshing || isSyncing)) {
                 LoadingView(message = "正在加载学籍信息...")
             } else {
                 LazyColumn(

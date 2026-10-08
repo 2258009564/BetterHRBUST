@@ -13,9 +13,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import AppLayout from '@/components/layout/AppLayout.vue';
 import { useSession } from '@/composables/useSession.js';
+import { useAcademicData } from '@/composables/useAcademicData.js';
 import DashboardView from '@/views/DashboardView.vue';
 import TimetableView from '@/views/TimetableView.vue';
 import ScoreView from '@/views/ScoreView.vue';
@@ -28,10 +29,31 @@ import CourseView from '@/views/CourseView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import LoginView from '@/views/LoginView.vue';
 
-const { checkAuth, activeTab, navigateTo } = useSession();
+const { activeTab, navigateTo, isLoggedIn } = useSession();
+const { ensureDailySync, needsDailySync, syncAll } = useAcademicData();
 
-onMounted(() => {
-  checkAuth();
+// 启动阶段标记：避免启动时的自动同步与"登录成功后同步"重复触发
+let bootstrapped = false;
+
+onMounted(async () => {
+  try {
+    // 数据策略：登录后数据已全量持久化，日常打开一律只读本地缓存；
+    // 仅在"每天首次打开"时才自动向教务获取一次全量数据
+    if (isLoggedIn.value && needsDailySync.value) {
+      await ensureDailySync();
+    }
+  } catch {
+    // 启动异常不阻塞界面渲染，离线缓存仍可正常展示
+  } finally {
+    bootstrapped = true;
+  }
+});
+
+// 用户主动登录成功后立即执行一次全量同步
+watch(isLoggedIn, val => {
+  if (val && bootstrapped) {
+    syncAll({ markManual: false });
+  }
 });
 
 const views = {
@@ -56,12 +78,10 @@ const currentViewComponent = computed(() => views[activeTab.value] || DashboardV
 .fade-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
-
 .fade-enter-from {
   opacity: 0;
   transform: translateY(4px);
 }
-
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-4px);

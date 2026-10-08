@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
             val prefs by app.preferencesManager.preferencesFlow.collectAsState(initial = null)
             val authState by app.authRepository.authState.collectAsState(initial = AuthState.Unauthenticated)
             val isSessionExpired by app.authRepository.isSessionExpired.collectAsState()
+            val shouldPromptReLogin by app.authRepository.shouldPromptReLogin.collectAsState()
 
             val isSystemDark = isSystemInDarkTheme()
             val useDarkTheme = prefs?.darkTheme ?: isSystemDark
@@ -71,7 +72,8 @@ class MainActivity : ComponentActivity() {
             ) {
                 MainAppScaffold(
                     authState = authState,
-                    isSessionExpired = isSessionExpired
+                    isSessionExpired = isSessionExpired,
+                    shouldPromptReLogin = shouldPromptReLogin
                 )
             }
         }
@@ -81,13 +83,17 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppScaffold(
     authState: AuthState,
-    isSessionExpired: Boolean
+    isSessionExpired: Boolean,
+    shouldPromptReLogin: Boolean = isSessionExpired
 ) {
+    val syncManager = remember { BetterHrbustApp.instance.syncManager }
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
     var showReLoginSheet by remember { mutableStateOf(false) }
+    var initialized by remember { mutableStateOf(false) }
+    var lastAuthenticated by remember { mutableStateOf(false) }
 
     val isAuthScreen = currentDestination?.hasRoute(AuthRoute::class) == true
     val startDestination = if (authState is AuthState.Authenticated) {
@@ -96,7 +102,27 @@ fun MainAppScaffold(
         AuthRoute
     }
 
-    val showSessionBanner = !isAuthScreen && isSessionExpired
+    // 数据策略：用户主动登录成功 → 立即全量同步；
+    // 冷启动已登录 → 仅"每天首次打开"自动同步一次；其余一律只读本地缓存
+    LaunchedEffect(authState) {
+        val authenticated = authState is AuthState.Authenticated
+        if (!initialized) {
+            initialized = true
+            lastAuthenticated = authenticated
+            if (authenticated) {
+                syncManager.ensureDailySync()
+            }
+        } else if (authenticated && !lastAuthenticated) {
+            // 未登录 → 已登录：用户主动登录成功
+            lastAuthenticated = true
+            syncManager.syncAll()
+        } else {
+            lastAuthenticated = authenticated
+        }
+    }
+
+    // 会话失效提示按一周节流；仅在应提示时展示顶部横幅
+    val showSessionBanner = !isAuthScreen && shouldPromptReLogin
     val showBottomNav = !isAuthScreen
 
     // 系统栏安全间距（dp）

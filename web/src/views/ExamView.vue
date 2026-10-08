@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <!-- Unauthenticated State -->
-    <UiCard v-if="!isLoggedIn" class="py-12 text-center max-w-lg mx-auto">
+    <UiCard v-if="showLoginPrompt" class="py-12 text-center max-w-lg mx-auto">
       <div class="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3 text-zinc-600 dark:text-zinc-300">
         <Icon name="exam" customClass="w-6 h-6" />
       </div>
@@ -11,17 +11,10 @@
     </UiCard>
 
     <template v-else>
-      <!-- Top Action Bar -->
-      <div class="flex items-center justify-between">
-        <div class="text-xs text-zinc-500">
-          共获取到 <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ exams.length }}</span> 门考试安排
-        </div>
-        <UiButton size="sm" variant="outline" :loading="loading" @click="fetchExamsData">
-          <template #prefix>
-            <Icon name="refresh" customClass="w-3.5 h-3.5" />
-          </template>
-          同步最新考务
-        </UiButton>
+      <!-- Top Action Bar（数据刷新统一由顶栏按钮完成） -->
+      <div class="text-xs text-zinc-500">
+        共获取到 <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ exams.length }}</span> 门考试安排
+        <span class="ml-2 text-zinc-400">上次同步：{{ lastSyncText }}</span>
       </div>
 
       <!-- Top Countdown Radar Highlight -->
@@ -133,55 +126,48 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiBadge from '@/components/ui/UiBadge.vue';
 import UiTabs from '@/components/ui/UiTabs.vue';
 import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
+import { useAcademicData } from '@/composables/useAcademicData.js';
 import { useToast } from '@/composables/useToast.js';
-import { academicApi } from '@/services/academic/api.js';
 
-const { isLoggedIn, openLoginModal } = useSession();
+const { isLoggedIn, isSessionExpired } = useSession();
+// 考试数据来自登录时的全量缓存，页面不再自动联网
+const { exams: cachedExams, syncing, lastSyncText } = useAcademicData();
 const { showToast } = useToast();
 
-const loading = ref(false);
-const exams = ref([]);
+const showLoginPrompt = computed(() => !isLoggedIn.value && !isSessionExpired.value);
 const examFilter = ref('all');
 
-async function fetchExamsData() {
-  if (!isLoggedIn.value) return;
-  loading.value = true;
-  try {
-    const res = await academicApi.getExams();
-    const now = new Date();
+const loading = computed(() => syncing.value && cachedExams.value.length === 0);
 
-    exams.value = (res || []).map(e => {
-      let countdownDays = null;
-      let isUpcoming = true;
+const exams = computed(() => {
+  const now = new Date();
+  return (cachedExams.value || []).map(e => {
+    let countdownDays = null;
+    let isUpcoming = true;
 
-      const dateStr = (e.time || '').split(' ')[0];
-      if (dateStr) {
-        const examDate = new Date(dateStr.replace(/-/g, '/'));
-        if (!isNaN(examDate.getTime())) {
-          countdownDays = Math.ceil((examDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
-          isUpcoming = countdownDays >= 0;
-        }
+    const dateStr = (e.time || '').split(' ')[0];
+    if (dateStr) {
+      const examDate = new Date(dateStr.replace(/-/g, '/'));
+      if (!isNaN(examDate.getTime())) {
+        countdownDays = Math.ceil((examDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+        isUpcoming = countdownDays >= 0;
       }
+    }
 
-      return {
-        ...e,
-        countdownDays: countdownDays !== null ? countdownDays : 0,
-        isUpcoming
-      };
-    });
-  } catch (err) {
-    showToast({ title: '考试列表获取失败', message: err.message, type: 'danger' });
-  } finally {
-    loading.value = false;
-  }
-}
+    return {
+      ...e,
+      countdownDays: countdownDays !== null ? countdownDays : 0,
+      isUpcoming
+    };
+  });
+});
 
 const upcomingExams = computed(() => {
   return exams.value.filter(e => e.isUpcoming);
@@ -204,12 +190,4 @@ function exportExamIcs(ex) {
   URL.revokeObjectURL(url);
   showToast({ title: '已生成日历文件', message: `${ex.courseName} (${ex.location})`, type: 'success' });
 }
-
-watch(isLoggedIn, (val) => {
-  if (val) fetchExamsData();
-});
-
-onMounted(() => {
-  if (isLoggedIn.value) fetchExamsData();
-});
 </script>

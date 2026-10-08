@@ -8,16 +8,45 @@ import com.glassous.betterhrbust.core.network.AcademicHttpClient
 import com.glassous.betterhrbust.core.network.CharsetDecoderHelper
 import com.glassous.betterhrbust.core.parser.AcademicParsers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 class AuthRepository(
     private val client: AcademicHttpClient,
     private val prefs: UserPreferencesManager,
     private val database: AppDatabase
 ) {
+    companion object {
+        /** 会话失效提示间隔：一周 */
+        const val PROMPT_INTERVAL_MS = 7L * 24 * 60 * 60 * 1000
+    }
+
+    private val scope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
+    )
+
     private val _isSessionExpired = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isSessionExpired: kotlinx.coroutines.flow.StateFlow<Boolean> = _isSessionExpired
+
+    /**
+     * 是否应主动弹出"登录状态已失效"提示（按一周节流后的判定结果）。
+     * 规则：上次登录/上次提示在一周内且用户未手动刷新 → 不提示（仅在登录页展示已失效）；
+     * 手动刷新 → 无条件提示；距上次提示满一周 → 提示一次，用户忽略后再过一周再提示。
+     */
+    private val _shouldPromptReLogin = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val shouldPromptReLogin: kotlinx.coroutines.flow.StateFlow<Boolean> = _shouldPromptReLogin
+
+    /** 用户已发起手动刷新：随后的会话失效需要无条件要求重新登录 */
+    private var pendingManualPrompt = false
+
+    /**
+     * 本次进程内是否已对"当前这一轮会话失效"做过节流判定。
+     * 置位后同一进程内不再重复评估，避免后续请求把提示时间不断后推；
+     * 进程重启（冷启动）后归零，因此"再过一周再提示"仍能正常生效。
+     */
+    private var promptDecided = false
 
     val authState: Flow<AuthState> = prefs.preferencesFlow.map { pref ->
         if (pref.username.isNotEmpty() && pref.studentId.isNotEmpty()) {
@@ -27,8 +56,49 @@ class AuthRepository(
         }
     }
 
+    init {
+        // 冷启动恢复上一轮的会话失效与提示状态，避免横幅在重启后消失
+        scope.launch {
+            val snapshot = prefs.preferencesFlow.firstOrNull() ?: return@launch
+            _isSessionExpired.value = snapshot.sessionExpired
+            _shouldPromptReLogin.value = snapshot.promptReLogin
+        }
+    }
+
+    /** 标记用户发起了手动刷新（刷新时若会话失效，必须重新登录） */
+    fun notifyManualRefreshIntent() {
+        pendingManualPrompt = true
+    }
+
     fun markSessionExpired(expired: Boolean = true) {
-        _isSessionExpired.value = expired
+        if (!expired) {
+            _isSessionExpired.value = false
+            _shouldPromptReLogin.value = false
+            pendingManualPrompt = false
+            promptDecided = false
+            scope.launch { prefs.setSessionState(expired = false, promptReLogin = false) }
+            return
+        }
+
+        val manual = pendingManualPrompt
+        pendingManualPrompt = false
+
+        // 本次进程内本轮失效只判定一次，避免后续重复请求把提示时间不断后推
+        if (promptDecided && !manual) return
+        promptDecided = true
+
+        _isSessionExpired.value = true
+        scope.launch {
+            val snapshot = prefs.preferencesFlow.firstOrNull()
+            val now = System.currentTimeMillis()
+            val base = maxOf(snapshot?.lastLoginAt ?: 0L, snapshot?.lastPromptAt ?: 0L)
+            val shouldPrompt = manual || base <= 0L || (now - base) >= PROMPT_INTERVAL_MS
+            _shouldPromptReLogin.value = shouldPrompt
+            if (shouldPrompt) {
+                prefs.setLastPromptAt(now)
+            }
+            prefs.setSessionState(expired = true, promptReLogin = shouldPrompt)
+        }
     }
 
     suspend fun getCaptcha(): ByteArray {
@@ -70,7 +140,14 @@ class AuthRepository(
                 year = studentContext.year,
                 term = studentContext.term
             )
+            // 记录登录时间并清理提示节流状态，重新开始一周计时
+            prefs.setLastLoginAt(System.currentTimeMillis())
+            prefs.setLastPromptAt(0L)
+            prefs.setSessionState(expired = false, promptReLogin = false)
             _isSessionExpired.value = false
+            _shouldPromptReLogin.value = false
+            pendingManualPrompt = false
+            promptDecided = false
 
             emit(Resource.Success(studentContext))
         } catch (e: Exception) {
@@ -81,15 +158,30 @@ class AuthRepository(
     fun logout(): Flow<Resource<Unit>> = flow {
         emit(Resource.Loading)
         _isSessionExpired.value = false
+        _shouldPromptReLogin.value = false
+        pendingManualPrompt = false
+        promptDecided = false
+        // clearSession() 会一并清理 lastLoginAt / lastPromptAt / lastFullSyncDate
+        prefs.setSessionState(expired = false, promptReLogin = false)
+        val studentId = prefs.preferencesFlow.firstOrNull()?.studentId ?: ""
         try {
             client.logout()
-            prefs.clearSession()
+        } catch (_: Exception) {
+            // 登出请求失败不影响本地清理
+        }
+        try {
+            if (studentId.isNotEmpty()) {
+                database.timetableDao().clear(studentId)
+                database.scoreDao().clear(studentId)
+                database.examDao().clear(studentId)
+                database.curriculumDao().clear(studentId)
+            }
             database.profileDao().clearAll()
             database.noticeDao().clearAll()
-            emit(Resource.Success(Unit))
-        } catch (e: Exception) {
-            prefs.clearSession()
-            emit(Resource.Success(Unit))
+        } catch (_: Exception) {
+            // 本地缓存清理失败不阻塞登出
         }
+        prefs.clearSession()
+        emit(Resource.Success(Unit))
     }
 }

@@ -16,32 +16,25 @@
 
     <!-- First-time Unauthenticated State: Only after auth is checked and no login & no cached data -->
     <div v-else-if="authChecked && !isLoggedIn && !hasCachedData" class="max-w-xl mx-auto py-6">
-      <LoginCard
-        @success="loadDashboardData"
-      />
+      <LoginCard />
     </div>
 
     <!-- Authenticated State or Cached Offline State -->
     <template v-else>
-      <!-- Top Metric Highlights with Loading Skeletons -->
+      <!-- Top Metric Highlights -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <!-- GPA Card -->
         <UiCard customClass="relative overflow-hidden">
           <div class="flex items-center justify-between">
             <div class="flex-1">
-              <div class="text-xs font-medium text-zinc-500 dark:text-zinc-400">平均学分绩点 (GPA)</div>
-              <div v-if="loadingStats" class="mt-2 space-y-1.5">
-                <div class="h-7 w-20 bg-zinc-200/80 dark:bg-zinc-800 animate-pulse rounded-md" />
-                <div class="h-3 w-24 bg-zinc-200/60 dark:bg-zinc-800/60 animate-pulse rounded" />
+              <div class="text-xs font-medium text-zinc-500 dark:text-zinc-400">平均学分绩点 (五分制 GPA)</div>
+              <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
+                {{ stats.gpa.toFixed(2) }}
               </div>
-              <template v-else>
-                <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
-                  {{ stats.gpa }}
-                </div>
-                <div class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                  <span>加权均分: {{ stats.weightedAvg }}</span>
-                </div>
-              </template>
+              <div class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
+                <span>加权均分: {{ stats.weightedAvg.toFixed(1) }}</span>
+              </div>
+              <div class="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">仅统计必修课</div>
             </div>
             <div class="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0">
               <Icon name="score" customClass="w-5 h-5" />
@@ -49,23 +42,17 @@
           </div>
         </UiCard>
 
-        <!-- Credits Card -->
+        <!-- Credits Card（与"培养方案与学分"页同口径） -->
         <UiCard>
           <div class="flex items-center justify-between">
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
               <div class="text-xs font-medium text-zinc-500 dark:text-zinc-400">已获得学分 / 方案总学分</div>
-              <div v-if="loadingStats" class="mt-2 space-y-1.5">
-                <div class="h-7 w-28 bg-zinc-200/80 dark:bg-zinc-800 animate-pulse rounded-md" />
-                <div class="h-3 w-28 bg-zinc-200/60 dark:bg-zinc-800/60 animate-pulse rounded" />
+              <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
+                {{ creditsProgress.earnedTotal }} <span class="text-xs font-normal text-zinc-400">/ {{ creditsProgress.requiredTotal }}</span>
               </div>
-              <template v-else>
-                <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
-                  {{ stats.earnedCredits }} <span class="text-xs font-normal text-zinc-400">/ {{ stats.requiredCredits }}</span>
-                </div>
-                <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
-                  已修读 {{ stats.totalCredits }} 学分 ({{ stats.courseCount }} 门)
-                </div>
-              </template>
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+                必修课已修读 {{ stats.totalCredits }} 学分 ({{ stats.courseCount }} 门)
+              </div>
             </div>
             <div class="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0">
               <Icon name="program" customClass="w-5 h-5" />
@@ -78,18 +65,12 @@
           <div class="flex items-center justify-between">
             <div class="flex-1">
               <div class="text-xs font-medium text-zinc-500 dark:text-zinc-400">今日课程安排</div>
-              <div v-if="loadingTimetable" class="mt-2 space-y-1.5">
-                <div class="h-7 w-20 bg-zinc-200/80 dark:bg-zinc-800 animate-pulse rounded-md" />
-                <div class="h-3 w-24 bg-zinc-200/60 dark:bg-zinc-800/60 animate-pulse rounded" />
+              <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
+                {{ todayCourses.length }} <span class="text-xs font-normal text-zinc-400">门待上</span>
               </div>
-              <template v-else>
-                <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
-                  {{ todayCourses.length }} <span class="text-xs font-normal text-zinc-400">门待上</span>
-                </div>
-                <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  当前教学周第 {{ currentWeek }} 周
-                </div>
-              </template>
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                当前教学周第 {{ currentWeek }} 周
+              </div>
             </div>
             <div class="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0">
               <Icon name="timetable" customClass="w-5 h-5" />
@@ -100,20 +81,14 @@
         <!-- Recent Exams Card -->
         <UiCard>
           <div class="flex items-center justify-between">
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
               <div class="text-xs font-medium text-zinc-500 dark:text-zinc-400">近期考试</div>
-              <div v-if="loadingExams" class="mt-2 space-y-1.5">
-                <div class="h-7 w-16 bg-zinc-200/80 dark:bg-zinc-800 animate-pulse rounded-md" />
-                <div class="h-3 w-28 bg-zinc-200/60 dark:bg-zinc-800/60 animate-pulse rounded" />
+              <div class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">
+                {{ upcomingExams.length }} <span class="text-xs font-normal text-zinc-400">门</span>
               </div>
-              <template v-else>
-                <div class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">
-                  {{ upcomingExams.length }} <span class="text-xs font-normal text-zinc-400">门</span>
-                </div>
-                <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate max-w-[140px]">
-                  {{ upcomingExams[0]?.courseName || '暂无近期考试' }}
-                </div>
-              </template>
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate max-w-[140px]">
+                {{ upcomingExams[0]?.courseName || '暂无近期考试' }}
+              </div>
             </div>
             <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
               <Icon name="exam" customClass="w-5 h-5" />
@@ -122,6 +97,51 @@
         </UiCard>
       </div>
 
+      <!-- 特色学业算法摘要（与成绩页共用同一口径） -->
+      <UiCard>
+        <template #header-action>
+          <UiButton size="sm" variant="ghost" @click="$emit('navigate', 'score')">
+            查看成绩分析 →
+          </UiButton>
+        </template>
+
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-x-8 gap-y-3">
+            <div>
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-400">学位绩点</div>
+              <div class="text-lg font-bold" :class="stats.degree.qualified ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                {{ stats.degree.gpa.toFixed(2) }}
+              </div>
+            </div>
+            <div>
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-400">补考 / 重修</div>
+              <div class="text-lg font-bold" :class="stats.recommend.qualified ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                {{ stats.recommend.retakeCount }} / {{ stats.recommend.retakeLimit }}
+              </div>
+            </div>
+            <div>
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-400">累计挂科学分</div>
+              <div class="text-lg font-bold" :class="stats.risk.level === 'none' ? 'text-zinc-900 dark:text-zinc-100' : 'text-rose-600 dark:text-rose-400'">
+                {{ stats.risk.failedCredits }}
+              </div>
+            </div>
+            <div>
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-400">提前毕业</div>
+              <div class="text-lg font-bold" :class="stats.earlyGraduation.qualified ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-900 dark:text-zinc-100'">
+                {{ stats.earlyGraduation.qualified ? '达标' : '未达标' }}
+              </div>
+            </div>
+            <UiBadge size="sm" :variant="stats.risk.level === 'none' ? 'success' : 'danger'">
+              {{ stats.risk.label }}
+            </UiBadge>
+          </div>
+
+          <div class="text-[11px] text-zinc-400 dark:text-zinc-500 leading-relaxed max-w-md">
+            {{ statsScopeNote }}
+          </div>
+        </div>
+      </UiCard>
+
       <!-- Main Content Two Columns -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Left Column: Today's Schedule & Exam Radar -->
@@ -129,22 +149,12 @@
           <!-- Today's Schedule Card -->
           <UiCard :title="`今日课程安排 (${currentDayName})`">
             <template #header-action>
-              <div class="flex items-center gap-2">
-                <UiButton size="sm" variant="ghost" :loading="loadingTimetable" @click="fetchTimetableData">
-                  刷新
-                </UiButton>
-                <UiButton size="sm" variant="ghost" @click="$emit('navigate', 'timetable')">
-                  查看完整课表 →
-                </UiButton>
-              </div>
+              <UiButton size="sm" variant="ghost" @click="$emit('navigate', 'timetable')">
+                查看完整课表 →
+              </UiButton>
             </template>
 
-            <div v-if="loadingTimetable" class="py-12 text-center text-xs text-zinc-400">
-              <Icon name="refresh" customClass="w-5 h-5 animate-spin mx-auto mb-2" />
-              正在同步教务课表...
-            </div>
-
-            <div v-else-if="todayCourses.length === 0" class="py-8 text-center text-xs text-zinc-400">
+            <div v-if="todayCourses.length === 0" class="py-8 text-center text-xs text-zinc-400">
               今日无排课或已结课，享受自习时光吧 ☕
             </div>
 
@@ -200,12 +210,7 @@
               </UiButton>
             </template>
 
-            <div v-if="loadingExams" class="py-8 text-center text-xs text-zinc-400">
-              <Icon name="refresh" customClass="w-5 h-5 animate-spin mx-auto mb-2" />
-              正在同步考试日程...
-            </div>
-
-            <div v-else-if="upcomingExams.length === 0" class="py-8 text-center text-xs text-zinc-400">
+            <div v-if="upcomingExams.length === 0" class="py-8 text-center text-xs text-zinc-400">
               当前暂无考试安排，或本学期考试尚未发布排考考场。
             </div>
 
@@ -257,11 +262,7 @@
               </UiButton>
             </template>
 
-            <div v-if="loadingNotices" class="py-6 text-center text-xs text-zinc-400">
-              正在获取校历与公告...
-            </div>
-
-            <div v-else-if="latestNotices.length === 0" class="py-6 text-center text-xs text-zinc-400">
+            <div v-if="latestNotices.length === 0" class="py-6 text-center text-xs text-zinc-400">
               本周暂无发布的教学运行新公告
             </div>
 
@@ -289,158 +290,41 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { computed } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiBadge from '@/components/ui/UiBadge.vue';
 import Icon from '@/components/icons/Icon.vue';
 import LoginCard from '@/components/auth/LoginCard.vue';
 import { useSession } from '@/composables/useSession.js';
-import { academicApi } from '@/services/academic/api.js';
+import { useAcademicData } from '@/composables/useAcademicData.js';
+import { buildAcademicStats, computeCreditsProgress, STATS_SCOPE_NOTE } from '@/services/academic/stats.js';
 import { getCombineSlotTime } from '@/utils/periodTimes.js';
 import { getCourseColor } from '@/utils/courseColors.js';
 import { isCourseActiveInWeek } from '@/utils/courseWeeks.js';
 
 defineEmits(['navigate']);
 
-const { isLoggedIn, authChecked, studentId, currentWeek, currentSemester } = useSession();
+const { isLoggedIn, authChecked, currentWeek } = useSession();
+// 登录后数据全部走本地缓存，仅顶栏刷新按钮与每日首次打开会触网
+const { scores, plan, timetableCombine, exams, notices, hasCachedData } = useAcademicData();
 
-// Local cache keys
-const CACHE_STATS_KEY = 'better_hrbust_cache_stats';
-const CACHE_TIMETABLE_KEY = 'better_hrbust_cache_timetable';
-const CACHE_EXAMS_KEY = 'better_hrbust_cache_exams';
-const CACHE_NOTICES_KEY = 'better_hrbust_cache_notices';
+const stats = computed(() => buildAcademicStats(scores.value));
+const statsScopeNote = STATS_SCOPE_NOTE;
 
-const stats = ref({
-  gpa: '0.00',
-  weightedAvg: '0.0',
-  totalCredits: 0,
-  earnedCredits: 0,
-  requiredCredits: 160,
-  courseCount: 0
-});
-
-const allCourses = ref([]);
-const upcomingExams = ref([]);
-const latestNotices = ref([]);
-
-// Restore cached data synchronously on component setup
-function loadCachedData() {
-  try {
-    const s = localStorage.getItem(CACHE_STATS_KEY);
-    if (s) {
-      const parsed = JSON.parse(s);
-      if (parsed && typeof parsed.totalCredits === 'number') stats.value = parsed;
-    }
-    const t = localStorage.getItem(CACHE_TIMETABLE_KEY);
-    if (t) {
-      const parsed = JSON.parse(t);
-      if (Array.isArray(parsed) && parsed.length > 0) allCourses.value = parsed;
-    }
-    const e = localStorage.getItem(CACHE_EXAMS_KEY);
-    if (e) {
-      const parsed = JSON.parse(e);
-      if (Array.isArray(parsed) && parsed.length > 0) upcomingExams.value = parsed.filter(isRecentExam);
-    }
-    const n = localStorage.getItem(CACHE_NOTICES_KEY);
-    if (n) {
-      const parsed = JSON.parse(n);
-      if (Array.isArray(parsed) && parsed.length > 0) latestNotices.value = parsed;
-    }
-  } catch {
-    // 忽略缓存解析错误
-  }
-}
-
-loadCachedData();
-
-const hasCachedData = computed(() => {
-  return stats.value.totalCredits > 0 || allCourses.value.length > 0 || upcomingExams.value.length > 0;
-});
-
-// If cached data is present, do not show blank skeletons initially
-const loadingStats = ref(!hasCachedData.value);
-const loadingTimetable = ref(!hasCachedData.value);
-const loadingExams = ref(!hasCachedData.value);
-const loadingNotices = ref(!hasCachedData.value);
+// 与"培养方案与学分"页共用同一函数，保证两页数据完全一致
+const creditsProgress = computed(() => computeCreditsProgress(scores.value, plan.value?.groups || []));
 
 const dayMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const currentDayIndex = new Date().getDay() || 7; // 1~7
 const currentDayName = computed(() => dayMap[new Date().getDay()]);
 
 const todayCourses = computed(() => {
-  return allCourses.value.filter(
+  const cells = timetableCombine.value?.cells || [];
+  return cells.filter(
     c => c.day === currentDayIndex && isCourseActiveInWeek(c, currentWeek.value)
   );
 });
-
-async function fetchStats() {
-  if (!hasCachedData.value) loadingStats.value = true;
-  try {
-    const [scoresRes, planRes] = await Promise.all([
-      academicApi.getScores().catch(() => ({ scores: [] })),
-      academicApi.getCurriculumPlan().catch(() => ({ groups: [] }))
-    ]);
-    const scores = scoresRes.scores || [];
-    const groups = planRes.groups || [];
-
-    let totalCredits = 0;
-    let earnedCredits = 0;
-    let totalScoreWeight = 0;
-    let totalGpaWeight = 0;
-
-    scores.forEach(item => {
-      const cr = item.credit || 0;
-      const num = parseFloat(item.score);
-      totalCredits += cr;
-      if (item.passed) earnedCredits += cr;
-
-      if (!isNaN(num)) {
-        totalScoreWeight += num * cr;
-        const gpa = num >= 60 ? (num - 50) / 10 : 0;
-        totalGpaWeight += gpa * cr;
-      }
-    });
-
-    const requiredCredits = groups.reduce((acc, g) => acc + (g.requiredCredits || 0), 0) || 160;
-
-    stats.value = {
-      gpa: totalCredits ? (totalGpaWeight / totalCredits).toFixed(2) : '0.00',
-      weightedAvg: totalCredits ? (totalScoreWeight / totalCredits).toFixed(1) : '0.0',
-      totalCredits: parseFloat(totalCredits.toFixed(1)),
-      earnedCredits: parseFloat(earnedCredits.toFixed(1)),
-      requiredCredits: parseFloat(requiredCredits.toFixed(1)),
-      courseCount: scores.length
-    };
-
-    localStorage.setItem(CACHE_STATS_KEY, JSON.stringify(stats.value));
-  } catch {
-    // 忽略未登录或网络异常
-  } finally {
-    loadingStats.value = false;
-  }
-}
-
-async function fetchTimetableData() {
-  if (!studentId.value) return;
-  if (!hasCachedData.value) loadingTimetable.value = true;
-  try {
-    const res = await academicApi.getTimetable({
-      studentId: studentId.value,
-      yearId: currentSemester.yearId || '46',
-      termId: currentSemester.termId || '2',
-      sectionType: 'COMBINE'
-    });
-    allCourses.value = res.cells || [];
-    if (allCourses.value.length > 0) {
-      localStorage.setItem(CACHE_TIMETABLE_KEY, JSON.stringify(allCourses.value));
-    }
-  } catch {
-    // 失败保留现有缓存
-  } finally {
-    loadingTimetable.value = false;
-  }
-}
 
 function isRecentExam(exam) {
   if (!exam.time) return true;
@@ -452,65 +336,24 @@ function isRecentExam(exam) {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  // 严格只显示未来的考试和过去 7 天以内的考试，早于 7 天前的均不属于近期
+  // 严格只显示未来的考试和过去 7 天以内的考试
   return examDate >= sevenDaysAgo;
 }
 
-async function fetchExamsData() {
-  if (!hasCachedData.value) loadingExams.value = true;
-  try {
-    const res = await academicApi.getExams();
-    const filtered = (res || []).filter(isRecentExam);
-    filtered.sort((a, b) => {
+const upcomingExams = computed(() => {
+  return (exams.value || [])
+    .filter(isRecentExam)
+    .slice()
+    .sort((a, b) => {
       const ma = a.time?.match(/(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})/);
       const mb = b.time?.match(/(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})/);
       const ta = ma ? new Date(parseInt(ma[1], 10), parseInt(ma[2], 10) - 1, parseInt(ma[3], 10)).getTime() : 0;
       const tb = mb ? new Date(parseInt(mb[1], 10), parseInt(mb[2], 10) - 1, parseInt(mb[3], 10)).getTime() : 0;
       return ta - tb;
     });
-    upcomingExams.value = filtered;
-    if (upcomingExams.value.length > 0) {
-      localStorage.setItem(CACHE_EXAMS_KEY, JSON.stringify(upcomingExams.value));
-    }
-  } catch {
-    // 失败保留现有缓存
-  } finally {
-    loadingExams.value = false;
-  }
-}
-
-async function fetchNoticesData() {
-  if (!hasCachedData.value) loadingNotices.value = true;
-  try {
-    const res = await academicApi.getCalendarInfo(currentWeek.value);
-    latestNotices.value = res.notices?.slice(0, 4) || [];
-    if (latestNotices.value.length > 0) {
-      localStorage.setItem(CACHE_NOTICES_KEY, JSON.stringify(latestNotices.value));
-    }
-  } catch {
-    // 失败保留现有缓存
-  } finally {
-    loadingNotices.value = false;
-  }
-}
-
-async function loadDashboardData() {
-  if (!isLoggedIn.value) return;
-  await Promise.allSettled([
-    fetchStats(),
-    fetchTimetableData(),
-    fetchExamsData(),
-    fetchNoticesData()
-  ]);
-}
-
-watch(isLoggedIn, (val) => {
-  if (val) loadDashboardData();
 });
 
-onMounted(() => {
-  if (isLoggedIn.value) loadDashboardData();
-});
+const latestNotices = computed(() => (notices.value || []).slice(0, 4));
 
 const quickTools = [
   { label: '自习空教室', desc: '查找当前空闲房间', icon: 'classroom', target: 'classroom' },

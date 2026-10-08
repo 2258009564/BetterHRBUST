@@ -6,6 +6,7 @@ import com.glassous.betterhrbust.core.datastore.UserPreferencesManager
 import com.glassous.betterhrbust.core.network.AcademicHttpClient
 import com.glassous.betterhrbust.data.repository.AcademicRepository
 import com.glassous.betterhrbust.data.repository.AuthRepository
+import com.glassous.betterhrbust.data.sync.AcademicSyncManager
 
 class BetterHrbustApp : Application() {
 
@@ -24,6 +25,9 @@ class BetterHrbustApp : Application() {
     lateinit var academicRepository: AcademicRepository
         private set
 
+    lateinit var syncManager: AcademicSyncManager
+        private set
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -36,6 +40,7 @@ class BetterHrbustApp : Application() {
             authRepository.markSessionExpired(true)
         }
         academicRepository = AcademicRepository(httpClient, database, preferencesManager)
+        syncManager = AcademicSyncManager(academicRepository, preferencesManager, authRepository)
     }
 
     companion object {

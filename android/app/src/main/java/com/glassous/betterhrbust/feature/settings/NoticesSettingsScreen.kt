@@ -36,37 +36,63 @@ fun NoticesSettingsScreen(
     val authRepo = remember { app.authRepository }
     val prefsManager = remember { app.preferencesManager }
     val database = remember { app.database }
+    val syncManager = remember { app.syncManager }
     val coroutineScope = rememberCoroutineScope()
 
     val prefs by prefsManager.preferencesFlow.collectAsState(initial = null)
+    val isSyncing by syncManager.isSyncing.collectAsState()
     var isRefreshing by remember { mutableStateOf(false) }
     var notices by remember { mutableStateOf<List<NoticeItem>>(emptyList()) }
     var selectedNotice by remember { mutableStateOf<NoticeItem?>(null) }
+    var syncMessage by remember { mutableStateOf("") }
+    var cacheError by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState()
 
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    fun loadData(force: Boolean = false) {
+    /**
+     * 读取本地缓存（离线只读，不联网）
+     * 教务数据仅在登录成功、每天首次打开与手动刷新三种情况下获取
+     */
+    fun loadCache() {
         coroutineScope.launch {
-            isRefreshing = true
-            academicRepo.getNotices(force).collect { res ->
-                if (res is Resource.Success) {
-                    notices = res.data
+            academicRepo.getNotices(forceRefresh = false, cacheOnly = true).collect { res ->
+                when (res) {
+                    is Resource.Success -> {
+                        notices = res.data
+                        cacheError = ""
+                    }
+                    is Resource.Error -> cacheError = res.message
+                    else -> Unit
                 }
             }
+        }
+    }
+
+    /** 手动全量刷新：会话失效时要求重新登录 */
+    fun refreshAll() {
+        coroutineScope.launch {
+            isRefreshing = true
+            val outcome = syncManager.syncAll(manual = true)
+            syncMessage = outcome.message
             isRefreshing = false
+            if (outcome.expired) {
+                authRepo.markSessionExpired(true)
+            } else {
+                loadCache()
+            }
         }
     }
 
     LaunchedEffect(Unit) {
-        loadData(force = false)
+        loadCache()
     }
 
     Box(modifier = modifier.fillMaxSize()) {
         AppPullToRefreshBox(
             isRefreshing = isRefreshing,
-            onRefresh = { loadData(force = true) },
+            onRefresh = { refreshAll() },
             modifier = Modifier.fillMaxSize()
         ) {
             LazyColumn(
@@ -77,8 +103,41 @@ fun NoticesSettingsScreen(
                     bottom = LocalBottomContentInset.current + 32.dp
                 )
             ) {
-                // 页面标题（作为滚动内容，可穿透状态栏）
-                item { PageHeaderTitle("通知与应用设置") }
+                // 第一行：页面标题 + 手动刷新按钮（登录后教务数据不再自动获取）
+                item {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            PageHeaderTitle("通知与应用设置", modifier = Modifier.weight(1f))
+                            FilledTonalIconButton(
+                                onClick = { refreshAll() },
+                                enabled = !isSyncing
+                            ) {
+                                if (isSyncing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "手动刷新教务数据"
+                                    )
+                                }
+                            }
+                        }
+                        if (syncMessage.isNotEmpty()) {
+                            Text(
+                                text = syncMessage,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                }
 
                 // Section: Academic Notices
                 item {
@@ -101,7 +160,7 @@ fun NoticesSettingsScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                         ) {
                             Text(
-                                text = "暂无新的教务公告",
+                                text = cacheError.ifEmpty { "暂无新的教务公告" },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.outline,
                                 modifier = Modifier.padding(16.dp)

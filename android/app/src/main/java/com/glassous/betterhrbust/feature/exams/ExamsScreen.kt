@@ -35,29 +35,51 @@ fun ExamsScreen(
 ) {
     val app = remember { BetterHrbustApp.instance }
     val academicRepo = remember { app.academicRepository }
+    val authRepo = remember { app.authRepository }
     val prefsManager = remember { app.preferencesManager }
+    val syncManager = remember { app.syncManager }
     val coroutineScope = rememberCoroutineScope()
 
     val prefs by prefsManager.preferencesFlow.collectAsState(initial = null)
+    val isSyncing by syncManager.isSyncing.collectAsState()
     var isRefreshing by remember { mutableStateOf(false) }
     var examList by remember { mutableStateOf<List<ExamItem>>(emptyList()) }
+    var cacheError by remember { mutableStateOf("") }
 
-    fun loadData(force: Boolean = false) {
+    /** 读取本地缓存（离线只读，不联网） */
+    fun loadCache() {
         val currentPrefs = prefs ?: return
         coroutineScope.launch {
-            isRefreshing = true
-            academicRepo.getExams(currentPrefs.studentId, force).collect { res ->
-                if (res is Resource.Success) {
-                    examList = res.data
+            academicRepo.getExams(currentPrefs.studentId, cacheOnly = true).collect { res ->
+                when (res) {
+                    is Resource.Success -> {
+                        examList = res.data
+                        cacheError = ""
+                    }
+                    is Resource.Error -> cacheError = res.message
+                    else -> Unit
                 }
             }
-            isRefreshing = false
         }
     }
 
-    LaunchedEffect(prefs?.studentId) {
+    /** 手动全量刷新：会话失效时要求重新登录 */
+    fun refreshAll() {
+        coroutineScope.launch {
+            isRefreshing = true
+            val outcome = syncManager.syncAll(manual = true)
+            isRefreshing = false
+            if (outcome.expired) {
+                authRepo.markSessionExpired(true)
+            } else {
+                loadCache()
+            }
+        }
+    }
+
+    LaunchedEffect(prefs?.studentId, prefs?.lastFullSyncDate) {
         if (prefs != null && prefs!!.studentId.isNotEmpty()) {
-            loadData(force = false)
+            loadCache()
         }
     }
 
@@ -67,14 +89,17 @@ fun ExamsScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         AppPullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = { loadData(force = true) },
+            isRefreshing = isRefreshing || isSyncing,
+            onRefresh = { refreshAll() },
             modifier = Modifier.fillMaxSize()
         ) {
-            if (examList.isEmpty() && isRefreshing) {
+            if (examList.isEmpty() && (isRefreshing || isSyncing)) {
                 LoadingView(message = "正在获取考试安排...")
             } else if (examList.isEmpty()) {
-                EmptyView(title = "暂无考试安排", description = "教务系统目前未公布您的考试日程")
+                EmptyView(
+                    title = "暂无考试安排",
+                    description = cacheError.ifEmpty { "教务系统目前未公布您的考试日程" }
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),

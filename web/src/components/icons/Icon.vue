@@ -179,8 +179,9 @@ defineProps({
     type: String,
     required: true
   },
+  // 允许传入字符串或类名数组（Vue 的 class 绑定会自动展平嵌套数组）
   customClass: {
-    type: String,
+    type: [String, Array, Object],
     default: 'w-5 h-5'
   },
   viewBox: {

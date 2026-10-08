@@ -1,8 +1,27 @@
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { academicApi } from '@/services/academic/api.js';
+import { clearRegisteredDataCaches } from '@/composables/dataCacheBridge.js';
 
 const SESSION_FLAG_KEY = 'better_hrbust_has_session';
 const SESSION_CACHE_KEY = 'better_hrbust_cached_profile';
+const LAST_LOGIN_KEY = 'better_hrbust_last_login_at';
+const LAST_PROMPT_KEY = 'better_hrbust_session_prompt_at';
+const PROMPT_ACTIVE_KEY = 'better_hrbust_session_prompt_active';
+const SESSION_EXPIRED_KEY = 'better_hrbust_session_expired';
+
+/**
+ * 会话失效提示间隔：一周
+ * 规则：
+ * - 上次登录在一周内且用户未手动刷新 → 不主动提示，仅在登录页展示"登录状态已失效"；
+ * - 用户手动刷新 → 无条件要求重新登录；
+ * - 距上次提示满一周 → 提示一次；用户忽略则再过一周再提示，以此类推。
+ */
+const PROMPT_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function readNumber(key) {
+  const n = Number(localStorage.getItem(key));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
 
 const hasSavedSession = localStorage.getItem(SESSION_FLAG_KEY) === 'true';
 const savedProfile = (() => {
@@ -14,12 +33,21 @@ const savedProfile = (() => {
 })();
 
 const isLoggedIn = ref(hasSavedSession);
-const isSessionExpired = ref(false);
+// 会话失效状态持久化：冷启动后仍能展示"登录状态已失效"与按周节流后的横幅
+const isSessionExpired = ref(localStorage.getItem(SESSION_EXPIRED_KEY) === 'true');
 const authChecked = ref(false);
 const isCheckingAuth = ref(false);
 const isLoggingIn = ref(false);
 const showLoginModal = ref(false);
 const loginError = ref('');
+
+// 会话失效提示节流状态
+const lastLoginAt = ref(readNumber(LAST_LOGIN_KEY));
+const lastPromptAt = ref(readNumber(LAST_PROMPT_KEY));
+/** 当前这一轮失效是否已经决定要提示（本轮提示一旦触发则持续展示，直到重新登录） */
+const promptActive = ref(localStorage.getItem(PROMPT_ACTIVE_KEY) === 'true');
+/** 本次运行期间是否已对当前这一轮失效做过节流判定（重新打开应用后归零） */
+let promptDecided = false;
 
 const studentId = ref(savedProfile?.internalId || ''); // 教务内部学生 ID
 const studentNumber = ref(localStorage.getItem('saved_student_number') || savedProfile?.studentNumber || '');
@@ -35,10 +63,12 @@ function navigateTo(tab) {
 }
 
 const currentWeek = ref(6);
+// yearId / termId 初始留空：只有从教务上下文拿到真实值后才允许请求课表，
+// 避免上下文获取失败时用硬编码学期覆盖本地正确缓存
 const currentSemester = reactive({
   name: '2025-2026学年 秋季学期',
-  yearId: '46',
-  termId: '2',
+  yearId: '',
+  termId: '',
   startDate: ''
 });
 
@@ -82,17 +112,77 @@ function resetProfile() {
   localStorage.removeItem(SESSION_FLAG_KEY);
 }
 
+/** 会话已失效但本地仍有缓存数据 → 进入离线只读模式 */
+const offlineMode = computed(() => isSessionExpired.value && !isLoggedIn.value);
+
+/** 是否展示"登录状态已失效"提示（按周节流后的最终判定） */
+const shouldShowSessionBanner = computed(() => isSessionExpired.value && promptActive.value);
+
+/** 登录页需要展示"登录状态已失效"（不满足提示条件时仅在此处体现） */
+const showLoginPageExpiredHint = computed(() => isSessionExpired.value);
+
+/**
+ * 标记会话失效，并按"一周节流"规则决定是否提示
+ * @param {Object} [options]
+ * @param {boolean} [options.manual] 是否由用户手动刷新触发（手动刷新无条件要求重新登录）
+ */
+function markSessionExpired(options = {}) {
+  const manual = options.manual === true;
+  isSessionExpired.value = true;
+  isLoggedIn.value = false;
+  localStorage.setItem(SESSION_EXPIRED_KEY, 'true');
+  localStorage.removeItem(SESSION_FLAG_KEY);
+
+  // 本次运行期间本轮失效已判定过 → 不重复评估，避免提示时间被后续请求不断后推；
+  // 重新打开应用后 promptDecided 归零，故"再过一周再提示"仍能生效
+  if (promptDecided && !manual) return;
+  promptDecided = true;
+
+  const now = Date.now();
+  const base = Math.max(lastLoginAt.value || 0, lastPromptAt.value || 0);
+
+  if (manual || base === 0 || now - base >= PROMPT_INTERVAL_MS) {
+    // 触发一次提示：记录提示时间，作为下一次提示的起点
+    promptActive.value = true;
+    lastPromptAt.value = now;
+    localStorage.setItem(LAST_PROMPT_KEY, String(now));
+    localStorage.setItem(PROMPT_ACTIVE_KEY, 'true');
+  } else {
+    promptActive.value = false;
+    localStorage.removeItem(PROMPT_ACTIVE_KEY);
+  }
+}
+
+/** 会话恢复有效（登录成功或校验通过）时清理失效状态 */
+function clearSessionExpired() {
+  isSessionExpired.value = false;
+  promptActive.value = false;
+  promptDecided = false;
+  lastPromptAt.value = 0;
+  localStorage.removeItem(LAST_PROMPT_KEY);
+  localStorage.removeItem(PROMPT_ACTIVE_KEY);
+  localStorage.removeItem(SESSION_EXPIRED_KEY);
+}
+
+function recordLoginTime() {
+  lastLoginAt.value = Date.now();
+  localStorage.setItem(LAST_LOGIN_KEY, String(lastLoginAt.value));
+}
+
 /**
  * 校验当前会话并同步身份
+ * @param {Object} [options]
+ * @param {boolean} [options.light] 轻量模式：仅校验上下文，不拉取档案与校历（用于日常打开时的静默校验）
  */
-async function checkAuth() {
+async function checkAuth(options = {}) {
+  const light = options.light === true;
   if (isCheckingAuth.value) return isLoggedIn.value;
   isCheckingAuth.value = true;
   try {
     const ctx = await academicApi.getStudentContext();
     if (ctx.studentId) {
       isLoggedIn.value = true;
-      isSessionExpired.value = false;
+      clearSessionExpired();
       studentId.value = ctx.studentId;
       userProfile.internalId = ctx.studentId;
       if (ctx.year) currentSemester.yearId = ctx.year;
@@ -100,41 +190,43 @@ async function checkAuth() {
 
       localStorage.setItem(SESSION_FLAG_KEY, 'true');
 
-      // 顺带拉取个人基本信息与周次
-      try {
-        const info = await academicApi.getPersonalInfo();
-        Object.assign(userProfile, info);
-        userProfile.internalId = ctx.studentId;
-        if (info.studentNumber) studentNumber.value = info.studentNumber;
-        localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(userProfile));
-      } catch {
-        // 忽略局部非关键错误
-      }
+      if (!light) {
+        // 顺带拉取个人基本信息与周次
+        try {
+          const info = await academicApi.getPersonalInfo();
+          Object.assign(userProfile, info);
+          userProfile.internalId = ctx.studentId;
+          if (info.studentNumber) studentNumber.value = info.studentNumber;
+          localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(userProfile));
+        } catch {
+          // 忽略局部非关键错误
+        }
 
-      try {
-        const cal = await academicApi.getCalendarInfo();
-        if (cal.currentWeek) currentWeek.value = cal.currentWeek;
-        if (cal.semesterName) currentSemester.name = cal.semesterName;
-      } catch {
-        // 忽略
+        try {
+          const cal = await academicApi.getCalendarInfo();
+          if (cal.currentWeek) currentWeek.value = cal.currentWeek;
+          if (cal.semesterName) currentSemester.name = cal.semesterName;
+        } catch {
+          // 忽略
+        }
       }
 
       return true;
+    }
+
+    // 未检测到有效 studentId，判定为会话失效
+    if (studentNumber.value || hasSavedSession) {
+      markSessionExpired({ manual: false });
     } else {
-      // 未检测到有效 studentId，判定为会话失效
-      if (studentNumber.value || hasSavedSession) {
-        isSessionExpired.value = true;
-      }
       isLoggedIn.value = false;
-      localStorage.removeItem(SESSION_FLAG_KEY);
     }
   } catch {
     // 异常（如重定向登录页/断网），若先前有学号或会话标记则判定为会话过期
     if (studentNumber.value || hasSavedSession) {
-      isSessionExpired.value = true;
+      markSessionExpired({ manual: false });
+    } else {
+      isLoggedIn.value = false;
     }
-    isLoggedIn.value = false;
-    localStorage.removeItem(SESSION_FLAG_KEY);
   } finally {
     isCheckingAuth.value = false;
     authChecked.value = true;
@@ -162,34 +254,18 @@ async function login({ username, password, captcha, remember = true }) {
     }
     studentNumber.value = username;
 
-    // 同步上下文
+    // 仅同步上下文（内部学生 ID 与当前学年学期）：
+    // 档案 / 校历 / 课表 / 成绩等全量数据统一交给 useAcademicData.syncAll() 拉取，避免重复请求
     const ctx = await academicApi.getStudentContext();
     studentId.value = ctx.studentId;
     userProfile.internalId = ctx.studentId;
     if (ctx.year) currentSemester.yearId = ctx.year;
     if (ctx.term) currentSemester.termId = ctx.term;
-
-    try {
-      const info = await academicApi.getPersonalInfo();
-      Object.assign(userProfile, info);
-      userProfile.internalId = ctx.studentId;
-      if (!userProfile.studentNumber) userProfile.studentNumber = username;
-    } catch {
-      userProfile.studentNumber = username;
-      userProfile.realName = username;
-      userProfile.status = '在籍';
-    }
-
-    try {
-      const cal = await academicApi.getCalendarInfo();
-      if (cal.currentWeek) currentWeek.value = cal.currentWeek;
-      if (cal.semesterName) currentSemester.name = cal.semesterName;
-    } catch {
-      // 忽略
-    }
+    if (!userProfile.studentNumber) userProfile.studentNumber = username;
 
     isLoggedIn.value = true;
-    isSessionExpired.value = false;
+    clearSessionExpired();
+    recordLoginTime();
     authChecked.value = true;
     showLoginModal.value = false;
     localStorage.setItem(SESSION_FLAG_KEY, 'true');
@@ -204,7 +280,7 @@ async function login({ username, password, captcha, remember = true }) {
 }
 
 /**
- * 登出
+ * 登出（同时清理节流时间戳与本地数据缓存）
  */
 async function logout() {
   try {
@@ -214,8 +290,19 @@ async function logout() {
   }
   isLoggedIn.value = false;
   isSessionExpired.value = false;
+  promptActive.value = false;
+  promptDecided = false;
+  lastLoginAt.value = 0;
+  lastPromptAt.value = 0;
   studentId.value = '';
+  localStorage.removeItem(LAST_LOGIN_KEY);
+  localStorage.removeItem(LAST_PROMPT_KEY);
+  localStorage.removeItem(PROMPT_ACTIVE_KEY);
+  localStorage.removeItem(SESSION_EXPIRED_KEY);
   resetProfile();
+
+  // 通过桥接模块清理集中式数据缓存，避免与 useAcademicData 形成循环依赖
+  clearRegisteredDataCaches();
 }
 
 function setWeek(w) {
@@ -239,6 +326,9 @@ export function useSession() {
     navigateTo,
     isLoggedIn,
     isSessionExpired,
+    offlineMode,
+    shouldShowSessionBanner,
+    showLoginPageExpiredHint,
     authChecked,
     isCheckingAuth,
     isLoggingIn,
@@ -249,9 +339,12 @@ export function useSession() {
     currentWeek,
     currentSemester,
     userProfile,
+    lastLoginAt,
+    lastPromptAt,
     checkAuth,
     login,
     logout,
+    markSessionExpired,
     setWeek,
     openLoginModal,
     closeLoginModal

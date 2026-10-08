@@ -92,29 +92,36 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiBadge from '@/components/ui/UiBadge.vue';
 import UiModal from '@/components/ui/UiModal.vue';
 import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
-import { academicApi } from '@/services/academic/api.js';
+import { useAcademicData } from '@/composables/useAcademicData.js';
 
 const { currentWeek } = useSession();
+// 当前周公告来自登录时的全量缓存；只有用户主动切换周次时才按需拉取并缓存该周
+const { notices: cachedNotices, loadNoticesForWeek } = useAcademicData();
 
 const loading = ref(false);
-const notices = ref([]);
+const weekNotices = ref([]);
 const selectedWeek = ref(0);
 const showModal = ref(false);
 const activeNotice = ref(null);
 
+const notices = computed(() =>
+  selectedWeek.value === 0 ? cachedNotices.value || [] : weekNotices.value
+);
+
 async function fetchNotices() {
+  if (selectedWeek.value === 0) {
+    weekNotices.value = [];
+    return;
+  }
   loading.value = true;
   try {
-    const res = await academicApi.getCalendarInfo(selectedWeek.value || undefined);
-    notices.value = res.notices || [];
-  } catch {
-    notices.value = [];
+    weekNotices.value = await loadNoticesForWeek(selectedWeek.value);
   } finally {
     loading.value = false;
   }
@@ -132,8 +139,4 @@ const milestones = [
   { title: '期末统考周', time: '第 18-19 周', desc: '集中进行专业必修与公共课闭卷统考', isPassed: false },
   { title: '寒假开始', time: '第 20 周 (2026.1.18)', desc: '学期结束，成绩公布及录入截止', isPassed: false }
 ];
-
-onMounted(() => {
-  fetchNotices();
-});
 </script>

@@ -76,7 +76,7 @@
             <div class="w-12 h-11 flex items-center justify-center shrink-0">
               <Icon
                 :name="item.icon"
-                :customClass="[
+                :custom-class="[
                   'w-5 h-5 shrink-0 transition-transform duration-150',
                   activeTab === item.id ? '' : 'group-hover:scale-105'
                 ]"

@@ -38,10 +38,6 @@
                 <option v-for="b in buildings" :key="b.id" :value="b.id">{{ b.name }}</option>
               </select>
             </div>
-
-            <UiButton size="sm" variant="ghost" :loading="loading" @click="fetchOptions">
-              刷新教学区
-            </UiButton>
           </div>
         </div>
       </UiCard>

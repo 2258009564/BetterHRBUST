@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-4">
     <!-- Unauthenticated State -->
-    <UiCard v-if="!isLoggedIn" class="py-12 text-center max-w-lg mx-auto">
+    <UiCard v-if="showLoginPrompt" class="py-12 text-center max-w-lg mx-auto">
       <div class="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3 text-zinc-600 dark:text-zinc-300">
         <Icon name="timetable" customClass="w-6 h-6" />
       </div>
@@ -11,6 +11,9 @@
     </UiCard>
 
     <template v-else>
+      <!-- 数据来源提示：全部走本地缓存，刷新统一由顶栏按钮完成 -->
+      <div class="text-[11px] text-zinc-400 dark:text-zinc-500">上次同步：{{ lastSyncText }}</div>
+
       <!-- Top Controls: Section mode, Week selector, Actions -->
       <UiCard bodyClass="p-4">
         <div class="flex flex-wrap items-center justify-between gap-4">
@@ -63,19 +66,14 @@
             </button>
           </div>
 
-          <!-- Right: View switch, reload & ICS export -->
+          <!-- Right: View switch & ICS export（数据刷新统一由顶栏按钮完成） -->
           <div class="flex items-center gap-2.5">
-            <UiButton size="sm" variant="ghost" :loading="loading" @click="fetchTimetable">
-              刷新课表
-            </UiButton>
-
             <UiTabs
               :items="[
                 { label: '大节模式 (COMBINE)', value: 'combine' },
                 { label: '小节模式 (BASE)', value: 'base' }
               ]"
               v-model="viewMode"
-              @update:modelValue="fetchTimetable"
             />
 
             <UiButton size="sm" variant="outline" @click="exportIcs">
@@ -239,30 +237,39 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiTabs from '@/components/ui/UiTabs.vue';
 import UiDrawer from '@/components/ui/UiDrawer.vue';
 import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
+import { useAcademicData } from '@/composables/useAcademicData.js';
 import { useToast } from '@/composables/useToast.js';
-import { academicApi } from '@/services/academic/api.js';
 import { BASE_SLOT_TIMES, COMBINE_SLOT_TIMES } from '@/utils/periodTimes.js';
 import { getCourseColor, COURSE_MUTED } from '@/utils/courseColors.js';
 import { isCourseActiveInWeek } from '@/utils/courseWeeks.js';
 
-const { isLoggedIn, studentId, currentWeek, currentSemester, openLoginModal } = useSession();
+const { isLoggedIn, isSessionExpired, currentWeek } = useSession();
+// 课表数据来自登录时的全量缓存，切换周次/视图不再触网
+const { timetableCombine, timetableBase, syncing, lastSyncText } = useAcademicData();
 const { showToast } = useToast();
+
+// 会话失效但仍持有离线缓存时，继续展示课表而非登录引导
+const showLoginPrompt = computed(() => !isLoggedIn.value && !isSessionExpired.value);
 
 const selectedWeek = ref(currentWeek.value);
 const onlyCurrentWeek = ref(false);
 const viewMode = ref('combine'); // 'combine' | 'base'
 const currentDayIndex = ref(new Date().getDay() || 7);
 
-const loading = ref(false);
-const courses = ref([]);
-const unarrangedCourses = ref([]);
+const loading = computed(() => syncing.value && activeTimetable.value.cells.length === 0);
+
+const activeTimetable = computed(() =>
+  viewMode.value === 'combine' ? timetableCombine.value : timetableBase.value
+);
+const courses = computed(() => activeTimetable.value.cells || []);
+const unarrangedCourses = computed(() => activeTimetable.value.unarranged || []);
 
 const showDrawer = ref(false);
 const selectedCourse = ref(null);
@@ -320,25 +327,6 @@ function openCourseDetail(course) {
   showDrawer.value = true;
 }
 
-async function fetchTimetable() {
-  if (!isLoggedIn.value || !studentId.value) return;
-  loading.value = true;
-  try {
-    const res = await academicApi.getTimetable({
-      studentId: studentId.value,
-      yearId: currentSemester.yearId || '46',
-      termId: currentSemester.termId || '2',
-      sectionType: viewMode.value === 'combine' ? 'COMBINE' : 'BASE'
-    });
-    courses.value = res.cells || [];
-    unarrangedCourses.value = res.unarranged || [];
-  } catch (err) {
-    showToast({ title: '课表加载失败', message: err.message, type: 'danger' });
-  } finally {
-    loading.value = false;
-  }
-}
-
 function exportIcs() {
   if (courses.value.length === 0) {
     showToast({ title: '暂无可导出的课程数据', type: 'warning' });
@@ -356,12 +344,4 @@ function exportIcs() {
   URL.revokeObjectURL(url);
   showToast({ title: '日历已成功导出', message: '已生成 .ics 标准日历文件', type: 'success' });
 }
-
-watch(isLoggedIn, (val) => {
-  if (val) fetchTimetable();
-});
-
-onMounted(() => {
-  if (isLoggedIn.value) fetchTimetable();
-});
 </script>

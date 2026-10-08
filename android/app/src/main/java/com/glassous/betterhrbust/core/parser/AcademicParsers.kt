@@ -428,66 +428,14 @@ object AcademicParsers {
         return ScoreResult(scores = scores, yearOptions = yearOptions)
     }
 
-    fun calculateGpaStats(scores: List<ScoreItem>): ScoreStats {
-        var totalCredits = 0.0
-        var earnedCredits = 0.0
-        var totalScoreWeight = 0.0
-        var totalGpaWeight = 0.0
-        var failedCount = 0
-        var excCount = 0
-
-        for (item in scores) {
-            val cr = item.credit
-            totalCredits += cr
-            if (item.passed) {
-                earnedCredits += cr
-            } else {
-                failedCount++
-            }
-
-            val num = item.score.toDoubleOrNull()
-            if (num != null) {
-                totalScoreWeight += num * cr
-                if (num >= 90.0) excCount++
-                val gp = if (num >= 60.0) min(4.0, (num - 50.0) / 10.0) else 0.0
-                totalGpaWeight += gp * cr
-            } else {
-                // 等级制折算
-                val gp = when (item.score) {
-                    "优秀", "优" -> 4.0
-                    "良好", "良" -> 3.5
-                    "中等", "中" -> 2.5
-                    "及格" -> 1.5
-                    else -> 0.0
-                }
-                totalGpaWeight += gp * cr
-                val estimatedScore = when (item.score) {
-                    "优秀", "优" -> 95.0
-                    "良好", "良" -> 85.0
-                    "中等", "中" -> 75.0
-                    "及格" -> 65.0
-                    else -> 0.0
-                }
-                if (estimatedScore > 0) {
-                    totalScoreWeight += estimatedScore * cr
-                    if (estimatedScore >= 90.0) excCount++
-                }
-            }
-        }
-
-        val gpa = if (totalCredits > 0) totalGpaWeight / totalCredits else 0.0
-        val weightedAvg = if (totalCredits > 0) totalScoreWeight / totalCredits else 0.0
-        val excellentRate = if (scores.isNotEmpty()) (excCount.toDouble() / scores.size.toDouble()) * 100.0 else 0.0
-
-        return ScoreStats(
-            gpa = Math.round(gpa * 100.0) / 100.0,
-            weightedAvg = Math.round(weightedAvg * 10.0) / 10.0,
-            totalCredits = totalCredits,
-            earnedCredits = earnedCredits,
-            failedCount = failedCount,
-            excellentRate = Math.round(excellentRate * 10.0) / 10.0
-        )
-    }
+    /**
+     * 学业统计（保留原有签名以兼容既有调用点与单元测试）
+     *
+     * 算法已收敛到 [com.glassous.betterhrbust.core.util.GpaCalculator]：
+     * 五分制绩点、重修/补考合并去重、必修课学分口径与四项特色算法。
+     */
+    fun calculateGpaStats(scores: List<ScoreItem>): ScoreStats =
+        com.glassous.betterhrbust.core.util.GpaCalculator.buildStats(scores)
 
     fun parseExams(html: String): List<ExamItem> {
         val cleanHtml = stripHtmlComments(html)

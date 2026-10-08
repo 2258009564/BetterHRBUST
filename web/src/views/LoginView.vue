@@ -33,6 +33,20 @@
           </div>
         </div>
 
+        <!-- Session Expired Notice -->
+        <div
+          v-if="showLoginPageExpiredHint && !isLoggedIn"
+          class="p-4 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-3"
+        >
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 mt-1" />
+          <div class="min-w-0">
+            <div class="font-bold text-sm">登录状态已失效</div>
+            <div class="text-[12px] text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+              教务会话已过期，本地缓存的课表 / 成绩 / 考试数据仍可离线查看；重新登录后即可手动刷新最新数据。
+            </div>
+          </div>
+        </div>
+
         <!-- Error Alert -->
         <div
           v-if="errorMessage"
@@ -193,6 +207,7 @@ const {
   userProfile,
   studentNumber,
   isLoggingIn,
+  showLoginPageExpiredHint,
   login,
   navigateTo
 } = useSession();

@@ -145,7 +145,91 @@ data class ScoreStats(
     val totalCredits: Double,
     val earnedCredits: Double,
     val failedCount: Int,
-    val excellentRate: Double
+    val excellentRate: Double,
+    // ---- 以下为五分制改造新增字段，均带默认值以保证向后兼容 ----
+    /** 累计挂科学分（去重后仍未通过的课程学分之和） */
+    val failedCredits: Double = 0.0,
+    /** 参与统计的必修课门数（去重后） */
+    val courseCount: Int = 0,
+    /** 原始成绩记录条数 */
+    val rawCourseCount: Int = 0,
+    /** 去重后课程总门数（含选修，仅用于展示合并效果） */
+    val dedupedCount: Int = 0,
+    val degree: DegreeStats = DegreeStats(),
+    val recommend: RecommendStats = RecommendStats(),
+    val risk: RiskStats = RiskStats(),
+    val earlyGraduation: EarlyGradStats = EarlyGradStats()
+)
+
+/** 特色算法 ① 学位证：学位课（必修 + 限选）平均学分绩点与达标判定 */
+@Serializable
+data class DegreeStats(
+    val gpa: Double = 0.0,
+    val courseCount: Int = 0,
+    val requiredCredits: Double = 0.0,
+    val earnedCredits: Double = 0.0,
+    val allPassed: Boolean = false,
+    val threshold: Double = 1.5,
+    val qualified: Boolean = false
+)
+
+/** 特色算法 ② 推免 / 保研资格自检（必修课口径） */
+@Serializable
+data class RecommendStats(
+    val gpa: Double = 0.0,
+    val courseCount: Int = 0,
+    val allPassed: Boolean = false,
+    val retakeCount: Int = 0,
+    val retakeLimit: Int = 2,
+    val qualified: Boolean = false
+)
+
+/** 特色算法 ③ 学业风险预警（累计挂科学分） */
+@Serializable
+data class RiskStats(
+    val failedCredits: Double = 0.0,
+    val downgradeLine: Double = 15.0,
+    val expelLine: Double = 25.0,
+    /** none / downgrade / expel */
+    val level: String = "none",
+    val label: String = "正常",
+    val description: String = ""
+)
+
+/** 特色算法 ④ 提前毕业判定 */
+@Serializable
+data class EarlyGradStats(
+    val gpa: Double = 0.0,
+    val threshold: Double = 4.0,
+    val qualified: Boolean = false
+)
+
+/** 去重后的课程记录（附带合并标记），用于成绩列表展示 */
+@Serializable
+data class DedupedScore(
+    val item: ScoreItem,
+    val recordCount: Int = 1,
+    val isRetake: Boolean = false,
+    val gradePoint: Double = 0.0
+)
+
+/** 培养方案课组学分完成度（概览页与培养方案页共用口径） */
+@Serializable
+data class CreditCategory(
+    val name: String,
+    val property: String = "",
+    val required: Double = 0.0,
+    val earned: Double = 0.0
+)
+
+@Serializable
+data class CreditsProgress(
+    val categories: List<CreditCategory> = emptyList(),
+    val earnedTotal: Double = 0.0,
+    val requiredTotal: Double = 160.0,
+    val completionPercent: Int = 0,
+    /** 是否只统计必修课（选修课不计入已获得学分） */
+    val requiredOnly: Boolean = true
 )
 
 @Serializable

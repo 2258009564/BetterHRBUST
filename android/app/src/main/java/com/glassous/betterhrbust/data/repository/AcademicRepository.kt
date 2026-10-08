@@ -23,7 +23,8 @@ class AcademicRepository(
         studentId: String,
         year: String,
         term: String,
-        forceRefresh: Boolean = false
+        forceRefresh: Boolean = false,
+        cacheOnly: Boolean = false
     ): Flow<Resource<TimetableResult>> = flow {
         emit(Resource.Loading)
 
@@ -33,7 +34,14 @@ class AcademicRepository(
             try {
                 val cached = json.decodeFromString<TimetableResult>(localEntity.json)
                 emit(Resource.Success(cached, isOfflineCache = true))
+                // 离线只读模式：命中缓存后不再联网
+                if (cacheOnly) return@flow
             } catch (_: Exception) {}
+        }
+
+        if (cacheOnly) {
+            emit(Resource.Error("本地暂无课表缓存，请在顶部刷新数据"))
+            return@flow
         }
 
         // 2. Fetch remote
@@ -59,7 +67,11 @@ class AcademicRepository(
         }
     }
 
-    fun getScores(studentId: String, forceRefresh: Boolean = false): Flow<Resource<ScoreResult>> = flow {
+    fun getScores(
+        studentId: String,
+        forceRefresh: Boolean = false,
+        cacheOnly: Boolean = false
+    ): Flow<Resource<ScoreResult>> = flow {
         emit(Resource.Loading)
 
         val localEntity = database.scoreDao().getScores(studentId).firstOrNull()
@@ -67,7 +79,14 @@ class AcademicRepository(
             try {
                 val cached = json.decodeFromString<ScoreResult>(localEntity.json)
                 emit(Resource.Success(cached, isOfflineCache = true))
+                // 离线只读模式：命中缓存后不再联网
+                if (cacheOnly) return@flow
             } catch (_: Exception) {}
+        }
+
+        if (cacheOnly) {
+            emit(Resource.Error("本地暂无成绩缓存，请在顶部刷新数据"))
+            return@flow
         }
 
         try {
@@ -94,7 +113,11 @@ class AcademicRepository(
         }
     }
 
-    fun getExams(studentId: String, forceRefresh: Boolean = false): Flow<Resource<List<ExamItem>>> = flow {
+    fun getExams(
+        studentId: String,
+        forceRefresh: Boolean = false,
+        cacheOnly: Boolean = false
+    ): Flow<Resource<List<ExamItem>>> = flow {
         emit(Resource.Loading)
 
         val localEntity = database.examDao().getExams(studentId).firstOrNull()
@@ -102,7 +125,14 @@ class AcademicRepository(
             try {
                 val cached = json.decodeFromString<List<ExamItem>>(localEntity.json)
                 emit(Resource.Success(cached, isOfflineCache = true))
+                // 离线只读模式：命中缓存后不再联网
+                if (cacheOnly) return@flow
             } catch (_: Exception) {}
+        }
+
+        if (cacheOnly) {
+            emit(Resource.Error("本地暂无考试缓存，请在顶部刷新数据"))
+            return@flow
         }
 
         try {
@@ -128,7 +158,11 @@ class AcademicRepository(
         }
     }
 
-    fun getPersonalInfo(studentNumber: String, forceRefresh: Boolean = false): Flow<Resource<PersonalInfo>> = flow {
+    fun getPersonalInfo(
+        studentNumber: String,
+        forceRefresh: Boolean = false,
+        cacheOnly: Boolean = false
+    ): Flow<Resource<PersonalInfo>> = flow {
         emit(Resource.Loading)
 
         val localEntity = database.profileDao().getProfile(studentNumber).firstOrNull()
@@ -136,7 +170,14 @@ class AcademicRepository(
             try {
                 val cached = json.decodeFromString<PersonalInfo>(localEntity.json)
                 emit(Resource.Success(cached, isOfflineCache = true))
+                // 离线只读模式：命中缓存后不再联网
+                if (cacheOnly) return@flow
             } catch (_: Exception) {}
+        }
+
+        if (cacheOnly) {
+            emit(Resource.Error("本地暂无档案缓存，请在顶部刷新数据"))
+            return@flow
         }
 
         try {
@@ -160,7 +201,11 @@ class AcademicRepository(
         }
     }
 
-    fun getCurriculumPlan(studentId: String, forceRefresh: Boolean = false): Flow<Resource<CurriculumPlanResult>> = flow {
+    fun getCurriculumPlan(
+        studentId: String,
+        forceRefresh: Boolean = false,
+        cacheOnly: Boolean = false
+    ): Flow<Resource<CurriculumPlanResult>> = flow {
         emit(Resource.Loading)
 
         val localEntity = database.curriculumDao().getPlan(studentId).firstOrNull()
@@ -168,7 +213,14 @@ class AcademicRepository(
             try {
                 val cached = json.decodeFromString<CurriculumPlanResult>(localEntity.json)
                 emit(Resource.Success(cached, isOfflineCache = true))
+                // 离线只读模式：命中缓存后不再联网
+                if (cacheOnly) return@flow
             } catch (_: Exception) {}
+        }
+
+        if (cacheOnly) {
+            emit(Resource.Error("本地暂无培养方案缓存，请在顶部刷新数据"))
+            return@flow
         }
 
         try {
@@ -233,13 +285,23 @@ class AcademicRepository(
         }
     }
 
-    fun getNotices(forceRefresh: Boolean = false): Flow<Resource<List<NoticeItem>>> = flow {
+    fun getNotices(
+        forceRefresh: Boolean = false,
+        cacheOnly: Boolean = false
+    ): Flow<Resource<List<NoticeItem>>> = flow {
         emit(Resource.Loading)
 
         val localEntities = database.noticeDao().getNotices().firstOrNull()
         if (!localEntities.isNullOrEmpty() && !forceRefresh) {
             val list = localEntities.map { NoticeItem(id = it.id, title = it.title, content = it.content, date = it.date) }
             emit(Resource.Success(list, isOfflineCache = true))
+            // 离线只读模式：命中缓存后不再联网
+            if (cacheOnly) return@flow
+        }
+
+        if (cacheOnly) {
+            emit(Resource.Error("本地暂无公告缓存，请在顶部刷新数据"))
+            return@flow
         }
 
         try {

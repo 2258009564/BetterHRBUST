@@ -22,6 +22,20 @@
       <span class="text-[11px] text-zinc-400 shrink-0">重新认证或换号</span>
     </div>
 
+    <!-- Session Expired Notice -->
+    <div
+      v-if="showLoginPageExpiredHint && !isLoggedIn"
+      class="mb-4 p-3 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5"
+    >
+      <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 mt-1" />
+      <div class="min-w-0">
+        <div class="font-semibold">登录状态已失效</div>
+        <div class="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+          本地缓存数据仍可离线查看，重新登录后即可手动刷新。
+        </div>
+      </div>
+    </div>
+
     <!-- Error Alert -->
     <div
       v-if="errorMessage"
@@ -180,7 +194,8 @@ const props = defineProps({
 
 const emit = defineEmits(['success']);
 
-const { isLoggingIn, loginError, login, studentNumber, isLoggedIn, userProfile } = useSession();
+const { isLoggingIn, loginError, login, studentNumber, isLoggedIn, userProfile, showLoginPageExpiredHint } =
+  useSession();
 
 const showPassword = ref(false);
 const rememberMe = ref(true);

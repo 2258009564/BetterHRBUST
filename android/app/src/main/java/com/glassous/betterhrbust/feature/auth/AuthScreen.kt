@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +46,7 @@ fun AuthScreen(
     val authRepo = remember { BetterHrbustApp.instance.authRepository }
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+    val isSessionExpired by authRepo.isSessionExpired.collectAsState()
 
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -180,6 +182,31 @@ fun AuthScreen(
                     }
 
                     Spacer(modifier = Modifier.height(28.dp))
+
+                    // 会话失效提示：不满足"一周节流"条件时此处仍会展示（仅登录页告知）
+                    if (isSessionExpired) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFFFF7E6)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "登录状态已失效",
+                                    color = Color(0xFF92400E),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "教务会话已过期，本地缓存的课表 / 成绩 / 考试数据仍可离线查看；重新登录后即可手动刷新最新数据。",
+                                    color = Color(0xFF92400E),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
 
                     if (errorMessage != null) {
                         Surface(

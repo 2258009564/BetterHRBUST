@@ -24,6 +24,7 @@ import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.LoadingView
+import com.glassous.betterhrbust.core.util.GpaCalculator
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -42,60 +43,84 @@ fun DashboardScreen(
 ) {
     val app = remember { BetterHrbustApp.instance }
     val academicRepo = remember { app.academicRepository }
+    val authRepo = remember { app.authRepository }
     val prefsManager = remember { app.preferencesManager }
+    val syncManager = remember { app.syncManager }
     val coroutineScope = rememberCoroutineScope()
 
     val prefs by prefsManager.preferencesFlow.collectAsState(initial = null)
+    val isSyncing by syncManager.isSyncing.collectAsState()
     var isRefreshing by remember { mutableStateOf(false) }
 
     var profile by remember { mutableStateOf<PersonalInfo?>(null) }
     var timetable by remember { mutableStateOf<TimetableResult?>(null) }
     var scoreResult by remember { mutableStateOf<ScoreResult?>(null) }
     var exams by remember { mutableStateOf<List<ExamItem>>(emptyList()) }
+    var plan by remember { mutableStateOf<CurriculumPlanResult?>(null) }
 
-    fun refreshData(force: Boolean = false) {
+    /**
+     * 读取本地缓存（离线只读，不联网）
+     * 教务数据仅在登录成功、每天首次打开与手动刷新三种情况下获取
+     */
+    fun loadCache() {
         val currentPrefs = prefs ?: return
         coroutineScope.launch {
-            isRefreshing = true
-            // Load Profile
             if (currentPrefs.username.isNotEmpty()) {
-                academicRepo.getPersonalInfo(currentPrefs.username, force).collect { res ->
+                academicRepo.getPersonalInfo(currentPrefs.username, cacheOnly = true).collect { res ->
                     if (res is Resource.Success) profile = res.data
                 }
             }
-            // Load Timetable
             if (currentPrefs.studentId.isNotEmpty()) {
-                academicRepo.getTimetable(currentPrefs.studentId, currentPrefs.year, currentPrefs.term, force).collect { res ->
+                academicRepo.getTimetable(
+                    currentPrefs.studentId,
+                    currentPrefs.year,
+                    currentPrefs.term,
+                    cacheOnly = true
+                ).collect { res ->
                     if (res is Resource.Success) timetable = res.data
                 }
-            }
-            // Load Scores
-            if (currentPrefs.studentId.isNotEmpty()) {
-                academicRepo.getScores(currentPrefs.studentId, force).collect { res ->
+                academicRepo.getScores(currentPrefs.studentId, cacheOnly = true).collect { res ->
                     if (res is Resource.Success) scoreResult = res.data
                 }
-            }
-            // Load Exams
-            if (currentPrefs.studentId.isNotEmpty()) {
-                academicRepo.getExams(currentPrefs.studentId, force).collect { res ->
+                academicRepo.getExams(currentPrefs.studentId, cacheOnly = true).collect { res ->
                     if (res is Resource.Success) exams = res.data
                 }
+                academicRepo.getCurriculumPlan(currentPrefs.studentId, cacheOnly = true).collect { res ->
+                    if (res is Resource.Success) plan = res.data
+                }
             }
-            // Load teaching week
-            academicRepo.getTeachingWeek().collect {}
-
-            isRefreshing = false
         }
     }
 
-    LaunchedEffect(prefs?.studentId) {
-        if (prefs != null) {
-            refreshData(force = false)
+    /** 手动全量刷新：会话失效时要求重新登录 */
+    fun refreshAll() {
+        coroutineScope.launch {
+            isRefreshing = true
+            val outcome = syncManager.syncAll(manual = true)
+            isRefreshing = false
+            if (outcome.expired) {
+                authRepo.markSessionExpired(true)
+            } else {
+                loadCache()
+            }
+        }
+    }
+
+    LaunchedEffect(prefs?.studentId, prefs?.lastFullSyncDate) {
+        if (prefs != null && prefs!!.studentId.isNotEmpty()) {
+            loadCache()
         }
     }
 
     val stats = remember(scoreResult) {
         scoreResult?.scores?.let { AcademicParsers.calculateGpaStats(it) }
+    }
+
+    // 与"培养方案与学分"页共用同一口径，保证概览页与方案页数据完全一致
+    val creditsProgress = remember(scoreResult, plan) {
+        scoreResult?.scores?.let { scores ->
+            GpaCalculator.computeCreditsProgress(scores, plan?.groups ?: emptyList())
+        }
     }
 
     // Today's courses
@@ -126,8 +151,8 @@ fun DashboardScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         AppPullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = { refreshData(force = true) },
+            isRefreshing = isRefreshing || isSyncing,
+            onRefresh = { refreshAll() },
             modifier = Modifier.fillMaxSize()
         ) {
             LazyColumn(
@@ -210,22 +235,25 @@ fun DashboardScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = stats?.gpa?.toString() ?: "--",
+                                text = stats?.gpa?.let { String.format("%.2f", it) } ?: "--",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                            Text(text = "累计 GPA", style = MaterialTheme.typography.labelSmall)
+                            Text(text = "五分制 GPA（必修）", style = MaterialTheme.typography.labelSmall)
                         }
                         VerticalDivider(modifier = Modifier.height(40.dp))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // 已获得学分：与"培养方案与学分"页同口径（必修课去重后通过学分）
+                            val earned = creditsProgress?.earnedTotal ?: stats?.earnedCredits
+                            val required = creditsProgress?.requiredTotal
                             Text(
-                                text = stats?.earnedCredits?.toString() ?: "--",
+                                text = earned?.let { "${trimNumber(it)}/${required?.let { r -> trimNumber(r) } ?: "--"}" } ?: "--",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.secondary
                             )
-                            Text(text = "已获学分", style = MaterialTheme.typography.labelSmall)
+                            Text(text = "已获学分 / 方案总学分", style = MaterialTheme.typography.labelSmall)
                         }
                         VerticalDivider(modifier = Modifier.height(40.dp))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -236,6 +264,65 @@ fun DashboardScreen(
                                 color = if ((stats?.failedCount ?: 0) > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
                             )
                             Text(text = "未通过门数", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
+
+            // 特色学业算法：学位证 / 推免 / 学业风险预警 / 提前毕业
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "特色学业算法（哈理工口径）",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = GpaCalculator.STATS_SCOPE_NOTE,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            MiniStatColumn(
+                                label = "学位绩点",
+                                value = stats?.degree?.gpa?.let { String.format("%.2f", it) } ?: "--",
+                                highlight = stats?.degree?.qualified == true
+                            )
+                            MiniStatColumn(
+                                label = "补考/重修",
+                                value = stats?.recommend?.let { "${it.retakeCount}/${it.retakeLimit}" } ?: "--",
+                                highlight = stats?.recommend?.qualified == true
+                            )
+                            MiniStatColumn(
+                                label = "挂科学分",
+                                value = stats?.risk?.failedCredits?.let { trimNumber(it) } ?: "--",
+                                highlight = stats?.risk?.level == "none"
+                            )
+                            MiniStatColumn(
+                                label = "提前毕业",
+                                value = if (stats?.earlyGraduation?.qualified == true) "达标" else "未达标",
+                                highlight = stats?.earlyGraduation?.qualified == true
+                            )
+                        }
+                        if (!stats?.risk?.description.isNullOrEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = stats!!.risk.description,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
                         }
                     }
                 }
@@ -440,5 +527,32 @@ fun DashboardScreen(
         }
     }
 }
+}
+
+/** 去除学分等数值末尾多余的 .0，保持紧凑展示 */
+private fun trimNumber(value: Double): String =
+    if (value % 1.0 == 0.0) value.toInt().toString() else String.format("%.1f", value)
+
+/** 概览页特色算法迷你指标列 */
+@Composable
+private fun MiniStatColumn(
+    label: String,
+    value: String,
+    highlight: Boolean
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = if (highlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline
+        )
+    }
 }
 

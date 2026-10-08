@@ -37,14 +37,11 @@
               ]"
               v-model="categoryFilter"
             />
-            <UiButton size="sm" variant="ghost" :loading="loading" @click="fetchCourses">
-              刷新
-            </UiButton>
           </div>
         </div>
       </UiCard>
 
-      <div v-if="loading" class="py-16 text-center text-xs text-zinc-400">
+      <div v-if="syncing && courses.length === 0" class="py-16 text-center text-xs text-zinc-400">
         <Icon name="refresh" customClass="w-5 h-5 animate-spin mx-auto mb-2 text-zinc-500" />
         正在拉取课程名录...
       </div>
@@ -88,7 +85,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiInput from '@/components/ui/UiInput.vue';
 import UiButton from '@/components/ui/UiButton.vue';
@@ -96,66 +93,54 @@ import UiBadge from '@/components/ui/UiBadge.vue';
 import UiTabs from '@/components/ui/UiTabs.vue';
 import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
-import { academicApi } from '@/services/academic/api.js';
+import { useAcademicData } from '@/composables/useAcademicData.js';
 
 const { isLoggedIn, openLoginModal } = useSession();
+// 全部课程名录由登录时的全量缓存拼装，页面不再自动联网
+const { currentCourses, scores } = useAcademicData();
 
-const loading = ref(false);
 const searchKey = ref('');
 const categoryFilter = ref('all');
-const courses = ref([]);
 
-async function fetchCourses() {
-  if (!isLoggedIn.value) return;
-  loading.value = true;
-  try {
-    const [ctx, sc] = await Promise.all([
-      academicApi.getStudentContext().catch(() => ({ courses: [] })),
-      academicApi.getScores().catch(() => ({ scores: [] }))
-    ]);
+const courses = computed(() => {
+  const list = [];
+  const seen = new Set();
 
-    const list = [];
-    const seen = new Set();
+  // 1. 本学期课程
+  (currentCourses.value || []).forEach(c => {
+    if (!c.courseId) return;
+    seen.add(c.courseId);
+    list.push({
+      id: c.courseId,
+      name: c.courseName,
+      property: c.property || '必修',
+      group: '本学期排课',
+      credits: c.credit || 0,
+      hours: 0,
+      teacher: c.teacher || '',
+      isCurrent: true
+    });
+  });
 
-    // 1. 本学期课程
-    (ctx.courses || []).forEach(c => {
-      seen.add(c.courseId);
+  // 2. 成绩单中修读过的课程
+  (scores.value || []).forEach(s => {
+    if (s.courseId && !seen.has(s.courseId)) {
+      seen.add(s.courseId);
       list.push({
-        id: c.courseId,
-        name: c.courseName,
-        property: c.property || '必修',
-        group: '本学期排课',
-        credits: c.credit || 0,
-        hours: 0,
-        teacher: c.teacher || '',
-        isCurrent: true
+        id: s.courseId,
+        name: s.courseName,
+        property: s.property || '必修',
+        group: s.courseGroup || '',
+        credits: s.credit || 0,
+        hours: s.hours || 0,
+        teacher: '',
+        isCurrent: false
       });
-    });
+    }
+  });
 
-    // 2. 成绩单中修读过的课程
-    (sc.scores || []).forEach(s => {
-      if (!seen.has(s.courseId)) {
-        seen.add(s.courseId);
-        list.push({
-          id: s.courseId,
-          name: s.courseName,
-          property: s.property || '必修',
-          group: s.courseGroup || '',
-          credits: s.credit || 0,
-          hours: s.hours || 0,
-          teacher: '',
-          isCurrent: false
-        });
-      }
-    });
-
-    courses.value = list;
-  } catch {
-    courses.value = [];
-  } finally {
-    loading.value = false;
-  }
-}
+  return list;
+});
 
 const filteredCourses = computed(() => {
   return courses.value.filter(c => {
@@ -171,13 +156,5 @@ const filteredCourses = computed(() => {
     }
     return true;
   });
-});
-
-watch(isLoggedIn, (val) => {
-  if (val) fetchCourses();
-});
-
-onMounted(() => {
-  if (isLoggedIn.value) fetchCourses();
 });
 </script>
