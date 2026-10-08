@@ -45,6 +45,7 @@ const header = `// ==UserScript==
 // @run-at       document-end
 // @noframes
 // @grant        GM_registerMenuCommand
+// @grant        unsafeWindow
 // @homepageURL  https://github.com/Glassous/BetterHRBUST
 // @license      MIT
 ${updateMeta}// ==/UserScript==

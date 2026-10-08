@@ -5,6 +5,17 @@
 
 const BASE_PREFIX = '/academic/';
 
+// 请求必须使用页面上下文的 fetch:
+// Tampermonkey 沙箱属于浏览器"安全上下文",Chromium/Edge 会对其发起的 http 请求
+// 做 HTTPS 自动升级,而教务系统 443 端口无 TLS,升级即 ERR_CONNECTION_CLOSED;
+// 若升级失败不能快速回落(如经由代理时 443 慢失败),整个请求直接 Failed to fetch。
+// unsafeWindow.fetch 由油猴 @grant unsafeWindow 提供,发起方变为 http 页面本身,
+// 不参与升级;Web 版没有 unsafeWindow,自然回落 window.fetch。
+const pageFetch =
+  typeof unsafeWindow !== 'undefined' && unsafeWindow && typeof unsafeWindow.fetch === 'function'
+    ? unsafeWindow.fetch.bind(unsafeWindow)
+    : fetch.bind(globalThis);
+
 // 登录页标记特征
 const LOGIN_PAGE_MARKERS = ['j_acegi_security_check', 'getCaptcha.do', 'j_captcha'];
 
@@ -133,7 +144,7 @@ export async function request(path, options = {}) {
 
   let response;
   try {
-    response = await fetch(url, fetchOptions);
+    response = await pageFetch(url, fetchOptions);
   } catch (err) {
     throw new Error(`网络连接失败：${err.message || '无法连接到教务系统，请确认是否处于校园网或VPN环境'}`);
   }
@@ -191,7 +202,7 @@ export async function postLogin(username, password, captcha) {
 
   let res;
   try {
-    res = await fetch(`${BASE_PREFIX}j_acegi_security_check`, {
+    res = await pageFetch(`${BASE_PREFIX}j_acegi_security_check`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -225,7 +236,7 @@ export async function postLogin(username, password, captcha) {
  */
 export async function postLogout() {
   try {
-    await fetch(`${BASE_PREFIX}j_acegi_logout`, {
+    await pageFetch(`${BASE_PREFIX}j_acegi_logout`, {
       credentials: 'include'
     });
   } catch {
