@@ -8,11 +8,11 @@
     <!-- 左侧留空：仅作为可拖拽区域（双击可切换最大化） -->
     <div class="flex-1 h-full"></div>
 
-    <!-- 右侧窗口控制按钮：与侧栏开关按钮同风格 -->
-    <div class="flex items-center gap-2 tb-nodrag">
+    <!-- 右侧窗口控制按钮：幽灵样式（无底色，与标题栏背景融为一体，悬停出现淡色晕染） -->
+    <div class="flex items-center gap-1.5 tb-nodrag">
       <button type="button" title="最小化" :class="btnClass" @click="win.minimize()">
         <svg
-          class="w-4 h-4"
+          class="w-5 h-5"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -30,7 +30,7 @@
       >
         <svg
           v-if="!isMaximized"
-          class="w-4 h-4"
+          class="w-5 h-5"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -42,7 +42,7 @@
         </svg>
         <svg
           v-else
-          class="w-4 h-4"
+          class="w-5 h-5"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -56,7 +56,7 @@
       </button>
       <button type="button" title="关闭" :class="closeClass" @click="win.close()">
         <svg
-          class="w-4 h-4"
+          class="w-5 h-5"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -89,11 +89,12 @@ function onBarMouseDown(e) {
   else win.startDrag();
 }
 
-// 与 AppHeader 侧栏开关按钮同源的样式语言（圆形、白/黑底、细边框、按压缩放）
+// 幽灵按钮：默认与标题栏背景同色（仅图标），悬停出现淡色晕染；
+// 关闭键悬停红色晕染以示区分。无底色/描边/阴影，尺寸放大到 36px。
 const btnBase =
-  'w-8 h-8 rounded-full border flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-95 shadow-sm bg-white text-zinc-800 border-zinc-200/80 dark:bg-black dark:text-zinc-100 dark:border-zinc-800';
-const btnClass = `${btnBase} hover:bg-zinc-50 dark:hover:bg-zinc-900`;
-const closeClass = `${btnBase} hover:bg-red-50 hover:text-red-600 hover:border-red-300 dark:hover:bg-red-500/10 dark:hover:text-red-400 dark:hover:border-red-500/30`;
+  'w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-95 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100';
+const btnClass = `${btnBase} hover:bg-zinc-900/6 dark:hover:bg-[#23262d]`;
+const closeClass = `${btnBase} hover:bg-red-500/10 hover:text-red-600 dark:hover:bg-red-500/15 dark:hover:text-red-400`;
 
 onMounted(async () => {
   if (!win) return;
