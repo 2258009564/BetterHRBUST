@@ -95,5 +95,6 @@ CI（`.github/workflows/build-desktop.yml`）：推送 main 自动构建并以 R
   （Win10/11 一般已随系统更新安装，此路径仅兜底）。
 - **SmartScreen**：应用未做代码签名，首次运行若被拦截，点击「更多信息 → 仍要运行」。
 - **应用图标**：更换时把新的正方形 PNG（建议 1024x1024、透明背景）放到
-  `desktop/build/icon-source.png`，执行 `npm run icon` 重新生成全套，再 `npm run dist`。
+  `desktop-tauri/build/icon-source.png`，执行 `npm run icon` 重新生成全套，再 `npm run dist`
+  （当前图标为项目吉祥物）。
 - 更新版本时同步修改 `desktop-tauri/package.json` 与 `src-tauri/tauri.conf.json` 的 `version`。

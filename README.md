@@ -1,5 +1,16 @@
 # BetterHRBUST
 
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6.svg)](./desktop-tauri/)
+[![Desktop](https://img.shields.io/badge/Desktop-Tauri%202-FFC131.svg)](./desktop-tauri/)
+[![Web](https://img.shields.io/badge/Web-Vue%203-42b883.svg)](./web/)
+[![Desktop CI](https://github.com/Glassous/BetterHRBUST/actions/workflows/build-desktop.yml/badge.svg)](https://github.com/Glassous/BetterHRBUST/actions/workflows/build-desktop.yml)
+[![Userscript CI](https://github.com/Glassous/BetterHRBUST/actions/workflows/build-userscript.yml/badge.svg)](https://github.com/Glassous/BetterHRBUST/actions/workflows/build-userscript.yml)
+
+<p align="center">
+  <img src="docs/assets/mascot.png" width="200" alt="BetterHRBUST 吉祥物" />
+</p>
+
 自制的现代化哈尔滨理工大学教务在线（URP）网页客户端。
 
 哈理工教务在线（`http://jwzx.hrbust.edu.cn/academic/`）基于清华教育在线 / 优慕课 URP 架构，为早期 JSP 应用：缺乏公开 API 与官方文档、网页编码不统一（GBK / UTF-8 混用）、真实功能路径深藏于模块调度器后。
