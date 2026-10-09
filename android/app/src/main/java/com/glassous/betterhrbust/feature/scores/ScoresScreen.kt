@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -53,6 +54,7 @@ fun ScoresScreen(
     var cacheError by remember { mutableStateOf("") }
 
     var searchQuery by remember { mutableStateOf("") }
+    var selectedSemester by remember { mutableStateOf("全部") } // 全部 或 "2024 春" 形式的学期标签
     var selectedProperty by remember { mutableStateOf("全部") } // 全部, 必修, 限选, 任选
     var selectedPassStatus by remember { mutableStateOf("全部") } // 全部, 仅及格, 未通过
 
@@ -109,17 +111,33 @@ fun ScoresScreen(
         dedupedScores.associate { it.item.courseId.ifEmpty { it.item.courseName } to it.recordCount }
     }
 
-    val filteredScores = remember(dedupedScores, searchQuery, selectedProperty, selectedPassStatus) {
+    // 学期筛选项：各学期按时间先后倒序（最新在前），排序口径与 Web 端 semesterSortKey 一致
+    val semesterOptions = remember(dedupedScores) {
+        dedupedScores.map { it.item }
+            .distinctBy { GpaCalculator.semesterLabel(it.year, it.term) }
+            .sortedByDescending { GpaCalculator.semesterSortKey(it.year, it.term) }
+            .map { GpaCalculator.semesterLabel(it.year, it.term) }
+    }
+
+    // 数据变化（切换账号 / 重新同步）后，若所选学期已不存在则回退到"全部"
+    LaunchedEffect(semesterOptions) {
+        if (selectedSemester != "全部" && selectedSemester !in semesterOptions) {
+            selectedSemester = "全部"
+        }
+    }
+
+    val filteredScores = remember(dedupedScores, searchQuery, selectedSemester, selectedProperty, selectedPassStatus) {
         val all = dedupedScores.map { it.item }
         all.filter { item ->
             val matchQuery = searchQuery.isBlank() || item.courseName.contains(searchQuery, ignoreCase = true) || item.courseId.contains(searchQuery, ignoreCase = true)
+            val matchSemester = selectedSemester == "全部" || GpaCalculator.semesterLabel(item.year, item.term) == selectedSemester
             val matchProp = selectedProperty == "全部" || item.property.contains(selectedProperty)
             val matchPass = when (selectedPassStatus) {
                 "仅及格" -> item.passed
                 "未通过" -> !item.passed
                 else -> true
             }
-            matchQuery && matchProp && matchPass
+            matchQuery && matchSemester && matchProp && matchPass
         }
     }
 
@@ -274,6 +292,28 @@ fun ScoresScreen(
                         )
                     }
 
+                    // Semester Filter Chips（最新学期在前）
+                    if (semesterOptions.isNotEmpty()) {
+                        item {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                item {
+                                    FilterChip(
+                                        selected = selectedSemester == "全部",
+                                        onClick = { selectedSemester = "全部" },
+                                        label = { Text("全部学期") }
+                                    )
+                                }
+                                items(semesterOptions) { label ->
+                                    FilterChip(
+                                        selected = selectedSemester == label,
+                                        onClick = { selectedSemester = label },
+                                        label = { Text(label) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // Segmented Button Row: Property
                     item {
                         val propOptions = listOf("全部", "必修", "限选", "任选")
@@ -395,7 +435,7 @@ fun ScoresScreen(
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = "${item.year}学年 • ${item.property} • ${item.credit} 学分",
+                                            text = "${GpaCalculator.semesterLabel(item.year, item.term)} • ${item.property} • ${item.credit} 学分",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
