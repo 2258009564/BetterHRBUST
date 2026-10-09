@@ -107,7 +107,7 @@ npm run build
 
 在「更多」页进入「教学评价助手」或「资料查找」。Android 网络层保留 HTTP，限制同源跳转，禁止自动重放表单 POST；教学评价采用 GBK 编码并刷新每门课程的隐藏令牌。
 
-`.github/workflows/android.yml` 在 PR 与代码推送时运行单元测试、Lint、Debug 与 Release 构建，保存 APK 和报告。Debug APK 只用于测试，Release APK 仍需维护者使用正式签名密钥签名后发布，不能用调试签名替代正式升级签名。
+`.github/workflows/android.yml` 在 PR 与代码推送时运行单元测试、Lint、Debug 与 Release 构建，保存 APK 和报告。配置好签名密钥后，CI 会用与本地发布**同一份正式密钥**自动签名 Release 包并校验签名，保证后续版本在同一台设备上可直接覆盖安装。Debug APK 只用于测试，不能用调试签名替代正式升级签名。
 
 Kotlin + Jetpack Compose 编写的原生 Android 客户端，与 Web 端共用同一套业务口径（接口路径、HTML 解析规则、五分制绩点与特色算法、缓存与刷新策略）。
 
@@ -131,16 +131,44 @@ cd android
 ```
 
 构建完成后用 `adb install -r app\build\outputs\apk\debug\app-debug.apk` 安装到设备，或直接在 Android Studio 中运行。
-开启 R8 压缩后 Release 包体量约 **3.8 MB**（未签名 `app-release-unsigned.apk`），Debug 包约 66 MB（含调试符号与未压缩资源）。
+开启 R8 压缩后 Release 包体量约 **3.8 MB**（已签名 `app-release.apk`；未提供密钥时为 `app-release-unsigned.apk`），Debug 包约 66 MB（含调试符号与未压缩资源）。
 
 > [!NOTE]
-> Release 构建（`./gradlew :app:assembleRelease`）已启用 R8 代码压缩与资源压缩（规则见 `app/src/main/keepRules/`），
-> 但**未内置签名配置**，正式分发前需自行在 `app/build.gradle.kts` 中补充 `signingConfigs`。
-> 因教务在线为 `http` 明文站点，Manifest 中显式开启了 `usesCleartextTraffic`。
+> Release 构建（`./gradlew :app:assembleRelease`）已启用 R8 代码压缩与资源压缩（规则见 `app/src/main/keepRules/`）。
+> 签名配置位于 `app/build.gradle.kts` 的 `signingConfigs`，从环境变量 / Gradle 属性读取密钥；未提供密钥时退回未签名包，
+> 因此无密钥的 PR 构建依然可以通过。因教务在线为 `http` 明文站点，Manifest 中显式开启了 `usesCleartextTraffic`。
+
+**正式签名（保证旧版本可直接覆盖升级）**
+
+正式分发必须**始终使用同一份密钥**签名，否则设备会因「签名不一致」拒绝覆盖安装。仓库已在 CI 中接入该密钥，只需一次性配置以下 Secrets（仓库 Settings → Secrets and variables → Actions）：
+
+| Secret | 说明 |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | 正式 keystore（`.jks`）文件的 Base64 内容 |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore 密码（storePassword） |
+| `ANDROID_KEY_ALIAS` | 密钥别名（keyAlias） |
+| `ANDROID_KEY_PASSWORD` | 别名密码（keyPassword） |
+
+生成 Base64（Windows，写入剪贴板后粘贴为 Secret 值）：
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("D:\path\to\release.jks")) | Set-Clipboard
+```
+
+同一份密钥也可用于本地签名，写入 `~/.gradle/gradle.properties`（不入库）：
+
+```properties
+androidKeystorePath=D:\\path\\to\\release.jks
+androidKeystorePassword=xxxx
+androidKeyAlias=xxxx
+androidKeyPassword=xxxx
+```
+
+发布前可用 `apksigner verify --print-certs app-release.apk` 核对新旧安装包的签名证书指纹是否一致。
 
 > [!IMPORTANT]
 > **安装包命名格式**：发布到 GitHub Release 时统一命名为 `BetterHRBUST-<版本>-android.apk`
-> （如 `BetterHRBUST-1.0.0-android.apk`，构建产物 `app-release-unsigned.apk` 重命名即可），
+> （如 `BetterHRBUST-1.0.0-android.apk`，构建产物 `app-release.apk` 重命名即可），
 > 与桌面端安装版 `BetterHRBUST-<版本>-windows-setup.exe`、便携版 `BetterHRBUST-<版本>-windows-portable.zip`
 > 保持同一命名格式，便于用户识别与 README 快捷下载链接对齐。
 > 详见「[发布 Release 与更新检测](#5-发布-release-与更新检测)」。
@@ -228,7 +256,7 @@ npm run dist    # 构建 web + 打包 + 统一命名，产物见 desktop-tauri/r
 
 **发布流程**：
 
-1. 桌面端产物从 Actions 的 `betterhrbust-desktop-windows` 下载（已统一命名）；Android 本地打包后重命名；
+1. 桌面端产物从 Actions 的 `betterhrbust-desktop-windows` 下载（已统一命名）；Android 从 Actions 的 `BetterHRBUST-Android` 下载 CI 已签名的 `app-release.apk` 后重命名；
 2. 打 tag `v<version>`（如 `v1.0.0`）并创建 Release，标题建议 `BetterHRBUST v<version>`，正文填写更新日志；
 3. 上传上述三个产物；
 4. 把 README 顶部「快捷下载」徽章链接中的版本号同步替换为新版本。
