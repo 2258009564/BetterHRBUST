@@ -64,8 +64,8 @@ object AcademicParsers {
         return when {
             Regex("锁定|已冻结|已禁用|accountLocked", RegexOption.IGNORE_CASE).containsMatchIn(text) -> "账号已被系统锁定，请稍后再试"
             Regex("用户不存在|学号不存在|用户名不存在").containsMatchIn(text) -> "该学号不存在"
-            Regex("验证码.{0,12}(错误|过期|失效|不正确|无效)|captcha.{0,12}(invalid|incorrect|expired)", RegexOption.IGNORE_CASE).containsMatchIn(text) -> "验证码错误或已过期，请刷新重试"
-            Regex("密码.{0,12}(错误|不正确|无效)|badCredentials|Bad credentials", RegexOption.IGNORE_CASE).containsMatchIn(text) -> "学号或密码错误"
+            Regex("验证码\\s*(?:输入|校验|验证)?\\s*(错误|已?过期|失效|不正确|无效)|captcha\\s*(invalid|incorrect|expired)", RegexOption.IGNORE_CASE).containsMatchIn(text) -> "验证码错误或已过期，请刷新重试"
+            Regex("密码\\s*(?:输入)?\\s*(错误|不正确|无效)|badCredentials|Bad credentials", RegexOption.IGNORE_CASE).containsMatchIn(text) -> "学号或密码错误"
             else -> "登录失败，请检查学号与密码"
         }
     }
