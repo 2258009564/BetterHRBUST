@@ -68,7 +68,10 @@ jobs:
           ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             "$SERVER_USER@$SERVER_HOST" "mkdir -p '$DEPLOY_PATH'"
 
-      # 源/目标均以斜杠结尾:将 dist 内容同步进目标目录,而非多嵌套一层
+      # 源/目标均以斜杠结尾:将 dist 内容同步进目标目录,而非多嵌套一层。
+      # --omit-dir-times / --no-owner / --no-group:目标目录一般属 root 或其他用户,
+      # 非属主无法设置目录时间戳(rsync code 23 "failed to set times on ...: Operation not permitted"),
+      # 故忽略这三类需属主权限的属性;文件内容与权限仍正常同步。
       - name: Deploy via rsync
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
@@ -76,7 +79,7 @@ jobs:
           SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
         run: |
           set -euo pipefail
-          rsync -avz --delete \
+          rsync -avz --delete --omit-dir-times --no-owner --no-group \
             -e "ssh -p $SERVER_PORT -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
             landing/dist/ "$SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/"
 

@@ -39,6 +39,8 @@ npm run preview  # 本地预览构建产物
 
 要求服务器已安装 `rsync`（1Panel 环境通常已内置），且目标目录的父级 `index/` 已存在。
 
+同步参数使用 `--omit-dir-times --no-owner --no-group`：1Panel 站点目录通常属 root 或其他用户，非属主无法写目录时间戳/属主属性，忽略它们可避免 `rsync: failed to set times ... Operation not permitted`（退出码 23）。若希望完整保留属性，可在服务器上把目录交给部署用户：`chown -R <SERVER_USER> /opt/1panel/www/sites/betterhrbust/index/dist`（注意 1Panel 可能会重置该权限）。
+
 ## 说明
 
 - 页面不请求任何后端接口，纯静态托管即可（GitHub Pages / Nginx / 任意对象存储）。
