@@ -63,6 +63,15 @@ private enum class TimetableViewMode(val label: String) {
     DAY("日")
 }
 
+/**
+ * 解析持久化的视图形态（[TimetableViewMode.name]，如 `WEEK` / `DAY`）。
+ *
+ * 大小写不敏感；缺失或未知值回落为周视图，保证旧数据 / 手工写入的异常值能够优雅降级。
+ */
+private fun viewModeOfStored(value: String?): TimetableViewMode =
+    TimetableViewMode.entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
+        ?: TimetableViewMode.WEEK
+
 /** 周视图列顺序（稳定实例，避免每次重组都新建列表）。 */
 private val WeekDays = (1..7).toList()
 
@@ -89,7 +98,19 @@ fun TimetableScreen(
     var selectedWeek by remember { mutableStateOf(currentWeek) }
     var viewMode by remember { mutableStateOf(TimetableViewMode.WEEK) }
     var sectionMode by remember { mutableStateOf(SectionMode.COMBINE) }
+    // 用户是否已在本页调整过「周 / 日」「大节 / 小节」：调整过之后，迟到的偏好值不再回写覆盖
+    var displayModeTouched by remember { mutableStateOf(false) }
     var showWeekPicker by remember { mutableStateOf(false) }
+
+    // 恢复上次的「周 / 日」与「大节 / 小节」：偏好异步读到后套用一次（冷启动、旋转重建均生效），
+    // 此后一律由本页切换结果写回，避免偏好流后续发射覆盖用户当前选择
+    LaunchedEffect(prefs != null) {
+        val loaded = prefs ?: return@LaunchedEffect
+        if (displayModeTouched) return@LaunchedEffect
+        displayModeTouched = true
+        viewMode = viewModeOfStored(loaded.timetableViewMode)
+        sectionMode = sectionModeOfStored(loaded.timetableSectionMode)
+    }
 
     val today = remember { LocalDate.now() }
     val todayDay = remember(today) { today.dayOfWeek.value } // 1..7
@@ -144,7 +165,8 @@ fun TimetableScreen(
         }
     }
 
-    // 课程配色注册：在数据变化后的首帧渲染前完成，避免颜色按遭遇顺序分配导致跳动
+    // 课程配色注册：必须早于首帧取色完成，避免颜色按遭遇顺序分配导致跳动，故用 remember 而非 LaunchedEffect；
+    // register 的返回值（已注册主键）在此无需使用，仅用于承载 remember 的产出（lambda 不得返回 Unit）
     remember(timetableResult) {
         CourseColorPalette.register(
             timetableResult?.cells.orEmpty().map {
@@ -226,9 +248,17 @@ fun TimetableScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             TimetableControlBar(
                 viewMode = viewMode,
-                onViewModeChange = { viewMode = it },
+                onViewModeChange = { mode ->
+                    displayModeTouched = true
+                    viewMode = mode
+                    coroutineScope.launch { prefsManager.setTimetableViewMode(mode.name) }
+                },
                 sectionMode = sectionMode,
-                onSectionModeChange = { sectionMode = it },
+                onSectionModeChange = { mode ->
+                    displayModeTouched = true
+                    sectionMode = mode
+                    coroutineScope.launch { prefsManager.setTimetableSectionMode(mode.name) }
+                },
                 selectedWeek = selectedWeek,
                 currentWeek = currentWeek,
                 onWeekStep = { step ->

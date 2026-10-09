@@ -55,6 +55,15 @@ fun slotsOf(mode: SectionMode): List<TimeSlot> = when (mode) {
 }
 
 /**
+ * 解析持久化的节次模式（[SectionMode.name]，如 `COMBINE` / `BASE`）。
+ *
+ * 大小写不敏感；缺失或未知值回落为大节，保证旧数据 / 手工写入的异常值能够优雅降级。
+ */
+fun sectionModeOfStored(value: String?): SectionMode =
+    SectionMode.entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
+        ?: SectionMode.COMBINE
+
+/**
  * 大节 → 覆盖的小节行区间（1-based，闭区间）。
  *
  * 教务数据只到大节粒度（`TimetableCell.sectionIndex` 1..6），小节模式下次序为 s 的大节

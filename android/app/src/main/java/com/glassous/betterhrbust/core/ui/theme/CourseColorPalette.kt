@@ -53,8 +53,11 @@ object CourseColorPalette {
      *
      * 按课程主键码点顺序注册新键，使颜色分配与数据源顺序无关；已注册的课程不受影响，
      * 可安全重复调用。
+     *
+     * @return 本次涉及的规范化主键（升序）。注册需在组合期完成（`remember(timetableResult)`），
+     *   而 `remember` 的 lambda 不允许返回 Unit，故由本方法产出该值供调用方承载。
      */
-    fun register(keys: Collection<String>) {
+    fun register(keys: Collection<String>): List<String> {
         val newKeys = keys.asSequence()
             .map(::normalize)
             .filter { it.isNotEmpty() }
@@ -64,6 +67,7 @@ object CourseColorPalette {
                 slotRegistry[key] = slotRegistry.size
             }
         }
+        return newKeys.toList()
     }
 
     /** 取课程色相（0..359）。主键为空返回兜底色相，未注册的主键按首次遭遇顺序补分配。 */

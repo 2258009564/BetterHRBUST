@@ -5,6 +5,7 @@ import com.glassous.betterhrbust.feature.timetable.BaseSlots
 import com.glassous.betterhrbust.feature.timetable.CombineSlots
 import com.glassous.betterhrbust.feature.timetable.SectionMode
 import com.glassous.betterhrbust.feature.timetable.baseRowRangeOf
+import com.glassous.betterhrbust.feature.timetable.sectionModeOfStored
 import com.glassous.betterhrbust.feature.timetable.sectionOfBasePeriod
 import com.glassous.betterhrbust.feature.timetable.slotRangeText
 import com.glassous.betterhrbust.feature.timetable.slotsOf
@@ -60,6 +61,17 @@ class TimetableSectionsTest {
         assertEquals(1, sectionOfBasePeriod(2))
         assertEquals(6, sectionOfBasePeriod(11))
         assertEquals(6, sectionOfBasePeriod(12))
+    }
+
+    @Test
+    fun sectionModeRestoresFromStoredValueWithFallback() {
+        // 切换后写回的标识（SectionMode.name）能原样还原，且大小写不敏感
+        assertEquals(SectionMode.BASE, sectionModeOfStored(SectionMode.BASE.name))
+        assertEquals(SectionMode.BASE, sectionModeOfStored("base"))
+        assertEquals(SectionMode.COMBINE, sectionModeOfStored("COMBINE"))
+        // 首次使用（键缺失）或写入异常值：回落为大节，保证课表仍可正常渲染
+        assertEquals(SectionMode.COMBINE, sectionModeOfStored(null))
+        assertEquals(SectionMode.COMBINE, sectionModeOfStored("unknown"))
     }
 
     @Test

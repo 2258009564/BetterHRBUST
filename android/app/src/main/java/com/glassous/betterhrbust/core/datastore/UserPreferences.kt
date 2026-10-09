@@ -16,6 +16,10 @@ data class AppPreferences(
     val term: String = "2",
     val currentWeek: Int = 1,
     val selectedWeek: Int = 1,
+    /** 课表视图形态的持久化标识（`TimetableViewMode.name`：WEEK / DAY） */
+    val timetableViewMode: String = "WEEK",
+    /** 课表节次粒度的持久化标识（`SectionMode.name`：COMBINE / BASE） */
+    val timetableSectionMode: String = "COMBINE",
     val darkTheme: Boolean? = null,
     val offlineMode: Boolean = false,
     /** 上次成功登录时间（毫秒时间戳），用于会话失效提示的"一周节流"判定 */
@@ -46,6 +50,8 @@ class UserPreferencesManager(private val context: Context) {
         private val KEY_TERM = stringPreferencesKey("term")
         private val KEY_CURRENT_WEEK = intPreferencesKey("current_week")
         private val KEY_SELECTED_WEEK = intPreferencesKey("selected_week")
+        private val KEY_TIMETABLE_VIEW_MODE = stringPreferencesKey("timetable_view_mode")
+        private val KEY_TIMETABLE_SECTION_MODE = stringPreferencesKey("timetable_section_mode")
         private val KEY_DARK_THEME = stringPreferencesKey("dark_theme") // "system", "dark", "light"
         private val KEY_OFFLINE_MODE = booleanPreferencesKey("offline_mode")
         private val KEY_LAST_LOGIN_AT = longPreferencesKey("last_login_at")
@@ -71,6 +77,8 @@ class UserPreferencesManager(private val context: Context) {
             term = prefs[KEY_TERM] ?: "2",
             currentWeek = prefs[KEY_CURRENT_WEEK] ?: 1,
             selectedWeek = prefs[KEY_SELECTED_WEEK] ?: 1,
+            timetableViewMode = prefs[KEY_TIMETABLE_VIEW_MODE] ?: "WEEK",
+            timetableSectionMode = prefs[KEY_TIMETABLE_SECTION_MODE] ?: "COMBINE",
             darkTheme = darkThemeBool,
             offlineMode = prefs[KEY_OFFLINE_MODE] ?: false,
             lastLoginAt = prefs[KEY_LAST_LOGIN_AT] ?: 0L,
@@ -151,6 +159,20 @@ class UserPreferencesManager(private val context: Context) {
     suspend fun setSelectedWeek(week: Int) {
         context.dataStore.edit { prefs ->
             prefs[KEY_SELECTED_WEEK] = week
+        }
+    }
+
+    /** 记忆课表视图形态（周 / 日），下次进入课表页时沿用 */
+    suspend fun setTimetableViewMode(mode: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_TIMETABLE_VIEW_MODE] = mode
+        }
+    }
+
+    /** 记忆课表节次粒度（大节 / 小节），下次进入课表页时沿用 */
+    suspend fun setTimetableSectionMode(mode: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_TIMETABLE_SECTION_MODE] = mode
         }
     }
 
