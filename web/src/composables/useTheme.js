@@ -4,10 +4,13 @@ import { storageGetItem, storageSetItem } from '@/services/storage.js';
 const THEME_KEY = 'better_hrbust_theme';
 
 const currentTheme = ref(storageGetItem(THEME_KEY) || 'system');
+const mediaQuery = typeof window !== 'undefined' && window.matchMedia
+  ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+const systemDark = ref(mediaQuery?.matches || false);
 
 function applyTheme(theme) {
   const root = document.documentElement;
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const isDark = theme === 'dark' || (theme === 'system' && systemDark.value);
   if (isDark) {
     root.classList.add('dark');
   } else {
@@ -16,9 +19,9 @@ function applyTheme(theme) {
 }
 
 // Listen to OS theme changes when in system mode
-if (typeof window !== 'undefined' && window.matchMedia) {
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  mediaQuery.addEventListener('change', () => {
+if (mediaQuery) {
+  mediaQuery.addEventListener('change', event => {
+    systemDark.value = event.matches;
     if (currentTheme.value === 'system') {
       applyTheme('system');
     }
@@ -31,7 +34,7 @@ applyTheme(currentTheme.value);
 export function useTheme() {
   const isDark = computed(() => {
     if (currentTheme.value === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return systemDark.value;
     }
     return currentTheme.value === 'dark';
   });

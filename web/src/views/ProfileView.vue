@@ -80,7 +80,7 @@
             </div>
             <div class="flex justify-between py-1.5 border-b border-zinc-100 dark:border-zinc-800">
               <span class="text-zinc-500">入学年级</span>
-              <span class="font-medium text-zinc-900 dark:text-zinc-100">{{ userProfile.grade || '—' }} 级</span>
+              <span class="font-medium text-zinc-900 dark:text-zinc-100">{{ userProfile.grade ? String(userProfile.grade).trim().replace(/(?:\s*级)+$/, '') + '级' : '—' }}</span>
             </div>
             <div class="flex justify-between py-1.5 border-b border-zinc-100 dark:border-zinc-800">
               <span class="text-zinc-500">专业方向</span>

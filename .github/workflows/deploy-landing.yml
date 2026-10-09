@@ -1,0 +1,88 @@
+name: Deploy Landing
+
+# 推送 landing/ 相关改动到 main 时自动构建介绍页并部署到 1Panel 服务器。
+# 构建全程在 GitHub 云端运行器完成（不在服务器上 build），产物经 rsync --delete
+# 同步到 /opt/1panel/www/sites/betterhrbust/index/dist（全量清理,避免旧哈希产物堆积）。
+# 依赖 Secrets:SERVER_HOST / SERVER_USER / SERVER_SSH_KEY,可选 SERVER_PORT(默认 22)。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landing/**'
+      - '.github/workflows/deploy-landing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-landing
+  cancel-in-progress: true
+
+env:
+  DEPLOY_PATH: /opt/1panel/www/sites/betterhrbust/index/dist
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+
+      - name: Build landing (cloud)
+        working-directory: landing
+        run: |
+          npm ci
+          npm run build
+
+      # 私钥仅通过 env 注入并落盘到 ~/.ssh,避免出现在命令行回显与日志中
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$SERVER_PORT" -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error::ssh-keyscan 未能获取 $SERVER_HOST:$SERVER_PORT 的主机密钥,请检查 SERVER_HOST/SERVER_PORT 是否正确"
+            exit 1
+          fi
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Prepare remote directory
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$SERVER_USER@$SERVER_HOST" "mkdir -p '$DEPLOY_PATH'"
+
+      # 源/目标均以斜杠结尾:将 dist 内容同步进目标目录,而非多嵌套一层。
+      # --omit-dir-times / --no-owner / --no-group:目标目录一般属 root 或其他用户,
+      # 非属主无法设置目录时间戳(rsync code 23 "failed to set times on ...: Operation not permitted"),
+      # 故忽略这三类需属主权限的属性;文件内容与权限仍正常同步。
+      - name: Deploy via rsync
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          rsync -avz --delete --omit-dir-times --no-owner --no-group \
+            -e "ssh -p $SERVER_PORT -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            landing/dist/ "$SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

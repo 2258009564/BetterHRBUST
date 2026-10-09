@@ -18,14 +18,18 @@
 
 <!-- 快捷下载：发版时请把下方三条 releases/latest/download 链接中的版本号（1.0.0）同步替换为新版本 -->
 <p align="center">
-  <a href="https://github.com/Glassous/BetterHRBUST/releases/latest/download/BetterHRBUST-1.0.0-windows-setup.exe"><img src="https://img.shields.io/badge/下载-Windows_安装版-0078D6?logo=windows&logoColor=white" alt="下载 Windows 安装版" /></a>
-  <a href="https://github.com/Glassous/BetterHRBUST/releases/latest/download/BetterHRBUST-1.0.0-windows-portable.zip"><img src="https://img.shields.io/badge/下载-Windows_便携版-5C2D91?logo=windows&logoColor=white" alt="下载 Windows 便携版" /></a>
-  <a href="https://github.com/Glassous/BetterHRBUST/releases/latest/download/BetterHRBUST-1.0.0-android.apk"><img src="https://img.shields.io/badge/下载-Android_APK-3DDC84?logo=android&logoColor=white" alt="下载 Android APK" /></a>
+  <a href="https://github.com/Glassous/BetterHRBUST/releases/latest"><img src="https://img.shields.io/badge/下载-Windows_安装版-0078D6?logo=windows&logoColor=white" alt="下载 Windows 安装版" /></a>
+  <a href="https://github.com/Glassous/BetterHRBUST/releases/latest"><img src="https://img.shields.io/badge/下载-Windows_便携版-5C2D91?logo=windows&logoColor=white" alt="下载 Windows 便携版" /></a>
+  <a href="https://github.com/Glassous/BetterHRBUST/releases/latest"><img src="https://img.shields.io/badge/下载-Android_APK-3DDC84?logo=android&logoColor=white" alt="下载 Android APK" /></a>
   <a href="https://raw.githubusercontent.com/Glassous/BetterHRBUST/dist/better-hrbust.user.js"><img src="https://img.shields.io/badge/安装-油猴脚本-990000?logo=tampermonkey&logoColor=white" alt="安装油猴脚本" /></a>
   <a href="https://github.com/Glassous/BetterHRBUST/releases"><img src="https://img.shields.io/badge/全部版本-Releases-181717?logo=github&logoColor=white" alt="全部版本" /></a>
 </p>
 
 自制的现代化哈尔滨理工大学教务在线（URP）客户端：Web / 油猴 / Windows 桌面端 / Android 原生四端同源。
+
+Android 源码版本为 **1.1.0（versionCode 2）**，新增教学评价助手与资料查找，同步 HTTP 登录与重定向修复。资料索引来自教务处公开下载栏目，包含 **9 个分类、97 条资料及 126 个附件链接**；网页与 Android 使用同一份索引。正式安装包以 [Releases](https://github.com/Glassous/BetterHRBUST/releases) 中已经发布的文件为准。
+
+新版发布页位于 [`landing/`](landing/README.md)，参考 Folia 的大标题、浅色几何背景与宽留白布局，提供浅色/深色主题、平台下载入口和使用指南。GitHub Pages 工作流只在原仓库 `Glassous/BetterHRBUST` 的 `main` 分支部署，PR 和 fork 只构建验证。
 
 哈理工教务在线（`http://jwzx.hrbust.edu.cn/academic/`）基于清华教育在线 / 优慕课 URP 架构，为早期 JSP 应用：缺乏公开 API 与官方文档、网页编码不统一（GBK / UTF-8 混用）、真实功能路径深藏于模块调度器后。
 
@@ -43,6 +47,9 @@ BetterHRBUST/
 ---
 
 ## 🌟 核心特性
+
+- **教学评价助手**：从学校读取评价课程和真实问卷，使用你选择的选项与评语逐门提交。每门课程重新取得隐藏字段，提交后读取学校列表核对；问卷结构不同、记录重复或状态未确认时停止，不自动重发 POST。学校未开放评价或返回空列表时，不能进行真实提交。
+- **资料查找**：按标题与分类检索教学管理、教务管理、学籍管理、实践教学等公开资料，打开学校原文和附件。不复制附件文件、不处理登录 Cookie；目录索引可离线搜索，访问原文及下载仍需网络。抓取时间显示在页面内。
 
 - **100% 真实教务直连**：不使用任何模拟数据，数据全部直连哈理工教务在线系统，保障准确性。
 - **独立现代化登录**：简洁高效的单列登录面板，支持验证码实时刷新、学号记住与会话快速切换。
@@ -97,6 +104,10 @@ npm run build
 ---
 
 ### 2. Android 客户端 (`android/`)
+
+在「更多」页进入「教学评价助手」或「资料查找」。Android 网络层保留 HTTP，限制同源跳转，禁止自动重放表单 POST；教学评价采用 GBK 编码并刷新每门课程的隐藏令牌。
+
+`.github/workflows/android.yml` 在 PR 与代码推送时运行单元测试、Lint、Debug 与 Release 构建，保存 APK 和报告。Debug APK 只用于测试，Release APK 仍需维护者使用正式签名密钥签名后发布，不能用调试签名替代正式升级签名。
 
 Kotlin + Jetpack Compose 编写的原生 Android 客户端，与 Web 端共用同一套业务口径（接口路径、HTML 解析规则、五分制绩点与特色算法、缓存与刷新策略）。
 

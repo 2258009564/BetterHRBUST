@@ -39,7 +39,8 @@
       </button>
     </div>
 
-    <!-- Right: Session Expired Notice Pill with Re-login Button -->
+    <!-- 右侧操作：会话提示与主题开关沿用客户端圆形按钮样式。 -->
+    <div class="pointer-events-auto flex items-center gap-2.5">
     <div v-if="shouldShowSessionBanner" class="pointer-events-auto">
       <div
         class="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs shadow-sm backdrop-blur-md"
@@ -62,6 +63,16 @@
         </button>
       </div>
     </div>
+      <button
+        type="button"
+        :aria-label="isDark ? '切换浅色模式' : '切换深色模式'"
+        :title="isDark ? '切换浅色模式' : '切换深色模式'"
+        class="w-10 h-10 rounded-full bg-[#f6f7f9] text-zinc-800 hover:bg-[#eceef2] border border-zinc-200/80 dark:bg-[#14161a] dark:text-zinc-100 dark:border-zinc-800 dark:hover:bg-[#1e2127] cursor-pointer transition-all duration-150 flex items-center justify-center shadow-md active:scale-95 shrink-0"
+        @click="toggleTheme"
+      >
+        <Icon :name="isDark ? 'sun' : 'moon'" customClass="w-5 h-5" />
+      </button>
+    </div>
   </header>
 </template>
 
@@ -70,11 +81,13 @@ import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
 import { useAcademicData } from '@/composables/useAcademicData.js';
 import { useToast } from '@/composables/useToast.js';
+import { useTheme } from '@/composables/useTheme.js';
 
 const { isLoggedIn, isSessionExpired, shouldShowSessionBanner, dismissSessionPrompt, openLoginModal, navigateTo } =
   useSession();
 const { syncing, lastSyncText, refreshAll } = useAcademicData();
 const { showToast } = useToast();
+const { isDark, toggleTheme } = useTheme();
 
 defineProps({
   isCollapsed: {

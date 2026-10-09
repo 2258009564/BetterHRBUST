@@ -9,3 +9,13 @@ export const ANDROID_APK = `${RELEASES}/latest/download/BetterHRBUST-1.0.0-andro
 
 export const USERSCRIPT =
   'https://raw.githubusercontent.com/Glassous/BetterHRBUST/dist/better-hrbust.user.js'
+
+// 六端品牌图标（顺序与「随处可用」卡片一致），供 Hero「查看全部版本」按钮的堆叠图标使用
+export const PLATFORM_LOGOS = [
+  '/Tampermonkey_logo.svg',
+  '/Windows_logo.svg',
+  '/Android_logo.svg',
+  '/Linux_logo.svg',
+  '/Apple_logo.svg',
+  '/App_Store_logo.svg'
+]

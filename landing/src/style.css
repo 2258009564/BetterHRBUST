@@ -24,6 +24,9 @@
   --color-brand-500: #6366f1;
   --color-brand-600: #4f46e5;
   --color-aqua-400: #22d3ee;
+
+  /* 象牙白：平台卡片图标底座（品牌图标多为深色，需浅底衬托） */
+  --color-ivory: #fffff0;
 }
 
 html {
@@ -31,6 +34,13 @@ html {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* 站内锚点（Hero「查看全部版本」→「随处可用」）平滑滚动；偏好减弱动效时保持直接跳转 */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 body {
@@ -68,18 +78,15 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* Custom scrollbar（与 web/ 端一致） */
+/* 隐藏滚动条（上下 + 左右），滚动能力保留：
+ * Firefox 用 scrollbar-width、旧 Edge 用 -ms-overflow-style、
+ * WebKit / Chromium 用 ::-webkit-scrollbar 伪元素 */
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(140, 145, 155, 0.25);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(140, 145, 155, 0.45);
+  width: 0;
+  height: 0;
+  display: none;
 }

@@ -14,18 +14,21 @@ const root = ref(null)
 let ctx
 let observers = []
 
-// 三端卡片：大图标 + 一句话说明 + 真实跳转链接
+// 六端卡片：真实品牌 SVG 图标 + 一句话说明 + 真实跳转链接；未上线平台以 soon 标记「敬请期待」
+// logoClass 单独给：Android 机器人头为宽幅，Apple / Linux(Tux) 为竖向比例，各自约束以对齐视觉重量
 const platforms = [
   {
     name: '油猴脚本',
-    icon: 'monkey',
-    desc: '一键安装，自动接管旧版教务页面。',
+    logo: '/Tampermonkey_logo.svg',
+    logoClass: 'h-14 w-14',
+    desc: '一键安装，自动接管旧版教务页面',
     links: [{ label: '一键安装', href: USERSCRIPT, primary: true }]
   },
   {
     name: 'Windows 桌面版',
-    icon: 'windows',
-    desc: '独立桌面应用，离线可用。',
+    logo: '/Windows_logo.svg',
+    logoClass: 'h-14 w-14',
+    desc: '独立桌面应用，离线可用',
     links: [
       { label: '下载安装版', href: WINDOWS_SETUP, primary: true },
       { label: '便携版 ZIP', href: WINDOWS_PORTABLE, primary: false }
@@ -33,9 +36,31 @@ const platforms = [
   },
   {
     name: 'Android 版',
-    icon: 'android',
-    desc: '独立Android应用，离线可用。',
+    logo: '/Android_logo.svg',
+    logoClass: 'w-20',
+    desc: '独立Android应用，离线可用',
     links: [{ label: '下载 APK', href: ANDROID_APK, primary: true }]
+  },
+  {
+    name: 'Linux 版',
+    logo: '/Linux_logo.svg',
+    logoClass: 'h-16 w-auto',
+    desc: 'Linux 桌面客户端，正在开发中',
+    links: [{ label: '敬请期待', soon: true }]
+  },
+  {
+    name: 'Mac 版',
+    logo: '/Apple_logo.svg',
+    logoClass: 'h-16 w-auto',
+    desc: 'macOS 原生客户端，正在开发中',
+    links: [{ label: '敬请期待', soon: true }]
+  },
+  {
+    name: 'App Store',
+    logo: '/App_Store_logo.svg',
+    logoClass: 'h-14 w-14',
+    desc: 'iPhone / iPad 版本，准备上架中',
+    links: [{ label: '敬请期待', soon: true }]
   }
 ]
 
@@ -93,7 +118,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section ref="root" class="relative px-6 pb-28 pt-10 sm:pt-16">
+  <section id="platforms" ref="root" class="relative px-6 pb-28 pt-10 sm:pt-16">
     <div class="mx-auto max-w-6xl">
       <!-- 区标题 -->
       <div class="section-head mx-auto max-w-2xl text-center">
@@ -104,7 +129,7 @@ onUnmounted(() => {
           随处可用
         </h2>
         <p class="mt-4 text-base leading-relaxed text-white/55">
-          同一套业务内核与数据口径，选你习惯的设备打开校园生活。
+          同一套业务内核与数据口径，选你习惯的设备打开校园生活
         </p>
       </div>
 
@@ -116,11 +141,16 @@ onUnmounted(() => {
           class="platform-card glass-card group flex flex-col rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1.5 hover:border-white/20 hover:shadow-[0_32px_70px_-32px_rgba(99,102,241,0.6)] sm:p-8"
         >
           <div
-            class="icon-glow flex h-24 w-24 items-center justify-center rounded-[1.6rem] bg-gradient-to-br from-brand-500/30 via-brand-400/10 to-transparent ring-1 ring-white/10"
+            class="icon-glow flex h-24 w-24 items-center justify-center rounded-[1.6rem] bg-ivory"
           >
-            <PlatformIcon
-              :name="platform.icon"
-              class="h-14 w-14 text-brand-300 transition-transform duration-300 group-hover:scale-110"
+            <img
+              :src="platform.logo"
+              alt=""
+              draggable="false"
+              :class="[
+                platform.logoClass,
+                'select-none transition-transform duration-300 group-hover:scale-110'
+              ]"
             />
           </div>
 
@@ -128,28 +158,37 @@ onUnmounted(() => {
           <p class="mt-2.5 text-[15px] leading-relaxed text-white/55">{{ platform.desc }}</p>
 
           <div class="mt-auto flex flex-wrap items-center gap-x-6 gap-y-2 pt-7">
-            <a
-              v-for="link in platform.links"
-              :key="link.href"
-              :href="link.href"
-              target="_blank"
-              rel="noopener noreferrer"
-              :class="
-                link.primary
-                  ? 'group/link inline-flex items-center gap-1.5 text-sm font-semibold text-brand-300 transition-colors hover:text-brand-200'
-                  : 'inline-flex items-center gap-1.5 text-sm font-medium text-white/40 transition-colors hover:text-white/70'
-              "
-            >
-              {{ link.label }}
-              <PlatformIcon
-                :name="link.primary ? 'arrow-right' : 'download'"
+            <template v-for="link in platform.links" :key="link.href ?? link.label">
+              <!-- 未上线平台：只展示状态，不可点击 -->
+              <span
+                v-if="link.soon"
+                class="inline-flex cursor-default select-none items-center gap-1.5 text-sm font-medium text-white/30"
+              >
+                {{ link.label }}
+                <PlatformIcon name="clock" class="h-3.5 w-3.5" />
+              </span>
+              <a
+                v-else
+                :href="link.href"
+                target="_blank"
+                rel="noopener noreferrer"
                 :class="
                   link.primary
-                    ? 'h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-1'
-                    : 'h-3.5 w-3.5'
+                    ? 'group/link inline-flex items-center gap-1.5 text-sm font-semibold text-brand-300 transition-colors hover:text-brand-200'
+                    : 'inline-flex items-center gap-1.5 text-sm font-medium text-white/40 transition-colors hover:text-white/70'
                 "
-              />
-            </a>
+              >
+                {{ link.label }}
+                <PlatformIcon
+                  :name="link.primary ? 'arrow-right' : 'download'"
+                  :class="
+                    link.primary
+                      ? 'h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-1'
+                      : 'h-3.5 w-3.5'
+                  "
+                />
+              </a>
+            </template>
           </div>
         </article>
       </div>

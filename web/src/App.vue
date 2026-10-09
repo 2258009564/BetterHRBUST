@@ -30,6 +30,7 @@ import CourseView from '@/views/CourseView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import LoginView from '@/views/LoginView.vue';
 import EvaluationView from '@/views/EvaluationView.vue';
+import ResourcesView from '@/views/ResourcesView.vue';
 
 const { activeTab, navigateTo, isLoggedIn, authChecked, checkAuth } = useSession();
 const { ensureDailySync, needsDailySync, syncAll } = useAcademicData();
@@ -70,6 +71,7 @@ watch(isLoggedIn, val => {
 });
 
 const views = {
+  resources: ResourcesView,
   evaluation: EvaluationView,
   dashboard: DashboardView,
   timetable: TimetableView,
