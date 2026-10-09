@@ -157,7 +157,7 @@ export function gpaOf(records) {
   let totalGpaWeight = 0;
   (records || []).forEach(item => {
     const cr = Number(item.credit) || 0;
-    if (cr <= 0) return;
+    if (cr <= 0 || parseScoreValue(item.score).estimated === null) return;
     totalCredits += cr;
     totalGpaWeight += gradePoint(item.score) * cr;
   });

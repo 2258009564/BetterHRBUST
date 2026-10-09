@@ -23,3 +23,6 @@ console.log('通过：两门选修规则、0 学分排除、重复与补考、�
 const direction = {id:'direction',name:'专业限选',property:'限选',requiredCredits:10,courses:Array.from({length:10},(_,i)=>({code:'DIR'+i,name:'方向课程'+i,credit:2.5}))};
 assert.equal(computeCreditsProgress([], [direction]).requiredTotal,10);
 assert.equal(computeCreditsProgress([], [direction]).categories[0].required,10);
+
+const ungraded = buildAcademicStats([course('VALID',90,3),{...course('PENDING',0,10),score:'缓考'}]);
+assert.equal(ungraded.degree.gpa,4);assert.equal(ungraded.degree.qualified,true);
