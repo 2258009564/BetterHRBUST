@@ -5,18 +5,29 @@
 
 const BASE_PREFIX = '/academic/';
 
-// 请求传输层(按优先级):
-// 1. GM_xmlhttpRequest(仅油猴环境存在):走扩展后台网络栈发起,完全不受浏览器
-//    对"安全上下文"发起请求的 HTTPS 自动升级策略影响(教务系统 443 无 TLS,
-//    任何 https 尝试都会 ERR_CONNECTION_CLOSED),也不受页面 window.fetch
-//    被其他脚本包装改写的影响;目标域 Cookie 由油猴按 @connect 域自动携带。
-// 2. 页面 fetch(Web 版 / 本地冒烟):Web 版请求是同源相对路径(dev 经反代),
-//    不存在升级问题;油猴环境的兜底也用页面上下文(unsafeWindow)的 fetch,
-//    发起方为 http 页面本身,不参与升级。
-const PAGE_FETCH =
+// HTTP 教务页面优先使用页面自身的同源 fetch，与验证码共享会话 Cookie。
+// 扩展后台请求可能被浏览器升级至 HTTPS，不能作为 HTTP 页面上的首选。
+// Web / 本地反代继续使用页面 fetch；其他油猴场景保留扩展通道。
+let PAGE_FETCH =
   typeof unsafeWindow !== 'undefined' && unsafeWindow && typeof unsafeWindow.fetch === 'function'
     ? unsafeWindow.fetch.bind(unsafeWindow)
     : fetch.bind(globalThis);
+
+// 在页面上下文中调用 fetch，避免调用方仍被认定为安全的扩展页面而升级 HTTP。
+if (typeof unsafeWindow !== 'undefined' && typeof document !== 'undefined' &&
+    location.protocol === 'http:' && location.hostname === 'jwzx.hrbust.edu.cn') {
+  const key = `__betterHRBUSTFetch_${Date.now()}`;
+  const script = document.createElement('script');
+  script.textContent = `window[${JSON.stringify(key)}] = function(url, options) {
+    return window.fetch(url, options);
+  };`;
+  document.documentElement.appendChild(script);
+  script.remove();
+  if (typeof unsafeWindow[key] === 'function') {
+    PAGE_FETCH = unsafeWindow[key].bind(unsafeWindow);
+    delete unsafeWindow[key];
+  }
+}
 
 /**
  * 相对路径转绝对 URL(GM_xmlhttpRequest 要求绝对地址)
@@ -28,7 +39,38 @@ function absoluteUrl(path) {
 /**
  * 统一请求执行:返回 { ok, status, contentType, buffer, finalUrl }
  */
-function executeRequest(url, { method = 'GET', headers = {}, body = null } = {}) {
+function executeRequest(url, { method = 'GET', headers = {}, body = null, referrer } = {}) {
+  if (location.protocol === 'http:' && location.hostname === 'jwzx.hrbust.edu.cn' &&
+      new URL(url, location.href).origin === location.origin) {
+    return (async () => {
+      const pathname = new URL(url, location.href).pathname;
+      const login = pathname === '/academic/j_acegi_security_check';
+      const evaluation = pathname.startsWith('/academic/eva/');
+      const manual = method.toUpperCase() === 'POST' && (login || evaluation);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      try {
+        const response = await PAGE_FETCH(url, {
+          method, headers, body, credentials: 'include',
+          ...(referrer ? { referrer } : {}),
+          redirect: manual ? 'manual' : 'follow', signal: controller.signal
+        });
+        // 原站的 POST 成功响应可能跳转到不可用的 HTTPS；接收 Cookie 后只读 HTTP 状态。
+        // 评教完成与否由调用方重新读取列表核对，302 本身不等于评教成功。
+        if (manual && response.type === 'opaqueredirect') {
+          if (login) return executeRequest(absoluteUrl('student/currcourse/currcourse.jsdo'));
+          return { ok: true, status: 202, contentType: '', buffer: new ArrayBuffer(0), finalUrl: url };
+        }
+        return {
+          ok: response.ok, status: response.status,
+          contentType: response.headers.get('content-type') || '',
+          buffer: await response.arrayBuffer(), finalUrl: response.url || url
+        };
+      } finally {
+        clearTimeout(timeout);
+      }
+    })();
+  }
   if (typeof GM_xmlhttpRequest === 'function') {
     return new Promise((resolve, reject) => {
       const details = {
@@ -62,6 +104,7 @@ function executeRequest(url, { method = 'GET', headers = {}, body = null } = {})
     headers,
     body,
     credentials: 'include', // 必传,携带与接收 Cookie
+    ...(referrer ? { referrer } : {}),
     redirect: 'follow'
   }).then(async (response) => ({
     ok: response.ok,
@@ -71,9 +114,6 @@ function executeRequest(url, { method = 'GET', headers = {}, body = null } = {})
     finalUrl: response.url
   }));
 }
-
-// 登录页标记特征
-const LOGIN_PAGE_MARKERS = ['j_acegi_security_check', 'getCaptcha.do', 'j_captcha'];
 
 // 登录失败特征
 const LOGIN_FAILURE_MARKERS = [
@@ -90,7 +130,10 @@ const LOGIN_FAILURE_MARKERS = [
  */
 export function isLoginPage(html) {
   if (!html) return false;
-  return LOGIN_PAGE_MARKERS.some(marker => html.includes(marker));
+  const content = String(html).replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  return /<form\b[^>]*\baction\s*=\s*["'][^"']*j_acegi_security_check/i.test(content)
+    || /<input\b[^>]*\bname\s*=\s*["']j_captcha["']/i.test(content);
 }
 
 /**
@@ -170,7 +213,8 @@ export async function request(path, options = {}) {
     headers = {},
     body = null,
     encoding, // 'gbk' 或 'utf-8'，未指定时按 header 判断
-    checkAuth = true
+    checkAuth = true,
+    referrer
   } = options;
 
   const requestHeaders = {
@@ -197,12 +241,13 @@ export async function request(path, options = {}) {
 
   let response;
   try {
-    response = await executeRequest(url, { method, headers: requestHeaders, body: requestBody });
+    response = await executeRequest(url, { method, headers: requestHeaders, body: requestBody, referrer });
   } catch (err) {
     throw new Error(`网络连接失败：${err.message || '无法连接到教务系统，请确认是否处于校园网或VPN环境'}`);
   }
 
   const html = await decodeResponse(response.buffer, response.contentType, encoding);
+  if (!response.ok) throw new Error(`教务请求失败（HTTP ${response.status}），请稍后重试`);
 
   // 会话过期判定
   if (checkAuth && isLoginPage(html)) {
@@ -217,6 +262,7 @@ export async function request(path, options = {}) {
     status: response.status,
     url: response.finalUrl,
     contentType: response.contentType,
+    encoding: encoding || 'utf-8',
     html
   };
 }
@@ -267,6 +313,7 @@ export async function postLogin(username, password, captcha) {
   }
 
   const html = await decodeResponse(res.buffer, res.contentType, 'gbk');
+  if (!res.ok) throw new Error(`教务系统登录请求失败（HTTP ${res.status}），请稍后重试`);
 
   // 如果依然是登录页或者包含失败标记
   if (isLoginPage(html) || LOGIN_FAILURE_MARKERS.some(m => html.includes(m))) {

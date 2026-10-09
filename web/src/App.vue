@@ -29,8 +29,9 @@ import NoticeView from '@/views/NoticeView.vue';
 import CourseView from '@/views/CourseView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import LoginView from '@/views/LoginView.vue';
+import EvaluationView from '@/views/EvaluationView.vue';
 
-const { activeTab, navigateTo, isLoggedIn } = useSession();
+const { activeTab, navigateTo, isLoggedIn, authChecked, checkAuth } = useSession();
 const { ensureDailySync, needsDailySync, syncAll } = useAcademicData();
 const { maybeAutoCheck } = useUpdate();
 
@@ -42,6 +43,13 @@ onMounted(async () => {
   maybeAutoCheck();
 
   try {
+    // 首次安装或扩展缓存没有会话标记时，检查浏览器已有的教务 Cookie。
+    // 无论认证成功与否都结束初始校验，避免概览永远停在加载状态。
+    if (!isLoggedIn.value) {
+      await checkAuth({ light: true });
+    } else {
+      authChecked.value = true;
+    }
     // 数据策略：登录后数据已全量持久化，日常打开一律只读本地缓存；
     // 仅在"每天首次打开"时才自动向教务获取一次全量数据
     if (isLoggedIn.value && needsDailySync.value) {
@@ -62,6 +70,7 @@ watch(isLoggedIn, val => {
 });
 
 const views = {
+  evaluation: EvaluationView,
   dashboard: DashboardView,
   timetable: TimetableView,
   score: ScoreView,

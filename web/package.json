@@ -5,6 +5,9 @@
   "type": "module",
   "description": "BetterHRBUST - 现代化哈理工教务在线 Web 客户端",
   "scripts": {
+    "test": "node scripts/test-http-transport.mjs && node --test scripts/test-evaluation.mjs",
+    "test:browser": "node scripts/test-evaluation-browser.cjs",
+    "test:evaluation-browser": "node scripts/test-evaluation-browser.cjs",
     "dev": "vite",
     "build": "vite build",
     "build:userscript": "vite build --config vite.config.userscript.mjs && node scripts/wrap-userscript.mjs",

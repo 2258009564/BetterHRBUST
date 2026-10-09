@@ -172,6 +172,7 @@ const navGroups = [
       { id: 'dashboard', label: '概览', icon: 'dashboard' },
       { id: 'timetable', label: '智能课程表', icon: 'timetable' },
       { id: 'score', label: '成绩与GPA分析', icon: 'score' },
+      { id: 'evaluation', label: '教学评价助手', icon: 'course' },
       { id: 'exam', label: '考试日程与倒计时', icon: 'exam' }
     ]
   },
