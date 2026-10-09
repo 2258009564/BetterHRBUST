@@ -16,6 +16,17 @@ class AcademicParsersTest {
     }
 
     @Test
+    fun curriculumUsesExplicitTotalAndDeduplicatesGroupOptions() {
+        val html = """<p>方案总学分：158.5</p><select id="syt12">
+          <option value="1">基础课程 选课属性：必修 学分要求=20 门数要求=5</option>
+          <option value="1">基础课程 选课属性：必修 学分要求=20 门数要求=5</option>
+        </select>"""
+        val plan = AcademicParsers.parseCurriculumPlan(html)
+        assertEquals(158.5, plan.totalRequiredCredits!!, 0.001)
+        assertEquals(1, plan.groups.size)
+    }
+
+    @Test
     fun loginLabelsDoNotOverrideTheActualFailure() {
         val labels = "<form><label>教务密码</label><label>安全验证码</label></form>"
         assertEquals("学号或密码错误", AcademicParsers.parseLoginFailureReason(labels + "<p>密码输入错误</p>"))

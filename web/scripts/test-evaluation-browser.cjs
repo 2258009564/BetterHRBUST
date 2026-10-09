@@ -219,6 +219,11 @@ async function runScenario({ failSubmit = false } = {}) {
   await page.getByRole('button', { name: '培养方案与学分', exact: true }).click();
   assert.match(await page.locator('main').innerText(), /10 选 4/);
   assert.doesNotMatch(await page.locator('main').innerText(), /studentScheduleShowByTerm\.do|级级/);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, '培养方案手机排版不得横向溢出');
+  await page.setViewportSize({ width: 1440, height: 1050 });
+
   assert.match(await page.locator('main').innerText(), /158\.5/);
   for (const label of ['考试日程与倒计时', '学籍档案与隐私', '空教室与自习', '教学公告与校历']) {
     await page.getByRole('button', { name: label, exact: true }).click();
