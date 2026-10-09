@@ -1,6 +1,6 @@
 # BetterHRBUST 发布页
 
-Vue 3 + Vite 静态发布页，参考 https://folia-site.cielaniska.top/ 的宽留白、大标题和浅色几何背景。提供功能介绍、Android/Windows/油猴下载、使用指南、主题切换与移动端布局，不使用个人教务截图或数据。
+Vue 3 + Vite 静态发布页。提供功能介绍、Android/Windows/油猴下载、使用指南、主题切换与移动端布局，不使用个人教务截图或数据。
 
 ## 本地开发与构建
 

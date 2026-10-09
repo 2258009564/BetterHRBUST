@@ -65,7 +65,8 @@
             </label>
             <UiInput
               v-model="form.username"
-              placeholder="请输入您的学号 (例如 2023000001)"
+              @blur="prepareAccount"
+              placeholder="请输入您的学号 (例如 2401234567)"
               autocomplete="username"
               clearable
               :disabled="isLoggingIn"
@@ -209,6 +210,7 @@ const {
   isLoggingIn,
   showLoginPageExpiredHint,
   login,
+  prepareLoginAccount,
   navigateTo
 } = useSession();
 
@@ -230,6 +232,10 @@ const form = reactive({
 const canSubmit = computed(() => {
   return form.username.trim() && form.password.trim() && form.captcha.trim().length === 4;
 });
+
+async function prepareAccount() {
+  if (await prepareLoginAccount(form.username)) refreshCaptcha();
+}
 
 function refreshCaptcha() {
   captchaLoading.value = true;

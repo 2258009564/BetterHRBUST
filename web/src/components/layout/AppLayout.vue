@@ -35,7 +35,7 @@
           :isCollapsed="isCollapsed"
           @toggle-sidebar="handleToggleSidebar"
         />
-        <main class="flex-1 px-4 sm:px-6 lg:px-8 pb-10 max-w-[1600px] w-full mx-auto">
+        <main class="academic-main flex-1 min-w-0 px-4 sm:px-6 lg:px-8 pb-10 max-w-[1600px] w-full mx-auto">
           <slot />
         </main>
       </div>

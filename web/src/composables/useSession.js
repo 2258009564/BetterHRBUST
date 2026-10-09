@@ -56,7 +56,8 @@ const sessionPromptDismissed = ref(false);
 let promptDecided = false;
 
 const studentId = ref(savedProfile?.internalId || ''); // 教务内部学生 ID
-const studentNumber = ref(storageGetItem('saved_student_number') || savedProfile?.studentNumber || '');
+const studentNumber = ref(savedProfile?.studentNumber || storageGetItem('saved_student_number') || '');
+let authGeneration = 0;
 
 const activeTab = ref('dashboard');
 const previousTab = ref('dashboard');
@@ -191,8 +192,17 @@ async function checkAuth(options = {}) {
   const light = options.light === true;
   if (isCheckingAuth.value) return isLoggedIn.value;
   isCheckingAuth.value = true;
+  const generation = authGeneration;
   try {
     const ctx = await academicApi.getStudentContext();
+    if (generation !== authGeneration) return false;
+    if (studentId.value && ctx.studentId && studentId.value !== ctx.studentId) {
+      clearRegisteredDataCaches();
+      resetProfile();
+      studentId.value = '';
+      markSessionExpired({ manual: false });
+      return false;
+    }
     if (ctx.studentId) {
       isLoggedIn.value = true;
       clearSessionExpired();
@@ -207,6 +217,7 @@ async function checkAuth(options = {}) {
         // 顺带拉取个人基本信息与周次
         try {
           const info = await academicApi.getPersonalInfo();
+          if (generation !== authGeneration) return false;
           Object.assign(userProfile, info);
           userProfile.internalId = ctx.studentId;
           if (info.studentNumber) studentNumber.value = info.studentNumber;
@@ -217,6 +228,7 @@ async function checkAuth(options = {}) {
 
         try {
           const cal = await academicApi.getCalendarInfo();
+          if (generation !== authGeneration) return false;
           if (cal.currentWeek) currentWeek.value = cal.currentWeek;
           if (cal.semesterName) currentSemester.name = cal.semesterName;
         } catch {
@@ -234,6 +246,7 @@ async function checkAuth(options = {}) {
       isLoggedIn.value = false;
     }
   } catch {
+    if (generation !== authGeneration) return false;
     // 异常（如重定向登录页/断网），若先前有学号或会话标记则判定为会话过期
     if (studentNumber.value || hasSavedSession) {
       markSessionExpired({ manual: false });
@@ -241,8 +254,10 @@ async function checkAuth(options = {}) {
       isLoggedIn.value = false;
     }
   } finally {
-    isCheckingAuth.value = false;
-    authChecked.value = true;
+    if (generation === authGeneration) {
+      isCheckingAuth.value = false;
+      authChecked.value = true;
+    }
   }
   return false;
 }
@@ -250,8 +265,32 @@ async function checkAuth(options = {}) {
 /**
  * 登录
  */
-async function login({ username, password, captcha, remember = true }) {
+/** 切换账号前先结束旧服务端会话，再重新获取属于新会话的验证码。 */
+async function prepareLoginAccount(username) {
+  const target = String(username || '').trim();
+  const current = userProfile.studentNumber || studentNumber.value;
+  if (!target || !current || target === current || (!isLoggedIn.value && !isSessionExpired.value)) return false;
+  if (isLoggingIn.value) return false;
   isLoggingIn.value = true;
+  try { await logout(); return true; }
+  finally { isLoggingIn.value = false; }
+}
+
+async function login({ username, password, captcha, remember = true }) {
+  if (isLoggingIn.value) return { success: false, message: '登录正在处理中' };
+  username = String(username).trim();
+  if (await prepareLoginAccount(username)) {
+    return { success: false, message: '账号已切换，请输入新验证码后登录' };
+  }
+  isLoggingIn.value = true;
+  isLoggedIn.value = false;
+  storageRemoveItem(SESSION_FLAG_KEY);
+  if (userProfile.studentNumber) {
+    isSessionExpired.value = true;
+    storageSetItem(SESSION_EXPIRED_KEY, 'true');
+  }
+  isCheckingAuth.value = false;
+  const generation = ++authGeneration;
   loginError.value = '';
   try {
     const res = await academicApi.login(username, password, captcha);
@@ -259,23 +298,22 @@ async function login({ username, password, captcha, remember = true }) {
       loginError.value = res.message || '登录失败';
       return { success: false, message: loginError.value };
     }
-
-    if (remember) {
-      storageSetItem('saved_student_number', username);
-    } else {
-      storageRemoveItem('saved_student_number');
-    }
-    studentNumber.value = username;
-
-    // 仅同步上下文（内部学生 ID 与当前学年学期）：
-    // 档案 / 校历 / 课表 / 成绩等全量数据统一交给 useAcademicData.syncAll() 拉取，避免重复请求
     const ctx = await academicApi.getStudentContext();
+    const profile = await academicApi.getPersonalInfo();
+    if (generation !== authGeneration) throw new Error('登录请求已失效，请重新登录');
+    if (!ctx.studentId || String(profile.studentNumber || '').trim() !== username) {
+      await logout();
+      throw new Error('教务返回的账号与输入学号不一致，请刷新验证码重新登录');
+    }
+    clearRegisteredDataCaches();
+    resetProfile();
+    Object.assign(userProfile, profile, { studentNumber: username, internalId: ctx.studentId });
+    studentNumber.value = username;
     studentId.value = ctx.studentId;
-    userProfile.internalId = ctx.studentId;
-    if (ctx.year) currentSemester.yearId = ctx.year;
-    if (ctx.term) currentSemester.termId = ctx.term;
-    if (!userProfile.studentNumber) userProfile.studentNumber = username;
-
+    currentSemester.yearId = ctx.year || '';
+    currentSemester.termId = ctx.term || '';
+    if (remember) storageSetItem('saved_student_number', username);
+    else storageRemoveItem('saved_student_number');
     isLoggedIn.value = true;
     clearSessionExpired();
     recordLoginTime();
@@ -287,20 +325,15 @@ async function login({ username, password, captcha, remember = true }) {
   } catch (err) {
     loginError.value = err.message || '登录异常';
     return { success: false, message: loginError.value };
-  } finally {
-    isLoggingIn.value = false;
-  }
+  } finally { isLoggingIn.value = false; }
 }
 
 /**
  * 登出（同时清理节流时间戳与本地数据缓存）
  */
 async function logout() {
-  try {
-    await academicApi.logout();
-  } catch {
-    // 忽略
-  }
+  ++authGeneration;
+  isCheckingAuth.value = false;
   isLoggedIn.value = false;
   isSessionExpired.value = false;
   promptActive.value = false;
@@ -316,6 +349,11 @@ async function logout() {
 
   // 通过桥接模块清理集中式数据缓存，避免与 useAcademicData 形成循环依赖
   clearRegisteredDataCaches();
+  currentSemester.yearId = '';
+  currentSemester.termId = '';
+  currentSemester.name = '';
+  studentNumber.value = '';
+  await academicApi.logout();
 }
 
 function setWeek(w) {
@@ -358,6 +396,7 @@ export function useSession() {
     lastPromptAt,
     checkAuth,
     login,
+    prepareLoginAccount,
     logout,
     markSessionExpired,
     setWeek,

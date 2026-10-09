@@ -163,6 +163,28 @@ async function runScenario({ failSubmit = false } = {}) {
   await page.goto('http://jwzx.hrbust.edu.cn/academic/student/currcourse/currcourse.jsdo');
   await page.evaluate(() => {
     localStorage.setItem('better_hrbust_has_session', 'true');
+    const fixed = new Date(2026, 9, 9, 22, 0).getTime();
+    const OriginalDate = Date;
+    window.Date = class extends OriginalDate {
+      constructor(...args) { super(...(args.length ? args : [fixed])); }
+      static now() { return fixed; }
+    };
+    const score = (courseId, value, credit, courseGroup = '', property = '必修') => ({
+      courseId, courseName: courseId, score: String(value), credit, courseGroup, property,
+      year: '2026', term: '1', examType: '正常考试', passed: value >= 60
+    });
+    localStorage.setItem('better_hrbust_cache_scores', JSON.stringify([
+      score('测试基础课', 65, 3), score('E最高', 95, 2, 'E类', '任选'),
+      score('E第二', 90, 2, 'E类', '任选'), score('A候选', 89, 2, 'A类', '任选'),
+      score('颜色69', 69, 1), score('颜色70', 70, 1)
+    ]));
+    localStorage.setItem('better_hrbust_cache_program_plan', JSON.stringify({totalRequiredCredits:158.5,
+      groups:[{id:'direction',name:'专业限选',property:'限选',requiredCredits:10,requiredCourses:4,
+      courses:Array.from({length:10},(_,i)=>({code:'DIR'+i,name:'方向课'+i,credit:2.5}))}]}));
+    localStorage.setItem('better_hrbust_cache_timetable', JSON.stringify({cells:[{
+      courseName:'已结束测试课程',day:5,sectionIndex:1,sectionLabel:'第一大节',weeks:'1-20'
+    }],unarranged:[]}));
+
     localStorage.setItem('better_hrbust_cached_profile', JSON.stringify({
       studentNumber: 'test-student',
       internalId: '100001',
@@ -184,6 +206,48 @@ async function runScenario({ failSubmit = false } = {}) {
   assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), true);
   await page.getByRole('button', { name: '切换浅色模式', exact: true }).click();
   assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), false);
+  await page.getByRole('button', { name: '概览', exact: true }).click();
+  await page.getByText('今日剩余课程', { exact: true }).waitFor();
+  await page.getByText('GPA 计算说明', { exact: true }).click();
+  assert.equal(await page.locator('details[open]').count(), 1);
+  assert.match(await page.locator('details[open]').innerText(), /剩余 A–E/);
+  await page.getByText('GPA 计算说明', { exact: true }).click();
+  for (const scale of [1.25, 1.5, 1.75, 2]) {
+    await page.setViewportSize({width:Math.floor(1920/scale),height:Math.floor(1080/scale)});
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `缩放 ${scale*100}% 的有效宽度不得溢出`);
+    if (scale === 1.5) {
+      assert.equal(await page.locator('.academic-summary-grid').last().evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length), 2, '缩放后按主内容宽度使用两列卡片');
+    }
+  }
+  await page.setViewportSize({width:1440,height:1050});
+
+  assert.equal(await page.getByText('已结束测试课程', { exact: true }).count(), 0);
+  assert.match(await page.getByText('今日剩余课程', { exact: true }).locator('..').innerText(), /0\s*门/);
+  assert.equal(await page.getByText('提前毕业', { exact: true }).count(), 0);
+  assert.match(await page.locator('main').innerText(), /158\.5/);
+  await page.getByRole('button', { name: '成绩与GPA分析', exact: true }).click();
+  const low = page.getByText('69', { exact: true });
+  const boundary = page.getByText('70', { exact: true });
+  assert.match(await low.getAttribute('class'), /text-rose/);
+  assert.doesNotMatch(await boundary.getAttribute('class'), /text-rose/);
+  assert.equal(await page.getByText('提前毕业判定', { exact: true }).count(), 0);
+  await page.getByRole('button', { name: '培养方案与学分', exact: true }).click();
+  await page.getByText('毕业方案总学分达成进度', { exact: true }).waitFor();
+  assert.match(await page.locator('main').innerText(), /10 选 4/);
+  assert.doesNotMatch(await page.locator('main').innerText(), /studentScheduleShowByTerm\.do|级级/);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, '培养方案手机排版不得横向溢出');
+  await page.setViewportSize({ width: 1440, height: 1050 });
+
+  assert.match(await page.locator('main').innerText(), /158\.5/);
+  for (const [label, heading] of [['考试日程与倒计时', '全部考试日程列表'], ['学籍档案与隐私', '学籍详细档案'], ['空教室与自习', '空教室与自习查询'], ['教学公告与校历', '教学运行公告']]) {
+    await page.getByRole('button', { name: label, exact: true }).click();
+    await page.getByText(heading, { exact: true }).waitFor();
+    assert.doesNotMatch(await page.locator('main').innerText(), /[a-zA-Z][a-zA-Z/]*\.(?:jsdo|do)/);
+  }
+  assert.equal(await page.getByRole('button', { name: '我的课程名录', exact: true }).count(), 1);
   await page.getByRole('button', { name: '资料查找', exact: true }).click();
   await page.getByLabel('搜索资料').fill('补办学生证');
   await page.getByText('补办学生证申请（新版）', { exact: true }).waitFor();

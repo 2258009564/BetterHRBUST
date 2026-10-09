@@ -281,7 +281,7 @@
           </div>
 
           <div class="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300 text-[11px] leading-relaxed">
-            数据直连自哈理工教务系统接口 <code class="font-mono">showTimetable.do</code>
+            课程信息来自学校教务系统
           </div>
         </div>
       </UiDrawer>

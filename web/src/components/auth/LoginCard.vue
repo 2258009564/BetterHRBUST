@@ -52,7 +52,8 @@
         <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">学号</label>
         <UiInput
           v-model="form.username"
-          placeholder="请输入教务学号 (如 2023000001)"
+              @blur="prepareAccount"
+          placeholder="请输入教务学号 (如 2401234567)"
           autocomplete="username"
           clearable
           :disabled="isLoggingIn"
@@ -194,7 +195,7 @@ const props = defineProps({
 
 const emit = defineEmits(['success']);
 
-const { isLoggingIn, loginError, login, studentNumber, isLoggedIn, userProfile, showLoginPageExpiredHint } =
+const { isLoggingIn, loginError, login, prepareLoginAccount, studentNumber, isLoggedIn, userProfile, showLoginPageExpiredHint } =
   useSession();
 
 const showPassword = ref(false);
@@ -213,6 +214,10 @@ const form = reactive({
 const canSubmit = computed(() => {
   return form.username.trim() && form.password.trim() && form.captcha.trim().length === 4;
 });
+
+async function prepareAccount() {
+  if (await prepareLoginAccount(form.username)) refreshCaptcha();
+}
 
 function refreshCaptcha() {
   captchaLoading.value = true;

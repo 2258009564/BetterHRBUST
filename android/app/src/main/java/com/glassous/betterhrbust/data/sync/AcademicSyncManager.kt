@@ -122,6 +122,10 @@ class AcademicSyncManager(
                     tasks.awaitAll()
                 }
 
+                val current = prefs.preferencesFlow.firstOrNull()
+                if (current?.studentId != studentId || current?.username != snapshot.username) {
+                    return SyncOutcome(success = false, expired = false, message = "账号已切换，旧同步结果已丢弃")
+                }
                 if (authRepo.isSessionExpired.value) {
                     SyncOutcome(success = false, expired = true, message = "登录状态已失效，请重新登录后再刷新数据")
                 } else {

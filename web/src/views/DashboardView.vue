@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <!-- Initial Auth Checking State: Smooth Skeleton to prevent login card flash -->
     <div v-if="!authChecked && !hasCachedData" class="space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="academic-summary-grid grid gap-4">
         <div v-for="i in 4" :key="i" class="p-5 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#1c1e24] space-y-3">
           <div class="h-3 w-20 bg-zinc-200/70 dark:bg-zinc-800 animate-pulse rounded" />
           <div class="h-7 w-28 bg-zinc-200/80 dark:bg-zinc-800 animate-pulse rounded-md" />
@@ -22,7 +22,7 @@
     <!-- Authenticated State or Cached Offline State -->
     <template v-else>
       <!-- Top Metric Highlights -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="academic-summary-grid grid gap-4">
         <!-- GPA Card -->
         <UiCard customClass="relative overflow-hidden">
           <div class="flex items-center justify-between">
@@ -48,9 +48,9 @@
             <div class="flex-1 min-w-0">
               <div class="text-xs font-medium text-zinc-500 dark:text-zinc-400">已获得学分 / 方案总学分</div>
               <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
-                {{ creditsProgress.earnedTotal }} <span class="text-xs font-normal text-zinc-400">/ {{ creditsProgress.requiredTotal }}</span>
+                {{ creditsProgress.earnedTotal }} <span class="text-xs font-normal text-zinc-400">/ {{ creditsProgress.requiredTotal || "待同步" }}</span>
               </div>
-              <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed break-words">
                 必修课已修读 {{ stats.totalCredits }} 学分 ({{ stats.courseCount }} 门)
               </div>
             </div>
@@ -64,7 +64,7 @@
         <UiCard>
           <div class="flex items-center justify-between">
             <div class="flex-1">
-              <div class="text-xs font-medium text-zinc-500 dark:text-zinc-400">今日课程安排</div>
+              <div class="text-xs font-medium text-zinc-500 dark:text-zinc-400">今日剩余课程</div>
               <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
                 {{ todayCourses.length }} <span class="text-xs font-normal text-zinc-400">门待上</span>
               </div>
@@ -86,7 +86,7 @@
               <div class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">
                 {{ upcomingExams.length }} <span class="text-xs font-normal text-zinc-400">门</span>
               </div>
-              <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate max-w-[140px]">
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed break-words max-w-[140px]">
                 {{ upcomingExams[0]?.courseName || '暂无近期考试' }}
               </div>
             </div>
@@ -116,7 +116,7 @@
             <div>
               <div class="text-[11px] text-zinc-500 dark:text-zinc-400">补考 / 重修</div>
               <div class="text-lg font-bold" :class="stats.recommend.qualified ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
-                {{ stats.recommend.retakeCount }} / {{ stats.recommend.retakeLimit }}
+                {{ stats.retakeCount }}
               </div>
             </div>
             <div>
@@ -125,20 +125,12 @@
                 {{ stats.risk.failedCredits }}
               </div>
             </div>
-            <div>
-              <div class="text-[11px] text-zinc-500 dark:text-zinc-400">提前毕业</div>
-              <div class="text-lg font-bold" :class="stats.earlyGraduation.qualified ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-900 dark:text-zinc-100'">
-                {{ stats.earlyGraduation.qualified ? '达标' : '未达标' }}
-              </div>
-            </div>
             <UiBadge size="sm" :variant="stats.risk.level === 'none' ? 'success' : 'danger'">
               {{ stats.risk.label }}
             </UiBadge>
           </div>
 
-          <div class="text-[11px] text-zinc-400 dark:text-zinc-500 leading-relaxed max-w-md">
-            {{ statsScopeNote }}
-          </div>
+          <GpaCalculationHelp />
         </div>
       </UiCard>
 
@@ -147,7 +139,7 @@
         <!-- Left Column: Today's Schedule & Exam Radar -->
         <div class="lg:col-span-2 space-y-6">
           <!-- Today's Schedule Card -->
-          <UiCard :title="`今日课程安排 (${currentDayName})`">
+          <UiCard :title="`今日剩余课程 (${currentDayName})`">
             <template #header-action>
               <UiButton size="sm" variant="ghost" @click="$emit('navigate', 'timetable')">
                 查看完整课表 →
@@ -290,7 +282,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, onUnmounted } from 'vue';
+import GpaCalculationHelp from '@/components/GpaCalculationHelp.vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiBadge from '@/components/ui/UiBadge.vue';
@@ -298,8 +291,8 @@ import Icon from '@/components/icons/Icon.vue';
 import LoginCard from '@/components/auth/LoginCard.vue';
 import { useSession } from '@/composables/useSession.js';
 import { useAcademicData } from '@/composables/useAcademicData.js';
-import { buildAcademicStats, computeCreditsProgress, STATS_SCOPE_NOTE } from '@/services/academic/stats.js';
-import { getCombineSlotTime } from '@/utils/periodTimes.js';
+import { buildAcademicStats, computeCreditsProgress } from '@/services/academic/stats.js';
+import { getCombineSlotTime, hasCombineSlotEnded } from '@/utils/periodTimes.js';
 import { getCourseColor } from '@/utils/courseColors.js';
 import { isCourseActiveInWeek } from '@/utils/courseWeeks.js';
 
@@ -310,19 +303,21 @@ const { isLoggedIn, authChecked, currentWeek } = useSession();
 const { scores, plan, timetableCombine, exams, notices, hasCachedData } = useAcademicData();
 
 const stats = computed(() => buildAcademicStats(scores.value));
-const statsScopeNote = STATS_SCOPE_NOTE;
 
 // 与"培养方案与学分"页共用同一函数，保证两页数据完全一致
-const creditsProgress = computed(() => computeCreditsProgress(scores.value, plan.value?.groups || []));
+const creditsProgress = computed(() => computeCreditsProgress(scores.value, plan.value?.groups || [], { planTotalCredits: plan.value?.totalRequiredCredits }));
 
 const dayMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-const currentDayIndex = new Date().getDay() || 7; // 1~7
-const currentDayName = computed(() => dayMap[new Date().getDay()]);
+const now = ref(new Date());
+const clock = setInterval(() => { now.value = new Date(); }, 30_000);
+onUnmounted(() => clearInterval(clock));
+const currentDayIndex = computed(() => now.value.getDay() || 7);
+const currentDayName = computed(() => dayMap[now.value.getDay()]);
 
 const todayCourses = computed(() => {
   const cells = timetableCombine.value?.cells || [];
   return cells.filter(
-    c => c.day === currentDayIndex && isCourseActiveInWeek(c, currentWeek.value)
+    c => c.day === currentDayIndex.value && isCourseActiveInWeek(c, currentWeek.value) && !hasCombineSlotEnded(c.sectionIndex, now.value)
   );
 });
 

@@ -6,7 +6,7 @@
         <Icon name="course" customClass="w-6 h-6" />
       </div>
       <h3 class="text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1">未登录教务系统</h3>
-      <p class="text-xs text-zinc-500 mb-4">请登录哈理工教务在线以查询本学期修读课程与全校课程名录</p>
+      <p class="text-xs text-zinc-500 mb-4">请登录哈理工教务在线以查询自己本学期修读的课程</p>
       <UiButton variant="primary" size="sm" @click="openLoginModal">立即登录</UiButton>
     </UiCard>
 

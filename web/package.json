@@ -1,11 +1,11 @@
 {
   "name": "better-hrbust-web",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.1",
   "type": "module",
   "description": "BetterHRBUST - 现代化哈理工教务在线 Web 客户端",
   "scripts": {
-    "test": "node scripts/test-http-transport.mjs && node --test scripts/test-evaluation.mjs && node scripts/test-resources.mjs",
+    "test": "node scripts/test-account-switch.mjs && node scripts/test-academic-corrections.mjs && node scripts/test-http-transport.mjs && node --test scripts/test-evaluation.mjs && node scripts/test-resources.mjs",
     "test:browser": "node scripts/test-evaluation-browser.cjs",
     "test:evaluation-browser": "node scripts/test-evaluation-browser.cjs",
     "dev": "vite",

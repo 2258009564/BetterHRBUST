@@ -12,7 +12,7 @@
 
     <template v-else>
       <!-- Query Filter Card -->
-      <UiCard title="空教室与自习查询 (roomschedulequery.jsdo)">
+      <UiCard title="空教室与自习查询">
         <div class="space-y-4">
           <div class="flex flex-wrap items-center gap-4">
             <!-- Campus Select -->

@@ -23,7 +23,7 @@
       </div>
 
       <!-- Top KPI Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <UiCard>
           <div class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">平均学分绩点 (五分制 GPA)</div>
           <div class="text-3xl font-extrabold text-zinc-900 dark:text-zinc-100 mt-1.5">{{ stats.gpa.toFixed(2) }}</div>
@@ -55,13 +55,13 @@
         </UiCard>
       </div>
 
-      <!-- 特色算法：学位证 / 推免 / 学业风险 / 提前毕业 -->
+      <!-- 特色算法：学位证 / 推免 / 学业风险 -->
       <UiCard title="特色学业算法（哈理工口径）">
         <template #header-action>
           <span class="text-[11px] text-zinc-400">门槛以学校教务处当期文件为准</span>
         </template>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <!-- ① 学位证算法 -->
           <div class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30">
             <div class="flex items-center justify-between">
@@ -71,11 +71,12 @@
               </UiBadge>
             </div>
             <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-2">{{ stats.degree.gpa.toFixed(2) }}</div>
-            <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
-              学位课（必修课口径）平均学分绩点，门槛 {{ stats.degree.threshold.toFixed(1) }}
+            <GpaCalculationHelp />
+        <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+              学业课 + E 类最高一门 + 剩余 A–E 类最高一门，门槛 {{ stats.degree.threshold.toFixed(1) }}
             </div>
             <div class="text-[11px] mt-1" :class="stats.degree.allPassed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
-              {{ stats.degree.allPassed ? '必修课已全部通过' : '存在未通过的必修课' }}
+              0 学分及其余通识选修不参与加权
             </div>
           </div>
 
@@ -117,21 +118,7 @@
             </div>
           </div>
 
-          <!-- ④ 提前毕业判定 -->
-          <div class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200">提前毕业判定</span>
-              <UiBadge size="sm" :variant="stats.earlyGraduation.qualified ? 'success' : 'default'">
-                {{ stats.earlyGraduation.qualified ? '达标' : '未达标' }}
-              </UiBadge>
-            </div>
-            <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-2">
-              {{ stats.earlyGraduation.gpa.toFixed(2) }}
-            </div>
-            <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
-              需全部课程平均学分绩点 ≥ {{ stats.earlyGraduation.threshold.toFixed(1) }}
-            </div>
-          </div>
+
         </div>
       </UiCard>
 
@@ -308,6 +295,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import GpaCalculationHelp from '@/components/GpaCalculationHelp.vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiInput from '@/components/ui/UiInput.vue';
@@ -435,12 +423,12 @@ function getScoreClass(score) {
   if (!isNaN(n)) {
     if (n >= 90) return 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900';
     if (n >= 80) return 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100';
-    if (n >= 60) return 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-300';
+    if (n >= 70) return 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-300';
     return 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
   }
   if (score === '优秀' || score === '优') return 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900';
   if (score === '良好' || score === '良') return 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100';
-  if (score === '及格' || score === '合格') return 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-300';
+  if (score === '中等' || score === '中') return 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-300';
   return 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
 }
 </script>

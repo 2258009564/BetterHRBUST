@@ -155,6 +155,7 @@ data class ScoreStats(
     val rawCourseCount: Int = 0,
     /** 去重后课程总门数（含选修，仅用于展示合并效果） */
     val dedupedCount: Int = 0,
+    val retakeCount: Int = 0,
     val degree: DegreeStats = DegreeStats(),
     val recommend: RecommendStats = RecommendStats(),
     val risk: RiskStats = RiskStats(),
@@ -245,7 +246,8 @@ data class ExamItem(
 
 @Serializable
 data class CurriculumPlanResult(
-    val groups: List<CurriculumGroup> = emptyList()
+    val groups: List<CurriculumGroup> = emptyList(),
+    val totalRequiredCredits: Double? = null
 )
 
 @Serializable

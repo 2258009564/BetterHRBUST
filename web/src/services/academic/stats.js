@@ -9,11 +9,10 @@
  *   - 五级记分制：不及格 0 / 及格 1.5 / 中等 2.5 / 良好 3.5 / 优秀 4.5
  * 相关门槛（同文件）：
  *   - 学位证：必修课平均学分绩点 ≥ 1.5
- *   - 提前毕业：必修课平均学分绩点 ≥ 4.0
  *   - 学业处理：累计挂科 > 15 学分留降级；> 25 学分退学
  *   - 推免：必修课成绩全部合格，且补考与重修课程累计不超过两门
  *
- * 统计范围：全部学业指标只统计必修课，限选与任选课不参与任何计算。
+ * 基础 GPA 与风险指标统计必修课；学位绩点和培养方案学分分别使用独立课程范围。
  *
  * 重要：各学院 / 各年度细则可能存在差异，门槛均为可配置常量，界面须标注"以学校教务处口径为准"。
  *
@@ -22,7 +21,7 @@
 
 /** 学位绩点门槛（必修课平均学分绩点下限，以学校教务处口径为准） */
 export const DEGREE_GPA_THRESHOLD = 1.5;
-/** 提前毕业门槛：全部课程平均学分绩点不低于该值 */
+/** 历史兼容常量：不作为学校政策或资格判定展示 */
 export const EARLY_GRAD_GPA_THRESHOLD = 4.0;
 /** 累计挂科学分上限（超过 → 留降级） */
 export const RISK_DOWNGRADE_CREDITS = 15;
@@ -34,7 +33,7 @@ export const RECOMMEND_RETAKE_LIMIT = 2;
  * 已获得学分是否只统计必修课（限选 / 任选不计）。
  * 与培养方案页、概览页共用一个开关，避免两侧口径再次分叉。
  */
-export const EARNED_CREDITS_REQUIRED_ONLY = true;
+export const EARNED_CREDITS_REQUIRED_ONLY = false;
 
 /** 五级记分制 → 成绩绩点（官方折算） */
 const LEVEL_GPA = {
@@ -135,7 +134,7 @@ export function isElective(property) {
 
 /**
  * 是否参与学业统计的课程。
- * 统计口径：全部指标只统计必修课，选修课（限选 + 任选）不参与任何计算。
+ * 基础 GPA 与风险指标只统计必修课。
  */
 export function isCountedCourse(property) {
   return isRequired(property);
@@ -158,7 +157,7 @@ export function gpaOf(records) {
   let totalGpaWeight = 0;
   (records || []).forEach(item => {
     const cr = Number(item.credit) || 0;
-    if (cr <= 0) return;
+    if (cr <= 0 || parseScoreValue(item.score).estimated === null) return;
     totalCredits += cr;
     totalGpaWeight += gradePoint(item.score) * cr;
   });
@@ -209,19 +208,39 @@ export function dedupeScores(scores) {
       return (parseScoreValue(b.score).estimated || 0) - (parseScoreValue(a.score).estimated || 0);
     });
     const best = sorted[0];
-    const retake = items.length > 1 || items.some(isRetakeRecord);
+    const attempts = new Set(items.map(s => `${s.year}|${s.term}`));
+    const retake = attempts.size > 1 || items.some(isRetakeRecord);
     result.push({ ...best, isRetake: retake, recordCount: items.length });
   });
 
   return result;
 }
 
+export function electiveCategory(item) {
+  if (isRequired(item.property) || /专业/.test(item.courseGroup || '')) return null;
+  const text = `${item.courseGroup || ''} ${item.property || ''} ${isElective(item.property) ? item.courseName || '' : ''}`.toUpperCase();
+  const match = text.match(/([ABCDE])\s*类|[（(]([ABCDE])[）)]/);
+  return match ? match[1] || match[2] : null;
+}
+
+export function degreeCourses(scores) {
+  const courses = dedupeScores(scores).filter(s => Number(s.credit) > 0);
+  const electives = courses.filter(s => electiveCategory(s));
+  const rank = (a, b) => (parseScoreValue(b.score).estimated ?? -Infinity) - (parseScoreValue(a.score).estimated ?? -Infinity) || String(a.courseId).localeCompare(String(b.courseId));
+  const academic = courses.filter(s => !electiveCategory(s) && (isDegreeCourse(s.property) || /专业/.test(s.courseGroup || '')));
+  const firstE = electives.filter(s => electiveCategory(s) === 'E').sort(rank)[0];
+  const second = firstE ? electives.filter(s => s !== firstE).sort(rank)[0] : undefined;
+  return [...academic, firstE, second].filter(Boolean);
+}
+
+export function isLowScore(score) { return (parseScoreValue(score).estimated ?? Infinity) < 70; }
+
 /**
  * 取出参与学业统计的课程记录（仅必修课，已合并去重）
  * 供学期走势、成绩分段等派生统计复用，保证口径与总览完全一致
  */
 export function countedCourses(scores) {
-  return dedupeScores(scores).filter(s => isCountedCourse(s.property));
+  return dedupeScores(scores).filter(s => isCountedCourse(s.property) && Number(s.credit) > 0);
 }
 
 /**
@@ -264,7 +283,7 @@ export function buildAcademicStats(scores) {
 
   // 统计口径：仅统计必修课（限选 / 任选均不参与任何计算）
   // 注意：dedupeScores 返回的是「原始课程对象 + isRetake/recordCount」的扁平结构（非 { item } 包装）
-  const requiredCourses = deduped.filter(s => isRequired(s.property));
+  const requiredCourses = deduped.filter(s => isRequired(s.property) && Number(s.credit) > 0);
 
   const totalCredits = round1(
     requiredCourses.reduce((acc, s) => acc + (Number(s.credit) || 0), 0)
@@ -280,9 +299,10 @@ export function buildAcademicStats(scores) {
   // 必修课加权：GPA / 加权平均分 / 优秀率
   const overall = calcWeighted(requiredCourses);
 
-  // ---- 特色算法 ① 学位证（必修课口径） ----
-  const degreeAllPassed = requiredCourses.length > 0 && requiredCourses.every(s => s.passed);
-  const degreeQualified = requiredCourses.length > 0 && degreeAllPassed && overall.gpa >= DEGREE_GPA_THRESHOLD;
+  const selectedDegreeCourses = degreeCourses(list);
+  const degreeWeight = calcWeighted(selectedDegreeCourses);
+  const degreeAllPassed = selectedDegreeCourses.length > 0 && selectedDegreeCourses.every(s => s.passed);
+  const degreeQualified = hasCredits(selectedDegreeCourses) && gpaOf(selectedDegreeCourses) >= DEGREE_GPA_THRESHOLD;
 
   // ---- 特色算法 ② 推免 / 保研（必修课口径，统计补考 + 重修门数） ----
   const retakeCount = requiredCourses.filter(s => s.isRetake).length;
@@ -305,6 +325,7 @@ export function buildAcademicStats(scores) {
     courseCount: requiredCourses.length,
     rawCourseCount: list.length,
     dedupedCount: deduped.length,
+    retakeCount: deduped.filter(s => s.isRetake && Number(s.credit) > 0).length,
     excellentRate: requiredCourses.length ? Math.round((overall.excCount / requiredCourses.length) * 100) : 0,
 
     // 学分（必修课口径：选修课不计数；重修/补考已合并去重）
@@ -318,10 +339,10 @@ export function buildAcademicStats(scores) {
 
     // 特色算法 ① 学位证
     degree: {
-      gpa: overall.gpa,
-      courseCount: requiredCourses.length,
-      requiredCredits: totalCredits,
-      earnedCredits,
+      gpa: degreeWeight.gpa,
+      courseCount: selectedDegreeCourses.length,
+      requiredCredits: round1(selectedDegreeCourses.reduce((sum, s) => sum + Number(s.credit), 0)),
+      earnedCredits: round1(selectedDegreeCourses.filter(s => s.passed).reduce((sum, s) => sum + Number(s.credit), 0)),
       allPassed: degreeAllPassed,
       threshold: DEGREE_GPA_THRESHOLD,
       qualified: degreeQualified
@@ -369,13 +390,18 @@ export function buildAcademicStats(scores) {
  * @param {boolean} [options.requiredOnly] 是否只统计必修课，默认读取 EARNED_CREDITS_REQUIRED_ONLY
  * @returns {{ categories: Array, earnedTotal: number, requiredTotal: number, completionPercent: number, requiredOnly: boolean }}
  */
+export function isProfessionalElectiveGroup(group) { return /专业(?:方向)?(?:选修|限选)/.test(group.name); }
+
+export function planGroupRequiredCredits(group) { return Number(group.requiredCredits) || 0; }
+
+
 export function computeCreditsProgress(scores, groups, options = {}) {
   const requiredOnly = options.requiredOnly !== undefined ? !!options.requiredOnly : EARNED_CREDITS_REQUIRED_ONLY;
   const deduped = dedupeScores(scores);
   const eligible = deduped.filter(s => s.passed && (!requiredOnly || isRequired(s.property)));
   const matched = new Set();
 
-  const planGroups = (groups || []).filter(Boolean);
+  const planGroups = [...new Map((groups || []).filter(Boolean).map(g => [g.id || g.name, g])).values()];
 
   let categories = [];
   if (planGroups.length > 0) {
@@ -398,7 +424,9 @@ export function computeCreditsProgress(scores, groups, options = {}) {
       return {
         name: g.name,
         property: g.property,
-        required: round1(g.requiredCredits),
+        required: round1(planGroupRequiredCredits(g)),
+        requiredCourses: isProfessionalElectiveGroup(g) ? 4 : Number(g.requiredCourses) || 0,
+        electiveCandidates: isProfessionalElectiveGroup(g) ? (g.courses || []).length : null,
         earned: round1(earned)
       };
     });
@@ -414,7 +442,7 @@ export function computeCreditsProgress(scores, groups, options = {}) {
       categories.push({
         name: grpName,
         property: '必修',
-        required: round1(cr * 1.2),
+        required: 0,
         earned: round1(cr)
       });
     }
@@ -436,7 +464,8 @@ export function computeCreditsProgress(scores, groups, options = {}) {
   }
 
   const earnedTotal = round1(categories.reduce((acc, c) => acc + c.earned, 0));
-  const requiredTotal = round1(categories.reduce((acc, c) => acc + c.required, 0)) || 160;
+  const summary = planGroups.find(g => ['总计', '合计', '全部课程', '毕业要求', '培养方案总计'].includes(g.name.trim()));
+  const requiredTotal = Number(options.planTotalCredits) > 0 ? Number(options.planTotalCredits) : Number(summary?.requiredCredits) > 0 ? Number(summary.requiredCredits) : round1(categories.reduce((acc, c) => acc + c.required, 0));
 
   return {
     categories,
@@ -449,7 +478,7 @@ export function computeCreditsProgress(scores, groups, options = {}) {
 
 /** 学业统计口径说明文案（供各页面统一展示） */
 export const STATS_SCOPE_NOTE =
-  '全部学业指标（GPA / 加权均分 / 优秀率 / 挂科门数与学分 / 风险预警）均只统计必修课，限选与任选课不参与任何计算';
+  '学位绩点：学业课 + E 类最高 1 门 + 排除该课后剩余 A–E 类最高 1 门；0 学分不计。风险与推免按必修课统计';
 
 /** 已获得学分口径说明文案（供各页面统一展示） */
 export const EARNED_CREDITS_NOTE = EARNED_CREDITS_REQUIRED_ONLY

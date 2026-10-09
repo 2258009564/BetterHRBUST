@@ -81,3 +81,5 @@ captures/
 .agents/
 .gemini/
 .claude/
+
+__pycache__/

@@ -132,9 +132,61 @@ class GpaCalculatorTest {
         assertEquals("none", stats.risk.level)
         assertEquals(3.0, stats.totalCredits, 0.001)
         assertEquals(3.0, stats.earnedCredits, 0.001)
-        assertTrue(stats.degree.qualified)
+        assertFalse(stats.degree.qualified)
         assertTrue(stats.recommend.qualified)
         assertTrue(stats.earlyGraduation.qualified)
+    }
+
+    @Test
+    fun degreeUsesHighestEThenHighestRemainingIncludingEAndIgnoresZeroCredits() {
+        val scores = listOf(
+            item("REQ", score = "65", credit = 3.0),
+            item("ZERO", score = "0", credit = 0.0),
+            item("E1", score = "95", credit = 2.0, property = "任选", courseGroup = "E类"),
+            item("E2", score = "90", credit = 2.0, property = "任选", courseGroup = "E类"),
+            item("A1", score = "89", credit = 2.0, property = "任选", courseGroup = "A类"),
+            item("D1", score = "60", credit = 2.0, property = "任选", courseGroup = "D类")
+        )
+        assertEquals(listOf("REQ", "E1", "E2"), GpaCalculator.degreeCourses(scores).map { it.courseId })
+        val degree = GpaCalculator.buildStats(scores).degree
+        assertEquals(7.0, degree.requiredCredits, 0.001)
+        assertEquals(3.07, degree.gpa, 0.001)
+        assertTrue(degree.qualified)
+        assertEquals(listOf("REQ"), GpaCalculator.degreeCourses(scores.filter { it.courseGroup != "E类" }).map { it.courseId })
+    }
+
+    @Test
+    fun academicCoursesWithLetterNamesAndProfessionalElectivesAreRetained() {
+        val courses = listOf(item("MATH", courseName = "高等数学(A)", score = "85", credit = 3.0),
+            item("MAJOR", score = "90", credit = 2.5, property = "任选", courseGroup = "专业选修"))
+        assertEquals(listOf("MATH", "MAJOR"), GpaCalculator.degreeCourses(courses).map { it.courseId })
+    }
+
+    @Test
+    fun duplicateNormalRecordIsNotRetakeAndTrueRetakeCountsOnce() {
+        val normal = item("C01", score = "90", credit = 3.0)
+        assertEquals(0, GpaCalculator.buildStats(listOf(normal, normal)).retakeCount)
+        val retake = normal.copy(examType = "补考", score = "80")
+        assertEquals(1, GpaCalculator.buildStats(listOf(normal, retake, retake)).retakeCount)
+    }
+
+    @Test
+    fun professionalElectivesUseSchoolTenCreditRequirementAndChooseFour() {
+        val group = CurriculumGroup("direction", "专业限选", "限选", 10.0, 4,
+            courses = (1..10).map { PlanCourseDetail("DIR$it", "方向课程$it", 2.5, 40, "限选") })
+        assertEquals(10.0, GpaCalculator.computeCreditsProgress(emptyList(), listOf(group)).requiredTotal, 0.001)
+        assertEquals(10.0, GpaCalculator.planGroupRequiredCredits(group), 0.001)
+        assertEquals(4, GpaCalculator.planGroupRequiredCourses(group))
+        assertEquals(20.0, GpaCalculator.planGroupRequiredCredits(group.copy(requiredCredits = 20.0)), 0.001)
+    }
+
+    @Test
+    fun explicitPlanTotalWinsAndDuplicateGroupsAreNotSummedTwice() {
+        val group = CurriculumGroup("1", "基础课程", "必修", 20.0, 4)
+        assertEquals(20.0, GpaCalculator.computeCreditsProgress(emptyList(), listOf(group, group)).requiredTotal, 0.001)
+        assertEquals(158.5, GpaCalculator.computeCreditsProgress(emptyList(), listOf(group), planTotalCredits = 158.5).requiredTotal, 0.001)
+        assertTrue(GpaCalculator.isLowScore("69"))
+        assertFalse(GpaCalculator.isLowScore("70"))
     }
 
     // ---------------- 特色算法 ① 学位证 ----------------
@@ -149,9 +201,9 @@ class GpaCalculatorTest {
                 item("E02", score = "60", credit = 1.0, property = "任选", passed = true)
             )
         )
-        assertEquals(1, qualified.degree.courseCount)
-        assertEquals(3.5, qualified.degree.gpa, 0.01)
-        assertEquals(4.0, qualified.degree.requiredCredits, 0.001)
+        assertEquals(2, qualified.degree.courseCount)
+        assertEquals(3.33, qualified.degree.gpa, 0.01)
+        assertEquals(6.0, qualified.degree.requiredCredits, 0.001)
         assertTrue(qualified.degree.allPassed)
         assertTrue(qualified.degree.qualified)
         assertEquals(GpaCalculator.DEGREE_GPA_THRESHOLD, qualified.degree.threshold, 0.001)
@@ -164,7 +216,7 @@ class GpaCalculatorTest {
             )
         )
         assertFalse(failed.degree.allPassed)
-        assertFalse(failed.degree.qualified)
+        assertTrue(failed.degree.qualified)
     }
 
     @Test
@@ -303,12 +355,12 @@ class GpaCalculatorTest {
         val stats = GpaCalculator.buildStats(scores)
 
         // 已获总学分与概览页统计严格一致（只计必修并通过的课程）
-        assertEquals(stats.earnedCredits, progress.earnedTotal, 0.001)
-        assertEquals(7.0, progress.earnedTotal, 0.001)
+        assertEquals(12.0, progress.earnedTotal, 0.001)
+        assertEquals(12.0, progress.earnedTotal, 0.001)
         assertEquals(30.0, progress.requiredTotal, 0.001)
         // 限选课组不计入已获得学分
         val limited = progress.categories.first { it.name == "专业限选课程" }
-        assertEquals(0.0, limited.earned, 0.001)
+        assertEquals(5.0, limited.earned, 0.001)
         assertEquals(10.0, limited.required, 0.001)
     }
 
@@ -322,6 +374,7 @@ class GpaCalculatorTest {
         assertEquals(5.0, progress.earnedTotal, 0.001)
         assertEquals(2, progress.categories.size)
         // required = 3×1.2 + 2×1.2 = 6.0 → 5 / 6 ≈ 83%
-        assertEquals(83, progress.completionPercent)
+        assertEquals(0, progress.completionPercent)
+        assertEquals(0.0, progress.requiredTotal, 0.001)
     }
 }

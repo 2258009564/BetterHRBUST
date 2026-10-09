@@ -201,7 +201,7 @@ fun ScoresScreen(
                         }
                     }
 
-                    // 特色学业算法：学位证 / 推免 / 学业风险预警 / 提前毕业
+                    // 特色学业算法：学位证 / 推免 / 学业风险预警
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -229,7 +229,7 @@ fun ScoresScreen(
                                     qualified = stats?.degree?.qualified == true,
                                     detail = stats?.degree?.let {
                                         "门槛 ${it.threshold} · " +
-                                            if (it.allPassed) "已全部通过" else "存在未通过必修课"
+                                            "E 类最高 1 门 + 剩余 A–E 类最高 1 门"
                                     } ?: "暂无数据"
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
@@ -249,14 +249,7 @@ fun ScoresScreen(
                                     detail = stats?.risk?.description ?: "暂无数据"
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
-                                FeatureAlgorithmRow(
-                                    title = "④ 提前毕业判定",
-                                    value = if (stats?.earlyGraduation?.qualified == true) "达标" else "未达标",
-                                    qualified = stats?.earlyGraduation?.qualified == true,
-                                    detail = stats?.earlyGraduation?.let {
-                                        "平均学分绩点 ≥ ${it.threshold}"
-                                    } ?: "暂无数据"
-                                )
+
                             }
                         }
                     }
@@ -410,13 +403,13 @@ fun ScoresScreen(
 
                                     Surface(
                                         shape = RoundedCornerShape(12.dp),
-                                        color = if (item.passed) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+                                        color = if (!GpaCalculator.isLowScore(item.score)) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
                                     ) {
                                         Text(
                                             text = item.score,
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (item.passed) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error,
+                                            color = if (!GpaCalculator.isLowScore(item.score)) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error,
                                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                                         )
                                     }

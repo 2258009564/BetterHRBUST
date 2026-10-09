@@ -98,7 +98,7 @@ fun ProgramScreen(
     // 与概览页共用同一口径：必修课去重后的已获学分，保证两页数据完全一致
     val creditsProgress: CreditsProgress? = remember(scoreResult, planResult) {
         scoreResult?.scores?.let { scores ->
-            GpaCalculator.computeCreditsProgress(scores, groups)
+            GpaCalculator.computeCreditsProgress(scores, groups, planTotalCredits = planResult?.totalRequiredCredits)
         }
     }
 
@@ -179,7 +179,7 @@ fun ProgramScreen(
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
                                             text = "${creditsProgress?.earnedTotal ?: 0.0} / " +
-                                                "${creditsProgress?.requiredTotal ?: 0.0} 学分",
+                                                creditsProgress?.requiredTotal?.takeIf { it > 0 }?.let { "$it 学分" } ?: "待同步",
                                             style = MaterialTheme.typography.headlineSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -282,7 +282,7 @@ fun CurriculumGroupCard(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "要求 $requiredCredits 学分 · ${group.requiredCourses} 门",
+                        text = "要求 $requiredCredits 学分 · " + if (GpaCalculator.isProfessionalElectiveGroup(group) && group.courses.isNotEmpty()) "${group.courses.size} 选 4" else "${GpaCalculator.planGroupRequiredCourses(group)} 门",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )

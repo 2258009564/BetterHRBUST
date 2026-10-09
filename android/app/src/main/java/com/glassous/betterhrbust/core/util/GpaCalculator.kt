@@ -23,11 +23,10 @@ import kotlin.math.roundToInt
  *
  * 相关门槛：
  *  - 学位证：必修课平均学分绩点 ≥ 1.5
- *  - 提前毕业：必修课平均学分绩点 ≥ 4.0
  *  - 学业处理：累计挂科 > 15 学分留降级；> 25 学分退学
  *  - 推免：必修课成绩全部合格，且补考与重修课程累计不超过两门
  *
- * 统计范围：全部学业指标只统计必修课，限选与任选课不参与任何计算。
+ * 基础 GPA 与风险指标统计必修课；学位绩点和培养方案学分分别使用独立课程范围。
  *
  * 各学院 / 各年度细则可能存在差异，门槛均为可配置常量，界面须标注"以学校教务处口径为准"。
  *
@@ -38,7 +37,7 @@ object GpaCalculator {
     /** 学位绩点门槛（必修课平均学分绩点下限，以学校教务处口径为准） */
     const val DEGREE_GPA_THRESHOLD = 1.5
 
-    /** 提前毕业门槛：全部课程平均学分绩点不低于该值 */
+    /** 历史兼容常量：不作为学校政策或资格判定展示 */
     const val EARLY_GRAD_GPA_THRESHOLD = 4.0
 
     /** 累计挂科学分上限（超过 → 留降级） */
@@ -51,7 +50,7 @@ object GpaCalculator {
     const val RECOMMEND_RETAKE_LIMIT = 2
 
     /** 已获得学分是否只统计必修课（限选 / 任选不计） */
-    const val EARNED_CREDITS_REQUIRED_ONLY = true
+    const val EARNED_CREDITS_REQUIRED_ONLY = false
 
     /** 学分统计口径说明文案（面向用户，保持简短） */
     val EARNED_CREDITS_NOTE: String
@@ -62,11 +61,11 @@ object GpaCalculator {
         }
 
     /** 学业统计口径说明文案（全部指标仅统计必修课） */
-    const val STATS_SCOPE_NOTE = "仅统计必修课，选修课不参与计算"
+    const val STATS_SCOPE_NOTE = "学位绩点：学业课 + E 类最高 1 门 + 剩余 A–E 类最高 1 门；风险与推免按必修课统计"
 
     /**
      * 是否参与学业统计的课程。
-     * 统计口径：全部指标只统计必修课，选修课（限选 + 任选）不参与任何计算。
+     * 基础 GPA 与风险指标只统计必修课。
      */
     fun isCountedCourse(property: String?): Boolean = isRequired(property)
 
@@ -177,12 +176,12 @@ object GpaCalculator {
         }
 
         return order.map { key ->
-            val items = groups[key].orEmpty()
+            val items = groups[key].orEmpty().distinct()
             val best = items.sortedWith(
                 compareByDescending<ScoreItem> { it.passed }
                     .thenByDescending { parseScoreValue(it.score).estimated ?: 0.0 }
             ).first()
-            val retake = items.size > 1 || items.any { isRetakeRecord(it) }
+            val retake = items.any { isRetakeRecord(it) } || items.map { it.year to it.term }.distinct().size > 1
             DedupedScore(
                 item = best,
                 recordCount = items.size,
@@ -190,6 +189,27 @@ object GpaCalculator {
                 gradePoint = parseScoreValue(best.score).gradePoint
             )
         }
+    }
+
+    fun isLowScore(score: String?): Boolean = parseScoreValue(score).estimated?.let { it < 70 } ?: false
+
+    private fun electiveCategory(item: ScoreItem): Char? {
+        if (isRequired(item.property) || item.courseGroup.contains("专业")) return null
+        val text = "${item.courseGroup} ${item.property} ${if (isElective(item.property)) item.courseName else ""}".uppercase()
+        return Regex("([ABCDE])\\s*类|[（(]([ABCDE])[）)]").find(text)
+            ?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.first()
+    }
+
+    fun degreeCourses(scores: List<ScoreItem>): List<ScoreItem> {
+        val courses = dedupeScores(scores).map { it.item }.filter { it.credit > 0 }
+        val electives = courses.filter { electiveCategory(it) != null }
+        val ranking = compareByDescending<ScoreItem> { parseScoreValue(it.score).estimated ?: Double.NEGATIVE_INFINITY }
+            .thenBy { it.courseId }
+        val academic = courses.filter { electiveCategory(it) == null && (isDegreeCourse(it.property) || it.courseGroup.contains("专业")) }
+        val firstE = electives.filter { electiveCategory(it) == 'E' }.sortedWith(ranking).firstOrNull()
+        val second = if (firstE != null) electives.filter { it !== firstE }.sortedWith(ranking).firstOrNull() else null
+        return academic + listOfNotNull(firstE, second)
+
     }
 
     private data class WeightedResult(
@@ -234,7 +254,7 @@ object GpaCalculator {
     fun buildStats(scores: List<ScoreItem>): ScoreStats {
         val deduped = dedupeScores(scores)
         // 统计口径：仅统计必修课（限选 / 任选均不参与任何计算）
-        val requiredRecords = deduped.filter { isRequired(it.item.property) }
+        val requiredRecords = deduped.filter { isRequired(it.item.property) && it.item.credit > 0 }
         val requiredCourses = requiredRecords.map { it.item }
 
         val totalCredits = round1(requiredCourses.sumOf { it.credit })
@@ -246,10 +266,12 @@ object GpaCalculator {
         // 必修课加权：GPA / 加权平均分 / 优秀率
         val overall = calcWeighted(requiredCourses)
 
-        // ---- 特色算法 ① 学位证（必修课口径） ----
-        val degreeAllPassed = requiredCourses.isNotEmpty() && requiredCourses.all { it.passed }
-        val degreeQualified =
-            requiredCourses.isNotEmpty() && degreeAllPassed && overall.gpa >= DEGREE_GPA_THRESHOLD
+        val selectedDegreeCourses = degreeCourses(scores)
+        val degreeWeight = calcWeighted(selectedDegreeCourses)
+        val degreeAllPassed = selectedDegreeCourses.isNotEmpty() && selectedDegreeCourses.all { it.passed }
+        val degreeCredits = selectedDegreeCourses.filter { it.credit > 0 && parseScoreValue(it.score).estimated != null }.sumOf { it.credit }
+        val degreeRawGpa = if (degreeCredits > 0) selectedDegreeCourses.sumOf { it.credit.coerceAtLeast(0.0) * gradePoint(it.score) } / degreeCredits else 0.0
+        val degreeQualified = degreeCredits > 0 && degreeRawGpa >= DEGREE_GPA_THRESHOLD
 
         // ---- 特色算法 ② 推免 / 保研（必修课口径，统计补考 + 重修门数） ----
         val retakeCount = requiredRecords.count { it.isRetake }
@@ -292,11 +314,12 @@ object GpaCalculator {
             courseCount = requiredCourses.size,
             rawCourseCount = scores.size,
             dedupedCount = deduped.size,
+            retakeCount = deduped.count { it.isRetake && it.item.credit > 0 },
             degree = DegreeStats(
-                gpa = overall.gpa,
-                courseCount = requiredCourses.size,
-                requiredCredits = totalCredits,
-                earnedCredits = earnedCredits,
+                gpa = degreeWeight.gpa,
+                courseCount = selectedDegreeCourses.size,
+                requiredCredits = round1(selectedDegreeCourses.sumOf { it.credit }),
+                earnedCredits = round1(selectedDegreeCourses.filter { it.passed }.sumOf { it.credit }),
                 allPassed = degreeAllPassed,
                 threshold = DEGREE_GPA_THRESHOLD,
                 qualified = degreeQualified
@@ -325,13 +348,22 @@ object GpaCalculator {
         )
     }
 
+    fun isProfessionalElectiveGroup(group: CurriculumGroup): Boolean =
+        Regex("专业(?:方向)?(?:选修|限选)").containsMatchIn(group.name)
+
+    fun planGroupRequiredCredits(group: CurriculumGroup): Double = group.requiredCredits
+
+    fun planGroupRequiredCourses(group: CurriculumGroup): Int =
+        if (isProfessionalElectiveGroup(group)) 4 else group.requiredCourses
+
     /**
      * 计算培养方案课组学分完成度（概览页与培养方案页共用，保证两侧口径一致）
      */
     fun computeCreditsProgress(
         scores: List<ScoreItem>,
         groups: List<CurriculumGroup>,
-        requiredOnly: Boolean = EARNED_CREDITS_REQUIRED_ONLY
+        requiredOnly: Boolean = EARNED_CREDITS_REQUIRED_ONLY,
+        planTotalCredits: Double? = null
     ): CreditsProgress {
         val deduped = dedupeScores(scores)
         val eligible = deduped
@@ -342,7 +374,7 @@ object GpaCalculator {
         val categories = mutableListOf<CreditCategory>()
 
         if (groups.isNotEmpty()) {
-            groups.forEach { g ->
+            groups.distinctBy { it.id.ifBlank { it.name } }.forEach { g ->
                 var earned = 0.0
                 eligible.forEach { s ->
                     val key = courseKey(s)
@@ -363,7 +395,7 @@ object GpaCalculator {
                     CreditCategory(
                         name = g.name,
                         property = g.property,
-                        required = round1(g.requiredCredits),
+                        required = round1(planGroupRequiredCredits(g)),
                         earned = round1(earned)
                     )
                 )
@@ -381,7 +413,7 @@ object GpaCalculator {
                     CreditCategory(
                         name = grpName,
                         property = "必修",
-                        required = round1(cr * 1.2),
+                        required = 0.0,
                         earned = round1(cr)
                     )
                 )
@@ -407,7 +439,8 @@ object GpaCalculator {
 
         val earnedTotal = round1(categories.sumOf { it.earned })
         val requiredTotalRaw = round1(categories.sumOf { it.required })
-        val requiredTotal = if (requiredTotalRaw > 0) requiredTotalRaw else 160.0
+        val summary = groups.firstOrNull { it.name.trim() in listOf("总计", "合计", "全部课程", "毕业要求", "培养方案总计") }
+        val requiredTotal = planTotalCredits?.takeIf { it > 0 } ?: summary?.requiredCredits?.takeIf { it > 0 } ?: requiredTotalRaw
 
         return CreditsProgress(
             categories = categories,
