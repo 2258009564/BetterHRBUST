@@ -156,6 +156,7 @@ fun ReLoginBottomSheet(
     var isCaptchaLoading by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var captchaErrorMessage by remember { mutableStateOf<String?>(null) }
 
     fun refreshCaptcha() {
         if (isCaptchaLoading || isLoading) return
@@ -164,12 +165,19 @@ fun ReLoginBottomSheet(
         captcha = ""
         coroutineScope.launch {
             try {
-                captchaBytes = authRepo.getCaptcha()
+                val bytes = authRepo.getCaptcha()
+                if (BitmapFactory.decodeByteArray(bytes, 0, bytes.size) == null) {
+                    throw java.io.IOException("验证码图片无效，请重新获取")
+                }
+                captchaBytes = bytes
                 captcha = ""
+                if (errorMessage == captchaErrorMessage) errorMessage = null
+                captchaErrorMessage = null
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                errorMessage = e.message ?: "获取验证码失败，请切换网络后重试"
+                captchaErrorMessage = e.message ?: "获取验证码失败，请切换网络后重试"
+                errorMessage = captchaErrorMessage
             } finally {
                 isCaptchaLoading = false
             }

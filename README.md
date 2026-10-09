@@ -27,7 +27,7 @@
 
 自制的现代化哈尔滨理工大学教务在线（URP）客户端：Web / 油猴 / Windows 桌面端 / Android 原生四端同源。
 
-Android 源码版本为 **1.1.0（versionCode 2）**，新增教学评价助手与资料查找，同步 HTTP 登录与重定向修复。资料索引来自教务处公开下载栏目，包含 **9 个分类、97 条资料及 126 个附件链接**；网页与 Android 使用同一份索引。正式安装包以 [Releases](https://github.com/Glassous/BetterHRBUST/releases) 中已经发布的文件为准。
+Android 源码版本为 **1.1.1（versionCode 3）**，新增教学评价助手与资料查找，同步 HTTP 登录与重定向修复；修复验证码刷新并发、旧图片残留、网络错误提示和 Cookie 路径隔离。资料索引来自教务处公开下载栏目，包含 **9 个分类、97 条资料及 126 个附件链接**；网页与 Android 使用同一份索引。正式安装包以 [Releases](https://github.com/Glassous/BetterHRBUST/releases) 中已经发布的文件为准。
 
 新版发布页位于 [`landing/`](landing/README.md)，参考 Folia 的大标题、浅色几何背景与宽留白布局，提供浅色/深色主题、平台下载入口和使用指南。GitHub Pages 工作流只在原仓库 `Glassous/BetterHRBUST` 的 `main` 分支部署，PR 和 fork 只构建验证。
 
