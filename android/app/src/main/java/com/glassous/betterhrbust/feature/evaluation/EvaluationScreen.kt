@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
+import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.data.repository.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -53,7 +54,7 @@ fun EvaluationScreen(onBack: () -> Unit) {
             IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
             Text("教学评价助手", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 10.dp))
         }
-        LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = LocalBottomContentInset.current + 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
                 Text("按你设置的评分与评语处理所选课程，每门课提交后核对学校返回的完成状态。")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

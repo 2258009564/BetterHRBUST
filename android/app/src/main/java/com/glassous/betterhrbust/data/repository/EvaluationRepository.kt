@@ -74,7 +74,7 @@ class EvaluationRepository(private val client: AcademicHttpClient) {
                     val label = document.select("label[for]").firstOrNull { it.attr("for") == input.id() }?.text()
                         ?: input.closest("label")?.text()
                         ?: input.nextSibling()?.toString()?.let { Jsoup.parse(it).text() }
-                        ?: "选项 ${input.attr("value")}" 
+                        ?: "选项 ${input.attr("value") }"
                     EvaluationOption(input.attr("value"), label)
                 })
             }
