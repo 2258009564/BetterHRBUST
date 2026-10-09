@@ -52,6 +52,17 @@
       <polyline points="13 5 20 12 13 19" />
     </g>
 
+    <g v-else-if="name === 'arrow-down'">
+      <line x1="12" y1="4" x2="12" y2="20" />
+      <polyline points="5 13 12 20 19 13" />
+    </g>
+
+    <!-- 未上线平台「敬请期待」用 -->
+    <g v-else-if="name === 'clock'">
+      <circle cx="12" cy="12" r="8.6" />
+      <polyline points="12 7.2 12 12 15.6 14.2" />
+    </g>
+
     <g v-else-if="name === 'check'">
       <polyline points="20 6 9 17 4 12" />
     </g>

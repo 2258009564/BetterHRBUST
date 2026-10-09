@@ -1,12 +1,35 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { gsap } from 'gsap'
 import PlatformIcon from './PlatformIcon.vue'
-import { RELEASES, WINDOWS_SETUP } from '../links.js'
+import { ANDROID_APK, PLATFORM_LOGOS, WINDOWS_SETUP } from '../links.js'
 
 const root = ref(null)
 let ctx
 let mm
+
+// 识别访客系统：优先 UA-CH（Chromium 系），回退 UA 字符串；
+// Windows / Android 直达对应安装包，其余系统引导到下方「随处可用」自行挑选。
+const detectVisitorPlatform = () => {
+  const platform = navigator.userAgentData?.platform ?? ''
+  const ua = navigator.userAgent ?? ''
+
+  if (/android/i.test(platform) || /android/i.test(ua)) return 'android'
+  if (/windows/i.test(platform) || /windows|win32|win64/i.test(ua)) return 'windows'
+  return 'other'
+}
+
+const visitorPlatform = detectVisitorPlatform()
+
+const primaryDownload = computed(() => {
+  if (visitorPlatform === 'android') {
+    return { label: '下载 Android 安装包', href: ANDROID_APK, logo: '/Android_logo.svg', external: true }
+  }
+  if (visitorPlatform === 'windows') {
+    return { label: '下载 Windows 安装版', href: WINDOWS_SETUP, logo: '/Windows_logo.svg', external: true }
+  }
+  return { label: '选择你的平台', href: '#platforms', logo: '', external: false }
+})
 
 // 入场动画：吉祥物 → 标题 → 简介 → 按钮 → 徽章 依次淡入上移；
 // 吉祥物随后进入无限轻微浮动。仅在用户未偏好减弱动效时启用。
@@ -90,27 +113,42 @@ onUnmounted(() => {
       现代化哈理工教务在线 · 课程表 · 成绩 GPA · 考试日程
     </p>
 
-    <!-- 真实下载 / 入口按钮 -->
+    <!-- 真实下载 / 入口按钮：按访客系统动态区分（Windows / Android 直达安装包） -->
     <div
       class="hero-actions mt-10 flex w-full flex-col items-center justify-center gap-4 sm:w-auto sm:flex-row"
     >
       <a
-        :href="WINDOWS_SETUP"
-        target="_blank"
-        rel="noopener noreferrer"
+        :href="primaryDownload.href"
+        :target="primaryDownload.external ? '_blank' : undefined"
+        :rel="primaryDownload.external ? 'noopener noreferrer' : undefined"
         class="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-brand-400 px-8 py-4 text-base font-semibold text-white shadow-[0_20px_50px_-20px_rgba(99,102,241,0.95)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_28px_66px_-20px_rgba(99,102,241,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 sm:w-auto"
       >
-        <PlatformIcon name="windows" class="h-5 w-5" />
-        下载 Windows 安装版
+        <img
+          v-if="primaryDownload.logo"
+          :src="primaryDownload.logo"
+          alt=""
+          draggable="false"
+          class="h-5 w-auto select-none"
+        />
+        <PlatformIcon v-else name="download" class="h-5 w-5" />
+        {{ primaryDownload.label }}
       </a>
       <a
-        :href="RELEASES"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="glass-card inline-flex w-full items-center justify-center gap-2.5 rounded-2xl px-8 py-4 text-base font-semibold text-white/85 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 sm:w-auto"
+        href="#platforms"
+        class="glass-card inline-flex w-full items-center justify-center gap-3 rounded-2xl px-8 py-4 text-base font-semibold text-white/85 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 sm:w-auto"
       >
+        <!-- 六端品牌图标：象牙白圆形底托 + 轻微堆叠 -->
+        <span class="flex shrink-0 items-center -space-x-2" aria-hidden="true">
+          <img
+            v-for="logo in PLATFORM_LOGOS"
+            :key="logo"
+            :src="logo"
+            alt=""
+            draggable="false"
+            class="h-6 w-6 select-none rounded-full bg-ivory object-contain p-[3px] ring-1 ring-black/10"
+          />
+        </span>
         查看全部版本
-        <PlatformIcon name="arrow-right" class="h-5 w-5" />
       </a>
     </div>
 
