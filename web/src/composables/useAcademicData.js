@@ -249,6 +249,8 @@ async function syncAll({ markManual = false } = {}) {
       '公告',
       () => academicApi.getCalendarInfo(currentWeek.value),
       res => {
+        if (res.currentWeek) currentWeek.value = res.currentWeek;
+        if (res.semesterName) currentSemester.name = res.semesterName;
         notices.value = res.notices || [];
         writeJson(CACHE_KEYS.notices, notices.value);
       }

@@ -116,6 +116,7 @@ class UserPreferencesManager(private val context: Context) {
                 prefs.remove(KEY_LAST_FULL_SYNC_DATE)
                 prefs.remove(KEY_SAVED_PASSWORD)
             }
+            prefs.remove(KEY_LAST_FULL_SYNC_DATE)
             prefs[KEY_REAL_NAME] = realName
             if (savedPassword != null) prefs[KEY_SAVED_PASSWORD] = savedPassword
             prefs[KEY_LAST_LOGIN_AT] = System.currentTimeMillis()

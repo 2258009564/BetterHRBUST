@@ -346,6 +346,7 @@ async function logout() {
   clearRegisteredDataCaches();
   currentSemester.yearId = '';
   currentSemester.termId = '';
+  currentSemester.name = '';
   studentNumber.value = '';
   await academicApi.logout();
 }
