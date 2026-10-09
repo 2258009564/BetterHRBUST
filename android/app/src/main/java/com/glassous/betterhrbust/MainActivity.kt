@@ -105,7 +105,7 @@ class MainActivity : ComponentActivity() {
                             .background(MaterialTheme.colorScheme.background)
                     )
                 } else {
-                    key((resolvedAuthState as? AuthState.Authenticated)?.studentId) {
+                    key((resolvedAuthState as? AuthState.Authenticated)?.studentId, prefs?.lastLoginAt) {
                     MainAppScaffold(
                         authState = resolvedAuthState,
                         isSessionExpired = isSessionExpired,

@@ -1,6 +1,9 @@
 package com.glassous.betterhrbust.data.repository
 
 import com.glassous.betterhrbust.core.database.AppDatabase
+import com.glassous.betterhrbust.core.database.ProfileEntity
+import androidx.room.withTransaction
+import kotlinx.serialization.encodeToString
 import com.glassous.betterhrbust.core.datastore.UserPreferencesManager
 import com.glassous.betterhrbust.core.model.AuthState
 import com.glassous.betterhrbust.core.model.StudentContext
@@ -168,6 +171,13 @@ class AuthRepository(
                 return@flow
             }
 
+            database.withTransaction {
+                database.timetableDao().clear(studentContext.studentId)
+                database.scoreDao().clear(studentContext.studentId)
+                database.examDao().clear(studentContext.studentId)
+                database.curriculumDao().clear(studentContext.studentId)
+                database.profileDao().insert(ProfileEntity(studentNumber = username, json = kotlinx.serialization.json.Json.encodeToString(profile)))
+            }
             _isSessionExpired.value = false
             _shouldPromptReLogin.value = false
             _sessionPromptDismissed.value = false
@@ -182,16 +192,6 @@ class AuthRepository(
                 realName = profile.realName,
                 savedPassword = password
             )
-            // 记录登录时间并清理提示节流状态，重新开始一周计时
-            prefs.setLastLoginAt(System.currentTimeMillis())
-            prefs.setLastPromptAt(0L)
-            prefs.setSessionState(expired = false)
-            _isSessionExpired.value = false
-            _shouldPromptReLogin.value = false
-            _sessionPromptDismissed.value = false
-            pendingManualPrompt = false
-            promptDecided = false
-
             preparedLoginAccount = null
             emit(Resource.Success(studentContext))
         } catch (e: kotlinx.coroutines.CancellationException) {
