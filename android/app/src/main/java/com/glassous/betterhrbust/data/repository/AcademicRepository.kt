@@ -53,6 +53,16 @@ class AcademicRepository(
             val html = client.get(url, preferredCharset = CharsetDecoderHelper.GBK)
             val parsed = AcademicParsers.parseTimetable(html)
 
+            // 远端返回空（异常页 / 登录页被解析为空结果）时保留既有缓存，
+            // 避免一次失败的刷新把已持久化的课表永久覆盖为空
+            if (parsed.cells.isEmpty() && parsed.unarranged.isEmpty() && localEntity != null) {
+                val cached = json.decodeFromString<TimetableResult>(localEntity.json)
+                if (cached.cells.isNotEmpty() || cached.unarranged.isNotEmpty()) {
+                    emit(Resource.Success(cached, isOfflineCache = true))
+                    return@flow
+                }
+            }
+
             // Cache to database
             val encoded = json.encodeToString(parsed)
             database.timetableDao().insert(TimetableEntity(studentId = studentId, json = encoded))
@@ -105,6 +115,16 @@ class AcademicRepository(
                 preferredCharset = CharsetDecoderHelper.UTF_8
             )
             val parsed = AcademicParsers.parseScores(html)
+
+            // 远端返回空（异常页 / 登录页被解析为空结果）时保留既有缓存，
+            // 避免一次失败的刷新把已持久化的成绩永久覆盖为空
+            if (parsed.scores.isEmpty() && localEntity != null) {
+                val cached = json.decodeFromString<ScoreResult>(localEntity.json)
+                if (cached.scores.isNotEmpty()) {
+                    emit(Resource.Success(cached, isOfflineCache = true))
+                    return@flow
+                }
+            }
 
             val encoded = json.encodeToString(parsed)
             database.scoreDao().insert(ScoreEntity(studentId = studentId, json = encoded))
@@ -244,6 +264,18 @@ class AcademicRepository(
             val parsed = AcademicParsers.parsePersonalInfo(html)
             require(parsed.studentNumber.trim() == studentNumber.trim()) { "教务档案账号与当前登录账号不一致，已拒绝保存" }
 
+            // 远端返回空（异常页 / 登录页被解析为空结果）时保留既有缓存，
+            // 避免一次失败的刷新把已持久化的档案永久覆盖为空
+            val parsedEmpty = parsed.studentNumber.isEmpty() && parsed.realName.isEmpty() &&
+                parsed.college.isEmpty() && parsed.className.isEmpty()
+            if (parsedEmpty && localEntity != null) {
+                val cached = json.decodeFromString<PersonalInfo>(localEntity.json)
+                if (cached.studentNumber.isNotEmpty() || cached.realName.isNotEmpty() || cached.college.isNotEmpty()) {
+                    emit(Resource.Success(cached, isOfflineCache = true))
+                    return@flow
+                }
+            }
+
             val encoded = json.encodeToString(parsed)
             database.profileDao().insert(ProfileEntity(studentNumber = studentNumber, json = encoded))
             // 姓名落到 DataStore，缓存被清理后概览页仍能正确显示
@@ -305,6 +337,16 @@ class AcademicRepository(
                 preferredCharset = CharsetDecoderHelper.GBK
             )
             val parsed = AcademicParsers.parseCurriculumPlan(planHtml)
+
+            // 远端返回空（异常页 / 登录页被解析为空结果）时保留既有缓存，
+            // 避免一次失败的刷新把已持久化的培养方案永久覆盖为空
+            if (parsed.groups.isEmpty() && localEntity != null) {
+                val cached = json.decodeFromString<CurriculumPlanResult>(localEntity.json)
+                if (cached.groups.isNotEmpty()) {
+                    emit(Resource.Success(cached, isOfflineCache = true))
+                    return@flow
+                }
+            }
 
             val encoded = json.encodeToString(parsed)
             database.curriculumDao().insert(CurriculumPlanEntity(studentId = studentId, json = encoded))
@@ -386,12 +428,25 @@ class AcademicRepository(
             val html = client.get("calendarinfo/viewCalendarInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
             val calendarInfo = AcademicParsers.parseCalendarInfo(html)
 
+            // 解析结果无效（异常页 / 登录页：无公告、无学期信息、周次回退为 1）时，
+            // 保留既有缓存与已记录的当前周，避免旧数据被覆盖为空、教学周被写坏
+            val parsedUsable = calendarInfo.notices.isNotEmpty() ||
+                calendarInfo.semesterName.isNotEmpty() ||
+                calendarInfo.currentWeek > 1
+            if (!parsedUsable && !localEntities.isNullOrEmpty()) {
+                val list = localEntities.map { NoticeItem(id = it.id, title = it.title, content = it.content, date = it.date) }
+                emit(Resource.Success(list, isOfflineCache = true))
+                return@flow
+            }
+
             val entities = calendarInfo.notices.map {
                 NoticeEntity(id = it.id, title = it.title, content = it.content, date = it.date)
             }
             database.noticeDao().insertAll(entities)
 
-            prefs.setCurrentWeek(calendarInfo.currentWeek)
+            if (parsedUsable) {
+                prefs.setCurrentWeek(calendarInfo.currentWeek)
+            }
 
             emit(Resource.Success(calendarInfo.notices, isOfflineCache = false))
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -437,7 +492,8 @@ class AcademicRepository(
             try {
                 val calHtml = client.get("calendarinfo/viewCalendarInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
                 val calWeek = AcademicParsers.parseCalendarInfo(calHtml).currentWeek
-                if (calWeek in 1..26) {
+                // 仅接受明确识别出的周次（>1），避免把"解析失败"误当第 1 周写坏本地教学周
+                if (calWeek > 1) {
                     prefs.setCurrentWeek(calWeek)
                     emit(calWeek)
                     return@flow

@@ -377,4 +377,46 @@ class GpaCalculatorTest {
         assertEquals(0, progress.completionPercent)
         assertEquals(0.0, progress.requiredTotal, 0.001)
     }
+
+    // ---------------- 学期时间轴（成绩页学期筛选） ----------------
+
+    @Test
+    fun testSemesterSortKeyUsesCalendarYearWithSpringBeforeAutumn() {
+        // 教务「学年」列是学期所在公历年份：2023 秋 → 2024 春 → 2024 秋 连续
+        assertTrue(GpaCalculator.semesterSortKey("2023", "秋") < GpaCalculator.semesterSortKey("2024", "春"))
+        assertTrue(GpaCalculator.semesterSortKey("2024", "春") < GpaCalculator.semesterSortKey("2024", "秋"))
+        assertTrue(GpaCalculator.semesterSortKey("2025", "秋") < GpaCalculator.semesterSortKey("2026", "春"))
+        assertTrue(GpaCalculator.semesterSortKey("2024", "春") < GpaCalculator.semesterSortKey("2024", "夏"))
+        // 兼容教务下拉序号（1 = 春，2 = 秋）
+        assertTrue(GpaCalculator.semesterSortKey("2024", "1") < GpaCalculator.semesterSortKey("2024", "2"))
+        // 未知学期值排在该年份最后
+        assertTrue(GpaCalculator.semesterSortKey("2024", "秋") < GpaCalculator.semesterSortKey("2024", "未知"))
+    }
+
+    @Test
+    fun testSemesterLabelMatchesWebFormat() {
+        assertEquals("2024 春", GpaCalculator.semesterLabel("2024", "春"))
+        assertEquals("2023 秋", GpaCalculator.semesterLabel("2023", "秋"))
+        assertEquals("2024", GpaCalculator.semesterLabel(" 2024 ", ""))
+        assertEquals("", GpaCalculator.semesterLabel("", ""))
+    }
+
+    @Test
+    fun testSemesterFilterOptionsSortNewestFirst() {
+        val scores = listOf(
+            item("C6", score = "70", credit = 2.0, year = "2026", term = "春"),
+            item("C3", score = "80", credit = 2.0, year = "2024", term = "秋"),
+            item("C1", score = "90", credit = 2.0, year = "2023", term = "秋"),
+            item("C2", score = "85", credit = 2.0, year = "2024", term = "春"),
+            item("C5", score = "75", credit = 2.0, year = "2025", term = "秋"),
+            item("C4", score = "95", credit = 2.0, year = "2025", term = "春")
+        )
+        // 与 ScoresScreen 学期筛选项的生成方式一致
+        val labels = GpaCalculator.dedupeScores(scores)
+            .map { it.item }
+            .distinctBy { GpaCalculator.semesterLabel(it.year, it.term) }
+            .sortedByDescending { GpaCalculator.semesterSortKey(it.year, it.term) }
+            .map { GpaCalculator.semesterLabel(it.year, it.term) }
+        assertEquals(listOf("2026 春", "2025 秋", "2025 春", "2024 秋", "2024 春", "2023 秋"), labels)
+    }
 }

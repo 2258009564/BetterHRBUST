@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -36,14 +37,18 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.glassous.betterhrbust.BetterHrbustApp
+import com.glassous.betterhrbust.core.ui.AppTextFieldShape
 import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
+import com.glassous.betterhrbust.core.ui.registerInputField
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 
 /**
  * 顶部“登录状态已失效”通知栏，与 Web 端 AppHeader 保持一致。
+ *
+ * 调用方以浮层方式摆放（对齐顶部、覆盖在内容之上）：出现 / 收起时不会推移其它区域。
  * 支持「忽略」收起，收起后本轮失效不再打扰（下次手动刷新失败仍会重新提示）。
  */
 @Composable
@@ -56,6 +61,7 @@ fun SessionExpiredBanner(
     val bannerBorder = Color(0xFFFCD34D)
     val textColor = Color(0xFF92400E)
     val buttonBg = Color(0xFFD97706)
+    val interactionSource = remember { MutableInteractionSource() }
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val alpha by infiniteTransition.animateFloat(
@@ -71,11 +77,17 @@ fun SessionExpiredBanner(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            // 悬浮在内容之上：拦截横幅自身区域的触摸，避免误触到下层页面
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {}
+            ),
         shape = RoundedCornerShape(20.dp),
         color = bannerBg,
         border = BorderStroke(1.dp, bannerBorder),
-        shadowElevation = 2.dp
+        shadowElevation = 6.dp
     ) {
         Row(
             modifier = Modifier
@@ -291,8 +303,10 @@ fun ReLoginOverlay(
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .registerInputField(),
+                shape = AppTextFieldShape
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -314,8 +328,10 @@ fun ReLoginOverlay(
                 visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .registerInputField(),
+                shape = AppTextFieldShape
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -337,8 +353,10 @@ fun ReLoginOverlay(
                         focusManager.clearFocus()
                         submitLogin()
                     }),
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .registerInputField(),
+                    shape = AppTextFieldShape
                 )
 
                 Box(

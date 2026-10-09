@@ -15,11 +15,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.model.CourseSearchItem
+import com.glassous.betterhrbust.core.ui.AppTextFieldShape
 import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.EmptyView
 import com.glassous.betterhrbust.core.ui.components.LoadingView
 import com.glassous.betterhrbust.core.ui.components.PageHeaderTitle
+import com.glassous.betterhrbust.core.ui.registerInputField
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 
@@ -75,8 +77,10 @@ fun CoursesScreen(
                 placeholder = { Text("输入课程名、课号或教师检索...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .registerInputField(),
+                shape = AppTextFieldShape
             )
         }
 

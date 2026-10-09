@@ -39,7 +39,9 @@ data class AppPreferences(
     /** 记住的登录密码（仅本地 DataStore，用于免重复输入） */
     val savedPassword: String = "",
     /** 上次版本更新检测时间（毫秒时间戳），用于启动静默检测的"按天节流" */
-    val lastUpdateCheckAt: Long = 0L
+    val lastUpdateCheckAt: Long = 0L,
+    /** 导航坞折叠态（用户手动在坞内展开 / 折叠后持久化，冷启动沿用） */
+    val navigationDockCollapsed: Boolean = false,
 )
 
 class UserPreferencesManager(private val context: Context) {
@@ -61,6 +63,7 @@ class UserPreferencesManager(private val context: Context) {
         private val KEY_REAL_NAME = stringPreferencesKey("real_name")
         private val KEY_SAVED_PASSWORD = stringPreferencesKey("saved_password")
         private val KEY_LAST_UPDATE_CHECK_AT = longPreferencesKey("last_update_check_at")
+        private val KEY_NAVIGATION_DOCK_COLLAPSED = booleanPreferencesKey("navigation_dock_collapsed")
     }
 
     val preferencesFlow: Flow<AppPreferences> = context.dataStore.data.map { prefs ->
@@ -87,7 +90,8 @@ class UserPreferencesManager(private val context: Context) {
             sessionExpired = prefs[KEY_SESSION_EXPIRED] ?: false,
             realName = prefs[KEY_REAL_NAME] ?: "",
             savedPassword = prefs[KEY_SAVED_PASSWORD] ?: "",
-            lastUpdateCheckAt = prefs[KEY_LAST_UPDATE_CHECK_AT] ?: 0L
+            lastUpdateCheckAt = prefs[KEY_LAST_UPDATE_CHECK_AT] ?: 0L,
+            navigationDockCollapsed = prefs[KEY_NAVIGATION_DOCK_COLLAPSED] ?: false
         )
     }
 
@@ -163,6 +167,13 @@ class UserPreferencesManager(private val context: Context) {
         context.dataStore.edit { prefs ->
             if (timestamp <= 0L) prefs.remove(KEY_LAST_UPDATE_CHECK_AT)
             else prefs[KEY_LAST_UPDATE_CHECK_AT] = timestamp
+        }
+    }
+
+    /** 记忆导航坞折叠态（用户手动在坞内展开 / 折叠后调用，冷启动沿用） */
+    suspend fun setNavigationDockCollapsed(collapsed: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_NAVIGATION_DOCK_COLLAPSED] = collapsed
         }
     }
 

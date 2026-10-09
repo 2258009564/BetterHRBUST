@@ -198,13 +198,18 @@ async function runScenario({ failSubmit = false } = {}) {
   await page.getByText('2024级', { exact: true }).waitFor();
   assert.equal(await page.getByText('2024级 级', { exact: true }).count(), 0);
   await page.emulateMedia({ colorScheme: 'dark' });
-  await page.getByRole('button', { name: '切换浅色模式', exact: true }).waitFor();
-  assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), true);
-  await page.getByRole('button', { name: '切换浅色模式', exact: true }).click();
+  // 顶栏已移除主题开关：跟随系统模式遇系统深色应自动生效
+  assert.equal(await page.getByRole('button', { name: '切换浅色模式', exact: true }).count(), 0);
+  await page.waitForFunction(() => document.documentElement.classList.contains('dark'));
+  // 主题切换改由设置页「外观与个性化设置」承担
+  await page.getByRole('button', { name: '设置与系统状态', exact: true }).click();
+  await page.getByText('外观与个性化设置', { exact: true }).waitFor();
+  await page.getByRole('button', { name: '浅色', exact: true }).click();
+  assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), false);
   await page.emulateMedia({ colorScheme: 'light' });
-  await page.getByRole('button', { name: '切换深色模式', exact: true }).click();
+  await page.getByRole('button', { name: '深色', exact: true }).click();
   assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), true);
-  await page.getByRole('button', { name: '切换浅色模式', exact: true }).click();
+  await page.getByRole('button', { name: '跟随系统', exact: true }).click();
   assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), false);
   await page.getByRole('button', { name: '概览', exact: true }).click();
   await page.getByText('今日剩余课程', { exact: true }).waitFor();
@@ -251,13 +256,17 @@ async function runScenario({ failSubmit = false } = {}) {
   await page.getByRole('button', { name: '资料查找', exact: true }).click();
   await page.getByLabel('搜索资料').fill('补办学生证');
   await page.getByText('补办学生证申请（新版）', { exact: true }).waitFor();
-  await page.getByLabel('资料分类').selectOption({ label: '学籍管理' });
+  await page.getByLabel('资料分类').click();
+  await page.getByRole('option', { name: '学籍管理', exact: true }).click();
+  assert.match(await page.getByLabel('资料分类').innerText(), /学籍管理/);
   const file = page.getByRole('link', { name: /补办学生证申请.*\.doc/ });
   assert.match(await file.getAttribute('href'), /^http:\/\/jwzx\.hrbust\.edu\.cn\/homepage\/downloadTheolFile\.do\?id=/);
   await page.getByLabel('搜索资料').fill('不存在的资料关键词');
   await page.getByRole('status').filter({ hasText: '未找到匹配资料' }).waitFor();
   await page.getByLabel('搜索资料').fill('');
-  await page.getByLabel('资料分类').selectOption('');
+  await page.getByLabel('资料分类').click();
+  await page.getByRole('option', { name: '全部分类', exact: true }).click();
+  assert.match(await page.getByLabel('资料分类').innerText(), /全部分类/);
   await page.getByRole('button', { name: '下一页', exact: true }).click();
   await page.getByText('2 / 5', { exact: true }).waitFor();
   await page.getByRole('button', { name: '教学评价助手' }).click();
@@ -307,7 +316,7 @@ async function runScenario({ failSubmit = false } = {}) {
     checks: [
       '评教列表解析通过',
       '资料标题搜索、分类、附件链接、空结果与分页通过',
-      '客户端右上角主题开关、跟随系统变化与实际配色切换通过',
+      '顶栏不再显示主题开关，设置页主题切换、跟随系统变化与实际配色切换通过',
       '配置预览无 POST 通过',
       '提交前重新读取隐藏令牌通过',
       '选择的评分和中文评语按 GBK 表单提交通过',

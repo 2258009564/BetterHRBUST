@@ -14,8 +14,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.glassous.betterhrbust.core.ui.AppTextFieldShape
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
+import com.glassous.betterhrbust.core.ui.registerInputField
 import org.json.JSONObject
 
 private data class ResourceFile(val title: String, val url: String)
@@ -47,7 +49,15 @@ fun ResourcesScreen(onBack: () -> Unit) {
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = LocalBottomContentInset.current + 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Text("教务处公开资料目录，原文与附件在学校网站打开。")
-                OutlinedTextField(value = query, onValueChange = { query = it }, label = { Text("搜索标题：学生证、缓考、四六级…") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("搜索标题：学生证、缓考、四六级…") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .registerInputField(),
+                    shape = AppTextFieldShape
+                )
                 Text("${filtered.size} 条结果 · 索引更新 ${catalog.getOrNull()?.optString("updatedAt")?.take(10).orEmpty()}", style = MaterialTheme.typography.bodySmall)
                 if (catalog.isFailure) Text("资料索引读取失败", color = MaterialTheme.colorScheme.error)
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)

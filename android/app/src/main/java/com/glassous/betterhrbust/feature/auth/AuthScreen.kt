@@ -6,7 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +34,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
+import com.glassous.betterhrbust.core.ui.AppTextFieldShape
+import com.glassous.betterhrbust.core.ui.registerInputField
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
@@ -157,12 +158,6 @@ fun AuthScreen(
                 .padding(padding)
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    focusManager.clearFocus()
-                }
         ) {
             val screenHeight = maxHeight
             // 整体下移：使组件视觉重心更靠下，呈现更舒展优美的留白与黄金分割比例
@@ -173,13 +168,7 @@ fun AuthScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 28.dp)
-                    .padding(bottom = 36.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        focusManager.clearFocus()
-                    },
+                    .padding(bottom = 36.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(goldenTopOffset))
@@ -277,8 +266,10 @@ fun AuthScreen(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Next
                         ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .registerInputField(),
+                        shape = AppTextFieldShape
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -305,8 +296,10 @@ fun AuthScreen(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Next
                         ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .registerInputField(),
+                        shape = AppTextFieldShape
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -331,8 +324,10 @@ fun AuthScreen(
                                 focusManager.clearFocus()
                                 submitLogin()
                             }),
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .registerInputField(),
+                            shape = AppTextFieldShape
                         )
 
                         Box(

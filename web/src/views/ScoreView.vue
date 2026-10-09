@@ -203,6 +203,17 @@
 
           <!-- Filter Controls -->
           <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-zinc-500">学期：</span>
+              <UiSelect
+                v-model="selectedSemester"
+                :items="semesterItems"
+                aria-label="学期筛选"
+                size="sm"
+                custom-class="min-w-[7.5rem]"
+              />
+            </div>
+
             <UiTabs
               :items="[
                 { label: '全部属性', value: 'all' },
@@ -294,11 +305,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import GpaCalculationHelp from '@/components/GpaCalculationHelp.vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiInput from '@/components/ui/UiInput.vue';
+import UiSelect from '@/components/ui/UiSelect.vue';
 import UiTabs from '@/components/ui/UiTabs.vue';
 import UiBadge from '@/components/ui/UiBadge.vue';
 import Icon from '@/components/icons/Icon.vue';
@@ -313,6 +325,7 @@ import {
   gradePoint,
   isRequired,
   resolveProperty,
+  semesterSortKey,
   EARNED_CREDITS_NOTE,
   STATS_SCOPE_NOTE
 } from '@/services/academic/stats.js';
@@ -321,6 +334,7 @@ const { isLoggedIn, isSessionExpired, openLoginModal } = useSession();
 const { scores: rawScores, syncing, lastSyncText } = useAcademicData();
 
 const searchQuery = ref('');
+const selectedSemester = ref('all');
 const selectedProperty = ref('all');
 const selectedPassStatus = ref('all');
 
@@ -352,19 +366,21 @@ const trendPoints = computed(() => {
 
   countedRecords.value.forEach(s => {
     const key = `${s.year} ${s.term}`;
-    if (!termMap.has(key)) termMap.set(key, []);
-    termMap.get(key).push(s);
+    if (!termMap.has(key)) termMap.set(key, { label: key, year: s.year, term: s.term, list: [] });
+    termMap.get(key).list.push(s);
   });
 
-  const sortedTerms = Array.from(termMap.entries())
-    .filter(([, list]) => hasCredits(list))
+  // 教务接口返回顺序不可依赖，必须显式按「学年 + 学期」时间先后升序排列，再取最近 6 个学期
+  const sortedTerms = Array.from(termMap.values())
+    .filter(({ list }) => hasCredits(list))
+    .sort((a, b) => semesterSortKey(a.year, a.term) - semesterSortKey(b.year, b.term))
     .slice(-6);
   if (sortedTerms.length === 0) return [];
 
   const width = 440;
   const step = sortedTerms.length > 1 ? width / (sortedTerms.length - 1) : 0;
 
-  return sortedTerms.map(([label, list], idx) => {
+  return sortedTerms.map(({ label, list }, idx) => {
     const gpaVal = gpaOf(list).toFixed(2);
     const num = parseFloat(gpaVal);
     // 映射 1.0 → y:140，5.0 → y:20
@@ -400,6 +416,26 @@ const distribution = computed(() => {
   ];
 });
 
+// 学期筛选选项：全部学期 + 按时间先后倒序（最新学期在前），与走势图共用同一排序口径
+const semesterItems = computed(() => {
+  const map = new Map();
+  scores.value.forEach(item => {
+    const key = `${item.year} ${item.term}`;
+    if (!map.has(key)) map.set(key, { value: key, label: key, year: item.year, term: item.term });
+  });
+  const list = Array.from(map.values())
+    .sort((a, b) => semesterSortKey(b.year, b.term) - semesterSortKey(a.year, a.term))
+    .map(({ value, label }) => ({ value, label }));
+  return [{ value: 'all', label: '全部学期' }, ...list];
+});
+
+// 数据变化（切换账号 / 重新同步）后，若所选学期已不存在则回退到全部学期
+watch(semesterItems, items => {
+  if (selectedSemester.value !== 'all' && !items.some(i => i.value === selectedSemester.value)) {
+    selectedSemester.value = 'all';
+  }
+});
+
 const filteredScores = computed(() => {
   return scores.value.filter(item => {
     if (searchQuery.value) {
@@ -407,6 +443,9 @@ const filteredScores = computed(() => {
       const matchName = (item.courseName || '').toLowerCase().includes(q);
       const matchId = (item.courseId || '').toLowerCase().includes(q);
       if (!matchName && !matchId) return false;
+    }
+    if (selectedSemester.value !== 'all' && `${item.year} ${item.term}` !== selectedSemester.value) {
+      return false;
     }
     if (selectedProperty.value !== 'all' && item.propertyKey !== selectedProperty.value) {
       return false;

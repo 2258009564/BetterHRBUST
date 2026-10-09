@@ -193,6 +193,37 @@ object GpaCalculator {
 
     fun isLowScore(score: String?): Boolean = parseScoreValue(score).estimated?.let { it < 70 } ?: false
 
+    /**
+     * 同一公历年份内学期先后：春 → 夏 → 秋；未知学期值排在该年份最后。
+     * 兼容教务下拉框序号（1 = 春，2 = 秋）。
+     */
+    private val TERM_RANK = mapOf(
+        "春" to 0, "春季" to 0, "1" to 0,
+        "夏" to 1, "夏季" to 1,
+        "秋" to 2, "秋季" to 2, "2" to 2
+    )
+
+    /**
+     * 学期时间轴排序键（学期筛选等需要按时间先后排列的场景使用）
+     *
+     * 教务成绩单的「学年」列是该学期所在的公历年份：如 2023 秋 → 2024 春 → 2024 秋
+     * 是连续三个学期（2023 级大一上的下一学期记为 2024 春），
+     * 因此同一「学年」值内必须先春后秋，跨学年按年份升序。
+     * 与 Web 端 web/src/services/academic/stats.js 的 semesterSortKey 口径一致。
+     */
+    fun semesterSortKey(year: String?, term: String?): Int {
+        val yearNum = Regex("\\d{4}").find(year.orEmpty())?.value?.toIntOrNull() ?: 0
+        val key = term.orEmpty().trim().replace(Regex("\\s"), "")
+        return yearNum * 10 + (TERM_RANK[key] ?: 3)
+    }
+
+    /** 学期显示标签，与 Web 端保持一致：如 "2024 春" */
+    fun semesterLabel(year: String?, term: String?): String =
+        listOfNotNull(year, term)
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .joinToString(" ")
+
     private fun electiveCategory(item: ScoreItem): Char? {
         if (isRequired(item.property) || item.courseGroup.contains("专业")) return null
         val text = "${item.courseGroup} ${item.property} ${if (isElective(item.property)) item.courseName else ""}".uppercase()

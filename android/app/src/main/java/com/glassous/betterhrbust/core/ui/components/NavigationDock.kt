@@ -29,11 +29,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -133,8 +135,17 @@ object NavigationDockDefaults {
     /** 单个目的地的最大宽度。 */
     val MaxItemExtent = 56.dp
 
-    /** 竖排导航坞（平板左侧）的胶囊宽度。 */
-    val VerticalBarWidth = 128.dp
+    /** 竖排导航坞（平板左侧）展开时的胶囊宽度：图标 + 标签。 */
+    val VerticalBarWidth = 96.dp
+
+    /** 竖排导航坞折叠后的胶囊宽度：隐藏标签，仅保留图标。 */
+    val CollapsedVerticalBarWidth = 60.dp
+
+    /**
+     * 竖排导航坞的圆角半径 = 单个目的地的选中胶囊半径（[VerticalItemHeight] 的一半）+ [BarPadding]。
+     * 与外层胶囊同心，内部选中块因此与外轮廓圆角统一，不会溢出胶囊轮廓。
+     */
+    val VerticalBarCornerRadius = 30.dp
 
     /** 竖排导航坞单个目的地的高度上限（高度不足时按可用空间收缩）。 */
     val VerticalItemHeight = 52.dp
@@ -215,14 +226,34 @@ fun navigationDockStartMargin(): Dp {
 }
 
 /**
- * 竖排导航坞在页面左侧占用的总宽度 = [navigationDockStartMargin] + 胶囊宽度；
- * 手机端（底部横排）无需左侧让位，返回 0。
+ * 平板端页面内容在左侧的让位：宽度随导航坞折叠进度在 [NavigationDockDefaults.VerticalBarWidth]
+ * 与 [NavigationDockDefaults.CollapsedVerticalBarWidth] 之间插值（布局期读取折叠弹簧，避免逐帧重组）。
+ *
+ * 手机端（底部横排）与未提供折叠状态时不作让位。
  */
 @Composable
-fun navigationDockStartInset(): Dp = if (isTabletDevice()) {
-    navigationDockStartMargin() + NavigationDockDefaults.VerticalBarWidth
-} else {
-    0.dp
+fun Modifier.navigationDockStartPadding(
+    collapseState: NavigationDockCollapseState?,
+): Modifier {
+    val density = LocalDensity.current
+    val startMarginPx = with(density) { navigationDockStartMargin().roundToPx() }
+    val expandedWidthPx = with(density) { NavigationDockDefaults.VerticalBarWidth.roundToPx() }
+    val collapsedWidthPx = with(density) { NavigationDockDefaults.CollapsedVerticalBarWidth.roundToPx() }
+    if (collapseState == null || !isTabletDevice()) return this
+    return layout { measurable, constraints ->
+        val t = collapseState.progress.value.coerceIn(0f, 1f)
+        val start = startMarginPx + (expandedWidthPx + (collapsedWidthPx - expandedWidthPx) * t).roundToInt()
+        val available = (constraints.maxWidth - start).coerceAtLeast(0)
+        val placeable = measurable.measure(
+            constraints.copy(
+                minWidth = (constraints.minWidth - start).coerceAtLeast(0),
+                maxWidth = available,
+            )
+        )
+        layout(constraints.maxWidth, placeable.height) {
+            placeable.placeRelative(start, 0)
+        }
+    }
 }
 
 /**
@@ -231,9 +262,16 @@ fun navigationDockStartInset(): Dp = if (isTabletDevice()) {
 @Stable
 class NavigationDockCollapseState internal constructor(
     internal val progress: ResettableSpring,
+    /** 用户是否手动设置过折叠态（跨配置变更保留，冷启动重置）。 */
+    private val userControlled: MutableState<Boolean>,
 ) {
     /** 目标态是否已折叠（动画可能仍在进行中）。 */
     val isCollapsed: Boolean get() = progress.target > 0.5f
+
+    /** 标记折叠态已由用户手动设定，此后不再随页面滚动自动变化。 */
+    fun markUserControlled() {
+        userControlled.value = true
+    }
 
     /** 折叠为"仅图标"。 */
     fun collapse() {
@@ -248,8 +286,11 @@ class NavigationDockCollapseState internal constructor(
     /**
      * 消费一段页面垂直滚动量（[scrollDeltaY] 与手指位移同向：手指上滑为负、下拖为正）：
      * 页面下滑浏览更后方内容累计超过 [collapseDistancePx] 即折叠；页面上滑回看累计超过 [expandDistancePx] 即展开。
+     *
+     * 用户手动展开 / 折叠过后不再自动变化（直到下次冷启动）。
      */
     fun onPageScroll(scrollDeltaY: Float, collapseDistancePx: Float, expandDistancePx: Float) {
+        if (userControlled.value) return
         when {
             scrollDeltaY < 0f -> {
                 collapseAccum -= scrollDeltaY
@@ -275,11 +316,21 @@ class NavigationDockCollapseState internal constructor(
     private var expandAccum = 0f
 }
 
-/** 记住一个 [NavigationDockCollapseState]。 */
+/**
+ * 记住一个 [NavigationDockCollapseState]。
+ *
+ * @param initiallyCollapsed 首帧折叠态（通常来自持久化的用户手动选择），
+ *   冷启动直接落位、不播放动画。
+ */
 @Composable
-fun rememberNavigationDockCollapseState(): NavigationDockCollapseState {
-    val spring = rememberResettableSpring(0f)
-    return remember(spring) { NavigationDockCollapseState(spring) }
+fun rememberNavigationDockCollapseState(
+    initiallyCollapsed: Boolean = false,
+): NavigationDockCollapseState {
+    val spring = rememberResettableSpring(if (initiallyCollapsed) 1f else 0f)
+    // 手动设定标记跨配置变更（旋转 / 分屏）保留，但冷启动重置：
+    // 即"手动展开折叠后直到下次冷启动都不再自动变化"
+    val userControlled = rememberSaveable { mutableStateOf(false) }
+    return remember(spring) { NavigationDockCollapseState(spring, userControlled) }
 }
 
 /**
@@ -324,15 +375,17 @@ private fun rubberBand(overshoot: Float, limit: Float): Float {
  *  - 图标/标签颜色：未被 lens 覆盖处渲染为 `onSurface`；被 lens 覆盖的部分渲染为主色 `primary`，lens 滑过时逐段变色；
  *  - 交互：按住可沿排列方向拖动 lens 滑过各目的地，经过时触发触感，松手切到该目的地；
  *    点击（按下即抬起）时触发一次触感；越界时整体橡皮筋拉伸；按压时整体膨胀；
- *  - 折叠：横排胶囊可收缩为"仅图标"（标签淡出、高度变矮），展开时恢复图标 + 标签；
- *    竖排（平板左侧）时标签常驻可见，不参与折叠，lens 沿 Y 轴移动。
+ *  - 折叠：横排胶囊收缩为"仅图标"（标签淡出、高度变矮）；竖排（平板左侧）同样可折叠为"仅图标"
+ *    （标签淡出、宽度收窄）。手机上在坞内上下滑动、平板上在坞内左右滑动即可手动展开 / 折叠；
+ *    横排的自动折叠由页面滚动驱动，竖排不随页面滚动变化，lens 沿 Y 轴移动。
  *
  * @param destinations 目的地列表
  * @param selectedIndex 当前选中的索引
  * @param onSelected 选中回调（点击或拖拽释放到该目的地时触发）
- * @param collapseState 外部折叠状态（通常由页面滚动驱动；竖排时忽略）
+ * @param collapseState 外部折叠状态
  * @param itemExtent 横排时单个目的地的最大宽度
  * @param vertical 是否竖排（平板左侧）
+ * @param onManualCollapseChange 用户在坞内手动展开 / 折叠并改变了折叠态时的回调
  */
 @Composable
 fun NavigationDock(
@@ -343,12 +396,19 @@ fun NavigationDock(
     collapseState: NavigationDockCollapseState? = null,
     itemExtent: Dp = NavigationDockDefaults.MaxItemExtent,
     vertical: Boolean = false,
+    onManualCollapseChange: ((collapsed: Boolean) -> Unit)? = null,
 ) {
     if (destinations.isEmpty()) return
 
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
-    val shape = RoundedCornerShape(50)
+    // 竖排：圆角与内部选中胶囊同心（半径 = 选中胶囊半径 + 内边距），保证圆角统一；
+    // 横排：胶囊随高度收缩，保持半高圆角的胶囊形
+    val shape = if (vertical) {
+        RoundedCornerShape(NavigationDockDefaults.VerticalBarCornerRadius)
+    } else {
+        RoundedCornerShape(50)
+    }
     val colorScheme = MaterialTheme.colorScheme
 
     val contentColor = colorScheme.onSurface
@@ -366,15 +426,19 @@ fun NavigationDock(
     val barHeightPx = with(density) { NavigationDockDefaults.BarHeight.toPx() }
     val collapsedBarHeightPx = with(density) { NavigationDockDefaults.CollapsedBarHeight.toPx() }
     val collapseTravelPx = with(density) { NavigationDockDefaults.CollapseTravel.toPx() }
+    val verticalBarWidthPx = with(density) { NavigationDockDefaults.VerticalBarWidth.toPx() }
+    val collapsedVerticalBarWidthPx = with(density) {
+        NavigationDockDefaults.CollapsedVerticalBarWidth.toPx()
+    }
 
     val lens = rememberResettableSpring(selectedIndex.toFloat())
     val lift = rememberResettableSpring(0f)
     val swell = rememberResettableSpring(0f)
     val stretch = rememberResettableSpring(0f)
 
-    /** 折叠进度：0 = 展开（图标 + 标签），1 = 折叠（仅图标）；竖排导航坞不折叠，恒为 0。 */
+    /** 折叠进度：0 = 展开（图标 + 标签），1 = 折叠（仅图标）。 */
     val localCollapse = rememberResettableSpring(0f)
-    val collapse = if (vertical) localCollapse else (collapseState?.progress ?: localCollapse)
+    val collapse = collapseState?.progress ?: localCollapse
     val dockTopInWindow = remember { floatArrayOf(0f) }
 
     var pressedIndex by remember { mutableStateOf<Int?>(null) }
@@ -382,6 +446,7 @@ fun NavigationDock(
 
     val currentSelectedIndex by rememberUpdatedState(selectedIndex)
     val currentOnSelected by rememberUpdatedState(onSelected)
+    val currentOnManualCollapseChange by rememberUpdatedState(onManualCollapseChange)
 
     // 外部改变选中项时，让 lens 弹向新的选中位置；按压/拖拽期间交由手势接管
     LaunchedEffect(selectedIndex) {
@@ -418,13 +483,18 @@ fun NavigationDock(
             modifier = Modifier
                 .then(
                     if (vertical) {
-                        // 竖排：高度按目的地数量自适应，可用高度不足时整体收缩
+                        // 竖排：高度按目的地数量自适应，可用高度不足时整体收缩；
+                        // 宽度随折叠进度在"图标 + 标签"与"仅图标"之间插值
                         val railHeight = (
                             NavigationDockDefaults.VerticalItemHeight * destinations.size +
                                 NavigationDockDefaults.BarPadding * 2
                             ).coerceAtMost(maxHeight)
                         Modifier
-                            .width(NavigationDockDefaults.VerticalBarWidth)
+                            .dockRailWidth(
+                                collapse = collapse,
+                                expandedPx = verticalBarWidthPx,
+                                collapsedPx = collapsedVerticalBarWidthPx,
+                            )
                             .height(railHeight)
                     } else {
                         Modifier
@@ -476,15 +546,13 @@ fun NavigationDock(
                 .pointerInput(destinations.size, vertical) {
                     val count = destinations.size
                     val lastIndex = count - 1
-                    // 竖排导航坞标签常驻，不支持手动折叠 / 展开手势
-                    val canCollapse = !vertical
 
                     fun indexAt(position: Float): Int = position.roundToInt().coerceIn(0, lastIndex)
 
                     /** 沿排列轴取坐标：横排为 x，竖排为 y。 */
                     fun along(offset: Offset): Float = if (vertical) offset.y else offset.x
 
-                    /** 取与排列轴垂直的坐标：横排为窗口 y（折叠手势用），竖排为控件内 x。 */
+                    /** 取与排列轴垂直的坐标：横排为窗口 y，竖排为控件内 x（折叠手势用）。 */
                     fun cross(offset: Offset): Float =
                         if (vertical) offset.x else dockTopInWindow[0] + offset.y
 
@@ -541,6 +609,7 @@ fun NavigationDock(
                                 val target = if (projected > 0.5f) 1f else 0f
                                 if ((target > 0.5f) != (collapseBase > 0.5f)) {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    currentOnManualCollapseChange?.invoke(target > 0.5f)
                                 }
                                 collapse.springTo(target, NavigationDockDefaults.SettleSpring)
                             }
@@ -603,12 +672,12 @@ fun NavigationDock(
                                 val positionAlong = along(change.position)
                                 val alongDelta = positionAlong - downAlong
                                 val crossDelta = cross(change.position) - downCross
+                                // 折叠手势方向：横排下拉折叠 / 上滑展开；竖排左滑（朝屏幕边缘）折叠 / 右滑展开
+                                val collapseDelta = if (vertical) -crossDelta else crossDelta
                                 tracker.addPosition(change.uptimeMillis, change.position)
                                 if (!wasDragging && !collapseDrag) {
                                     val slop = viewConfiguration.touchSlop
-                                    if (canCollapse && abs(crossDelta) > slop &&
-                                        abs(crossDelta) > abs(alongDelta)
-                                    ) {
+                                    if (abs(crossDelta) > slop && abs(crossDelta) > abs(alongDelta)) {
                                         collapseDrag = true
                                         pressedIndex = null
                                         dragging = false
@@ -626,7 +695,7 @@ fun NavigationDock(
                                 }
                                 if (collapseDrag) {
                                     collapse.springTo(
-                                        (collapseBase + crossDelta / collapseTravelPx)
+                                        (collapseBase + collapseDelta / collapseTravelPx)
                                             .coerceIn(0f, 1f),
                                         NavigationDockDefaults.TrackSpring,
                                     )
@@ -658,7 +727,13 @@ fun NavigationDock(
                     }
                 }
         ) {
-            BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(NavigationDockDefaults.BarPadding)) {
+            // 内容不裁剪：按压缩放 / 果冻拉伸的选中块允许溢出轮廓（交互反馈），
+            // 静置态的圆角统一由同心几何保证（外层半径 = 内部胶囊半径 + 内边距）
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(NavigationDockDefaults.BarPadding)
+            ) {
                 // 沿排列轴的单项尺寸：横排为宽度，竖排为高度
                 val extent: Dp =
                     if (vertical) maxHeight / destinations.size else maxWidth / destinations.size
@@ -881,7 +956,7 @@ private fun DockItem(
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             if (vertical) {
-                // 竖排：图标与标签并排，标签常驻可见
+                // 竖排：图标与标签并排，折叠时标签淡出并收拢宽度，图标回到居中
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = destination.glyph,
@@ -889,7 +964,11 @@ private fun DockItem(
                         tint = contentColor,
                         modifier = Modifier.size(NavigationDockDefaults.IconSize),
                     )
-                    Spacer(Modifier.width(NavigationDockDefaults.VerticalLabelGap))
+                    Spacer(
+                        Modifier
+                            .dockCollapseExtent(collapse, vertical = true)
+                            .width(NavigationDockDefaults.VerticalLabelGap)
+                    )
                     Text(
                         text = destination.label,
                         color = contentColor,
@@ -897,6 +976,7 @@ private fun DockItem(
                         maxLines = 1,
                         softWrap = false,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.dockLabelCollapse(collapse, vertical = true),
                     )
                 }
             } else {
@@ -918,7 +998,7 @@ private fun DockItem(
                         maxLines = 1,
                         softWrap = false,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.dockLabelCollapse(collapse),
+                        modifier = Modifier.dockLabelCollapse(collapse, vertical = false),
                     )
                 }
             }
@@ -1029,14 +1109,40 @@ private fun Modifier.dockBarHeight(
     layout(placeable.width, height) { placeable.placeRelative(0, 0) }
 }
 
-/** 折叠态的标签：透明度淡出并收拢高度。 */
-private fun Modifier.dockLabelCollapse(collapse: ResettableSpring): Modifier = this
+/**
+ * 折叠态的尺寸收拢：横排（标签在图标下方）收拢高度，竖排（标签在图标右侧）收拢宽度。
+ * 测量期读取折叠弹簧，跟随折叠动画逐帧收缩。
+ */
+private fun Modifier.dockCollapseExtent(collapse: ResettableSpring, vertical: Boolean): Modifier =
+    layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        val t = collapse.value.coerceIn(0f, 1f)
+        if (vertical) {
+            val width = (placeable.width * (1f - t)).roundToInt()
+            layout(width, placeable.height) { placeable.placeRelative(0, 0) }
+        } else {
+            val height = (placeable.height * (1f - t)).roundToInt()
+            layout(placeable.width, height) { placeable.placeRelative(0, 0) }
+        }
+    }
+
+/** 折叠态的标签：透明度淡出并收拢尺寸。 */
+private fun Modifier.dockLabelCollapse(collapse: ResettableSpring, vertical: Boolean): Modifier = this
     .graphicsLayer {
         alpha = (1f - collapse.value.coerceIn(0f, 1f) * 2f).coerceIn(0f, 1f)
     }
-    .layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints)
-        val t = collapse.value.coerceIn(0f, 1f)
-        val height = (placeable.height * (1f - t)).roundToInt()
-        layout(placeable.width, height) { placeable.placeRelative(0, 0) }
-    }
+    .dockCollapseExtent(collapse, vertical)
+
+/** 竖排导航坞折叠宽度：测量期读取折叠弹簧，在展开与折叠宽度间插值。 */
+private fun Modifier.dockRailWidth(
+    collapse: ResettableSpring,
+    expandedPx: Float,
+    collapsedPx: Float,
+): Modifier = layout { measurable, constraints ->
+    val t = collapse.value.coerceIn(0f, 1f)
+    val width = (expandedPx + (collapsedPx - expandedPx) * t)
+        .roundToInt()
+        .coerceIn(constraints.minWidth, constraints.maxWidth)
+    val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+    layout(width, placeable.height) { placeable.placeRelative(0, 0) }
+}

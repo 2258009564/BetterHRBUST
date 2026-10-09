@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -38,10 +37,11 @@ import androidx.navigation.compose.rememberNavController
 import com.glassous.betterhrbust.core.model.AuthState
 import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
+import com.glassous.betterhrbust.core.ui.clearFocusOnTapOutside
 import com.glassous.betterhrbust.core.ui.components.NavigationDock
 import com.glassous.betterhrbust.core.ui.components.NavigationDockDestination
 import com.glassous.betterhrbust.core.ui.components.navigationDockInset
-import com.glassous.betterhrbust.core.ui.components.navigationDockStartInset
+import com.glassous.betterhrbust.core.ui.components.navigationDockStartPadding
 import com.glassous.betterhrbust.core.ui.components.rememberNavigationDockCollapseConnection
 import com.glassous.betterhrbust.core.ui.components.rememberNavigationDockCollapseState
 import com.glassous.betterhrbust.core.ui.isTabletDevice
@@ -97,8 +97,9 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = true
             ) {
                 val resolvedAuthState = authState
-                if (resolvedAuthState == null) {
-                    // 首帧占位：仅渲染与主题一致的底色，等会话状态就绪后再决定落地页
+                if (resolvedAuthState == null || prefs == null) {
+                    // 首帧占位：仅渲染与主题一致的底色，等会话状态与偏好就绪后再决定落地页
+                    // （偏好需先到位，导航坞才能按持久化的折叠态首帧落位，避免可见的二次跳动）
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -110,7 +111,8 @@ class MainActivity : ComponentActivity() {
                         authState = resolvedAuthState,
                         isSessionExpired = isSessionExpired,
                         shouldPromptReLogin = shouldPromptReLogin,
-                        sessionPromptDismissed = sessionPromptDismissed
+                        sessionPromptDismissed = sessionPromptDismissed,
+                        dockCollapsed = prefs?.navigationDockCollapsed ?: false
                     )
                     }
                 }
@@ -124,7 +126,9 @@ fun MainAppScaffold(
     authState: AuthState,
     isSessionExpired: Boolean,
     shouldPromptReLogin: Boolean = isSessionExpired,
-    sessionPromptDismissed: Boolean = false
+    sessionPromptDismissed: Boolean = false,
+    /** 持久化的导航坞折叠态（用户上次手动展开 / 折叠的结果） */
+    dockCollapsed: Boolean = false
 ) {
     val authRepo = remember { BetterHrbustApp.instance.authRepository }
     val syncManager = remember { BetterHrbustApp.instance.syncManager }
@@ -181,8 +185,8 @@ fun MainAppScaffold(
     val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    // 顶部让位：会话过期横幅已占据状态栏区域时不再重复让位
-    val topContentInset = if (showSessionBanner) 0.dp else statusBarInset
+    // 顶部让位：会话过期横幅为悬浮提示，不影响内容布局，内容始终按状态栏让位
+    val topContentInset = statusBarInset
     // 平板端导航坞竖排在左侧（见 [MainPagerScreen]），底部无需再为导航坞让位
     val isTablet = isTabletDevice()
     // 底部让位：主界面为底部导航坞让位，其它二级页面、平板端直接让位给系统导航条
@@ -201,6 +205,8 @@ fun MainAppScaffold(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
+                // 全应用统一：点击任意非输入框区域（空白 / 按钮 / 顶部标题等）清除输入焦点、收起键盘
+                .clearFocusOnTapOutside()
         ) {
             Column(
                 modifier = Modifier
@@ -208,15 +214,6 @@ fun MainAppScaffold(
                     // 重新登录覆盖层渲染 / 滑出期间冻结下层输入，避免触摸穿透
                     .then(if (reLoginRendered) Modifier.blockPointerInput() else Modifier)
             ) {
-                // 当会话已过期且在应用内主界面时，在顶部显示重新登录提示条
-                if (showSessionBanner) {
-                    SessionExpiredBanner(
-                        onReLoginClick = { showReLogin = true },
-                        onDismiss = { authRepo.dismissSessionPrompt() },
-                        modifier = Modifier.statusBarsPadding()
-                    )
-                }
-
                 NavHost(
                     navController = navController,
                     startDestination = startDestination,
@@ -241,6 +238,7 @@ fun MainAppScaffold(
                     composable<MainRoute> {
                         MainPagerScreen(
                             navController = navController,
+                            dockCollapsed = dockCollapsed,
                             onLogout = {
                                 navController.navigate(AuthRoute) {
                                     popUpTo(MainRoute) { inclusive = true }
@@ -258,6 +256,7 @@ fun MainAppScaffold(
                     composable<DashboardRoute> {
                         MainPagerScreen(
                             navController = navController,
+                            dockCollapsed = dockCollapsed,
                             onLogout = {
                                 navController.navigate(AuthRoute) {
                                     popUpTo(DashboardRoute) { inclusive = true }
@@ -271,6 +270,18 @@ fun MainAppScaffold(
                         )
                     }
                 }
+            }
+
+            // 会话已过期提示：悬浮在内容之上（不参与布局测量），出现 / 收起时其它区域不位移；
+            // 按声明顺序位于内容之上、重新登录覆盖层之下
+            if (showSessionBanner) {
+                SessionExpiredBanner(
+                    onReLoginClick = { showReLogin = true },
+                    onDismiss = { authRepo.dismissSessionPrompt() },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                )
             }
 
             // 重新登录覆盖层：与二级页面一致的滑入 / 滑出动画；关闭时保留内容直到滑出结束
@@ -353,7 +364,10 @@ private enum class SecondaryPage(val route: Any, val key: String) {
  * - 使用 [HorizontalPager] 承载，提供平滑左右滑动切换动画，[beyondViewportPageCount] 保活所有页面状态；
  * - [userScrollEnabled] 设为 false，禁止手势直接翻页，仅由导航坞驱动；
  * - 手机端：底部悬浮 [NavigationDock]，并在容器挂载滚动折叠监听（标签随页面滑动折叠）；
- * - 平板端：导航坞竖排悬浮在左侧，标签常驻可见、不随滚动折叠，页面内容整体左让位；
+ * - 平板端：导航坞竖排悬浮在左侧，页面内容整体左让位（让位宽度随折叠动画收缩）；
+ *   坞内水平滑动可手动展开 / 折叠，主区域的上下滚动不影响它；
+ * - 折叠态由 [dockCollapsed] 持久化：用户手动展开 / 折叠后保存，冷启动沿用，
+ *   且在此之前不再被自动行为改变；
  * - 二级页面（[SecondaryPage]）：以覆盖层从右侧滑入 / 滑出，主页不重建、不移动，状态原样保留。
  */
 @Composable
@@ -361,16 +375,18 @@ fun MainPagerScreen(
     navController: NavController,
     onLogout: () -> Unit,
     onReLogin: () -> Unit,
+    /** 持久化的导航坞折叠态，作为首帧状态（不播放动画） */
+    dockCollapsed: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val preferencesManager = remember { BetterHrbustApp.instance.preferencesManager }
     val pagerState = rememberPagerState(pageCount = { 5 })
     var tabIndex by rememberSaveable { mutableStateOf(0) }
     val currentTab = tabIndex
 
-    // 平板端：导航坞竖排在左侧（标签常驻），页面内容让位其宽度 + 左侧安全距离
+    // 平板端：导航坞竖排在左侧，页面内容让位其宽度 + 左侧安全距离（见 pagerModifier）
     val isTablet = isTabletDevice()
-    val dockStartInset = navigationDockStartInset()
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage to pagerState.isScrollInProgress }
@@ -379,14 +395,9 @@ fun MainPagerScreen(
             }
     }
 
-    val dockCollapseState = rememberNavigationDockCollapseState()
+    // 首帧落位到持久化的折叠态：用户手动展开 / 折叠后写回偏好，冷启动沿用
+    val dockCollapseState = rememberNavigationDockCollapseState(initiallyCollapsed = dockCollapsed)
     val dockCollapseConnection = rememberNavigationDockCollapseConnection(dockCollapseState)
-
-    // 竖排导航坞常驻展开：进入平板布局时恢复展开态，
-    // 避免手机布局遗留的折叠态在设备旋转后继续生效
-    LaunchedEffect(isTablet) {
-        if (isTablet) dockCollapseState.expand()
-    }
 
     val dockDestinations = remember {
         TopLevelDestination.entries.map {
@@ -472,7 +483,7 @@ fun MainPagerScreen(
     }
 
     val containerModifier = if (isTablet) {
-        // 竖排导航坞不随页面滚动折叠，无需转发滚动量
+        // 竖排导航坞不随页面滚动折叠：主区域上下滑动不转发滚动量
         modifier.fillMaxSize()
     } else {
         modifier
@@ -482,7 +493,8 @@ fun MainPagerScreen(
 
     val pagerModifier = Modifier
         .fillMaxSize()
-        .padding(start = dockStartInset)
+        // 平板端：内容左让位随折叠进度收缩，折叠后页面可用宽度随之增大
+        .navigationDockStartPadding(dockCollapseState)
         // 覆盖层渲染期间冻结主页输入，避免触摸穿透（点击 / 滚动均不响应）
         .then(if (renderedPage != null) Modifier.blockPointerInput() else Modifier)
 
@@ -515,8 +527,20 @@ fun MainPagerScreen(
                     tabIndex = index
                     coroutineScope.launch { pagerState.animateScrollToPage(index) }
                 },
-                collapseState = if (isTablet) null else dockCollapseState,
+                collapseState = dockCollapseState,
                 vertical = isTablet,
+                // 仅平板：手动展开 / 折叠后持久化，并停止被自动行为改变（直到下次冷启动）；
+                // 手机端手动折叠保持原有"临时"语义，仍可被页面滚动重新展开
+                onManualCollapseChange = if (isTablet) {
+                    { collapsed: Boolean ->
+                        dockCollapseState.markUserControlled()
+                        coroutineScope.launch {
+                            preferencesManager.setNavigationDockCollapsed(collapsed)
+                        }
+                    }
+                } else {
+                    null
+                },
                 modifier = Modifier.align(
                     if (isTablet) Alignment.CenterStart else Alignment.BottomCenter
                 )
