@@ -119,7 +119,7 @@ cd android
 # 构建 Debug 安装包（产物：app/build/outputs/apk/debug/app-debug.apk）
 ./gradlew :app:assembleDebug
 
-# 运行单元测试（JVM，61 个用例）
+# 运行单元测试（JVM）
 ./gradlew :app:testDebugUnitTest
 ```
 
@@ -135,12 +135,15 @@ cd android
 
 > [!NOTE]
 > Release 构建（`./gradlew :app:assembleRelease`）已启用 R8 代码压缩与资源压缩（规则见 `app/src/main/keepRules/`），
-> 但**未内置签名配置**，正式分发前需自行在 `app/build.gradle.kts` 中补充 `signingConfigs`。
+> 正式签名从环境变量读取：`ANDROID_KEYSTORE_FILE`、`ANDROID_STORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。
+> 使用 `./gradlew :app:assembleRelease -PrequireReleaseSigning=true` 可强制缺少签名时停止构建。
+> Actions 的正式发布需要 `ANDROID_KEYSTORE_BASE64` 及上述三项密码/别名 Secrets；密钥不进入源码，也不使用随机调试签名。
+> 维护者从主分支手动运行「Android 验证与构建」并勾选 `publish`，或推送匹配源码版本的 `android-v<版本>` 标签；通过测试后才会签名、验证并上传 Releases。
 > 因教务在线为 `http` 明文站点，Manifest 中显式开启了 `usesCleartextTraffic`。
 
 > [!IMPORTANT]
 > **安装包命名格式**：发布到 GitHub Release 时统一命名为 `BetterHRBUST-<版本>-android.apk`
-> （如 `BetterHRBUST-1.0.0-android.apk`，构建产物 `app-release-unsigned.apk` 重命名即可），
+> （如 `BetterHRBUST-1.1.1-android.apk`，仅发布经过 `apksigner verify` 的 `app-release.apk`，禁止重命名 unsigned/debug 包发布），
 > 与桌面端安装版 `BetterHRBUST-<版本>-windows-setup.exe`、便携版 `BetterHRBUST-<版本>-windows-portable.zip`
 > 保持同一命名格式，便于用户识别与 README 快捷下载链接对齐。
 > 详见「[发布 Release 与更新检测](#5-发布-release-与更新检测)」。

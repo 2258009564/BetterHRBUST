@@ -5,6 +5,17 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// 签名由本地环境或 Actions Secrets 提供，密钥不进入源码。
+val signingVariables = listOf("ANDROID_KEYSTORE_FILE", "ANDROID_STORE_PASSWORD", "ANDROID_KEY_ALIAS", "ANDROID_KEY_PASSWORD")
+val signingValues = signingVariables.associateWith { System.getenv(it).orEmpty() }
+val hasReleaseSigning = signingValues.values.all { it.isNotBlank() }
+check(signingValues.values.all { it.isBlank() } || hasReleaseSigning) {
+    "Android 签名配置不完整，请提供全部四项签名环境变量"
+}
+check(providers.gradleProperty("requireReleaseSigning").orNull != "true" || hasReleaseSigning) {
+    "正式发布必须提供固定签名密钥，禁止发布未签名 APK"
+}
+
 android {
     namespace = "com.glassous.betterhrbust"
     compileSdk = 37
@@ -19,8 +30,18 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    if (hasReleaseSigning) {
+        signingConfigs.create("release") {
+            storeFile = file(signingValues.getValue("ANDROID_KEYSTORE_FILE"))
+            storePassword = signingValues.getValue("ANDROID_STORE_PASSWORD")
+            keyAlias = signingValues.getValue("ANDROID_KEY_ALIAS")
+            keyPassword = signingValues.getValue("ANDROID_KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
             // 依赖裁剪：R8 代码压缩 + 资源压缩（保守策略，见 src/main/keepRules/rules.keep）
             isMinifyEnabled = true
             isShrinkResources = true
