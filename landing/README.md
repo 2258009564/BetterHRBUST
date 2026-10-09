@@ -19,6 +19,26 @@ npm run build    # 产物：landing/dist/（相对路径引用，可直接静态
 npm run preview  # 本地预览构建产物
 ```
 
+## 自动部署
+
+`.github/workflows/deploy-landing.yml` 负责介绍页的自动构建与部署：
+
+- **触发**：向 `main` 推送 `landing/**`（或该工作流文件本身）的改动；也可在 Actions 页面手动触发（`workflow_dispatch`）。
+- **构建**：全程在 GitHub 云端运行器（`ubuntu-latest`，Node 22）执行 `npm ci && npm run build`，**不在服务器上构建**。
+- **部署**：`rsync -avz --delete` 将 `landing/dist/` 内容全量同步到服务器
+  `/opt/1panel/www/sites/betterhrbust/index/dist`（`--delete` 会清理历史哈希产物，注意该目录应专用于本页面）。
+
+需要在仓库 **Settings → Secrets and variables → Actions → Secrets** 中配置：
+
+| Secret | 必填 | 说明 |
+| --- | --- | --- |
+| `SERVER_HOST` | 是 | 服务器地址（域名或 IP） |
+| `SERVER_USER` | 是 | SSH 登录用户，需对目标目录有写权限 |
+| `SERVER_SSH_KEY` | 是 | SSH 私钥全文（对应公钥需已加入服务器 `~/.ssh/authorized_keys`） |
+| `SERVER_PORT` | 否 | SSH 端口，默认 `22` |
+
+要求服务器已安装 `rsync`（1Panel 环境通常已内置），且目标目录的父级 `index/` 已存在。
+
 ## 说明
 
 - 页面不请求任何后端接口，纯静态托管即可（GitHub Pages / Nginx / 任意对象存储）。
