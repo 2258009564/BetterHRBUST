@@ -41,3 +41,11 @@ export const COMBINE_SLOT_TIMES = [
 export function getCombineSlotTime(period) {
   return COMBINE_SLOT_TIMES.find(s => s.period === period)?.time || '';
 }
+
+/** 下课时刻起即视为结束，避免课程结束后仍显示待上。 */
+export function hasCombineSlotEnded(period, now = new Date()) {
+  const time = getCombineSlotTime(period).split('-')[1]?.trim();
+  if (!time) return false;
+  const [hours, minutes] = time.split(':').map(Number);
+  return now.getHours() * 60 + now.getMinutes() >= hours * 60 + minutes;
+}

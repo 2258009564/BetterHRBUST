@@ -606,7 +606,8 @@ object AcademicParsers {
             }
         }
 
-        return CurriculumPlanResult(groups = groups)
+        val total = Regex("""(?:方案总学分|毕业总学分|总学分要求|要求总学分|总学分)\s*[：:=]?\s*([0-9]+(?:\.[0-9]+)?)""").find(doc.text())?.groupValues?.get(1)?.toDoubleOrNull()
+        return CurriculumPlanResult(groups = groups.distinctBy { it.id.ifBlank { it.name } }, totalRequiredCredits = total)
     }
 
     fun parseClassroomQueryOptions(html: String): ClassroomQueryOptions {

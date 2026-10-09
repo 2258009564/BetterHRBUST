@@ -98,7 +98,7 @@ fun ProgramScreen(
     // 与概览页共用同一口径：必修课去重后的已获学分，保证两页数据完全一致
     val creditsProgress: CreditsProgress? = remember(scoreResult, planResult) {
         scoreResult?.scores?.let { scores ->
-            GpaCalculator.computeCreditsProgress(scores, groups)
+            GpaCalculator.computeCreditsProgress(scores, groups, planTotalCredits = planResult?.totalRequiredCredits)
         }
     }
 

@@ -69,7 +69,7 @@
       </UiCard>
 
       <!-- All Exams Archive Table -->
-      <UiCard title="全部考试日程列表 (studentQueryAllExam.do)">
+      <UiCard title="全部考试日程列表">
         <template #header-action>
           <div class="flex items-center gap-2">
             <UiTabs
@@ -108,7 +108,7 @@
                 <td class="p-3"><UiBadge size="sm" variant="default">{{ e.property }}</UiBadge></td>
                 <td class="p-3 pr-4 text-right">
                   <UiBadge size="sm" :variant="e.isUpcoming ? 'warning' : 'outline'">
-                    {{ e.isUpcoming ? '待开考' : '已归档' }}
+                    {{ e.isUpcoming ? '待开考' : '已结束' }}
                   </UiBadge>
                 </td>
               </tr>

@@ -72,7 +72,7 @@
       <!-- Details Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Academic Status Info -->
-        <UiCard title="学籍详细档案 (showPersonalInfo.do)">
+        <UiCard title="学籍详细档案">
           <div class="space-y-3 text-xs">
             <div class="flex justify-between py-1.5 border-b border-zinc-100 dark:border-zinc-800">
               <span class="text-zinc-500">培养层次 / 学生类别</span>

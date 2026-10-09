@@ -27,7 +27,7 @@
           <div>
             <div class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">毕业方案总学分达成进度</div>
             <div class="text-3xl font-extrabold text-zinc-900 dark:text-zinc-100 mt-1">
-              {{ creditsProgress.earnedTotal }} <span class="text-base font-normal text-zinc-400">/ {{ creditsProgress.requiredTotal }} 学分</span>
+              {{ creditsProgress.earnedTotal }} <span class="text-base font-normal text-zinc-400">/ {{ creditsProgress.requiredTotal || "待同步" }} 学分</span>
             </div>
             <div class="text-xs text-zinc-500 mt-1">
               学生专业：<span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ userProfile.college }} · {{ userProfile.major }} ({{ userProfile.grade }}级)</span>
@@ -135,7 +135,7 @@ const showLoginPrompt = computed(() => !isLoggedIn.value && !isSessionExpired.va
 const earnedCreditsNote = EARNED_CREDITS_NOTE;
 
 const creditsProgress = computed(() =>
-  computeCreditsProgress(scores.value, plan.value?.groups || [])
+  computeCreditsProgress(scores.value, plan.value?.groups || [], { planTotalCredits: plan.value?.totalRequiredCredits })
 );
 const categories = computed(() => creditsProgress.value.categories);
 
