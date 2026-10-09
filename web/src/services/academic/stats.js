@@ -217,8 +217,8 @@ export function dedupeScores(scores) {
 }
 
 export function electiveCategory(item) {
-  if (isRequired(item.property)) return null;
-  const text = `${item.courseGroup || ''} ${item.property || ''}`.toUpperCase();
+  if (isRequired(item.property) || /专业/.test(item.courseGroup || '')) return null;
+  const text = `${item.courseGroup || ''} ${item.property || ''} ${isElective(item.property) ? item.courseName || '' : ''}`.toUpperCase();
   const match = text.match(/([ABCDE])\s*类|[（(]([ABCDE])[）)]/);
   return match ? match[1] || match[2] : null;
 }

@@ -194,8 +194,8 @@ object GpaCalculator {
     fun isLowScore(score: String?): Boolean = parseScoreValue(score).estimated?.let { it < 70 } ?: false
 
     private fun electiveCategory(item: ScoreItem): Char? {
-        if (isRequired(item.property)) return null
-        val text = "${item.courseGroup} ${item.property}".uppercase()
+        if (isRequired(item.property) || item.courseGroup.contains("专业")) return null
+        val text = "${item.courseGroup} ${item.property} ${if (isElective(item.property)) item.courseName else ""}".uppercase()
         return Regex("([ABCDE])\\s*类|[（(]([ABCDE])[）)]").find(text)
             ?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.first()
     }
