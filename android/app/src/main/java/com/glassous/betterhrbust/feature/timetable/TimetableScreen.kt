@@ -1,7 +1,18 @@
 package com.glassous.betterhrbust.feature.timetable
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -20,8 +31,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -81,8 +95,11 @@ fun TimetableScreen(
     val todayDay = remember(today) { today.dayOfWeek.value } // 1..7
     var selectedDay by remember { mutableStateOf(todayDay) }
 
+    // 详情卡片：打开后保留课程引用（含退场动画期间），入场/退场由 detailShown 驱动
     var selectedCourseDetail by remember { mutableStateOf<TimetableCell?>(null) }
-    val sheetState = rememberModalBottomSheetState()
+    // 详情来源页码：共享元素 key 的一部分，用于与课表块配对
+    var selectedDetailPage by remember { mutableStateOf(0) }
+    var detailShown by remember { mutableStateOf(false) }
 
     val isDayView = viewMode == TimetableViewMode.DAY
 
@@ -136,6 +153,25 @@ fun TimetableScreen(
         )
     }
 
+    /**
+     * 打开课程详情卡片（共享元素从课表块过渡到卡片）。
+     *
+     * @param page 课程所在页码：共享元素 key 带页码，避免分页器预组合的相邻页出现同 key 课表块
+     */
+    fun openCourse(cell: TimetableCell, page: Int) {
+        selectedCourseDetail = cell
+        selectedDetailPage = page
+        detailShown = true
+    }
+
+    /** 关闭课程详情卡片：只隐藏卡片，课程引用保留到退场动画结束。 */
+    fun closeCourse() {
+        detailShown = false
+    }
+
+    // 卡片展开期间拦截系统返回键
+    BackHandler(enabled = detailShown) { closeCourse() }
+
     // 教务当前周变化（同步完成后）跟随到新的当前周
     LaunchedEffect(prefs?.currentWeek) {
         val week = prefs?.currentWeek ?: return@LaunchedEffect
@@ -184,52 +220,91 @@ fun TimetableScreen(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        TimetableControlBar(
-            viewMode = viewMode,
-            onViewModeChange = { viewMode = it },
-            sectionMode = sectionMode,
-            onSectionModeChange = { sectionMode = it },
-            selectedWeek = selectedWeek,
-            currentWeek = currentWeek,
-            onWeekStep = { step ->
-                navigateTo((selectedWeek + step).coerceIn(1, MaxTeachingWeek), selectedDay)
-            },
-            onPickWeek = { showWeekPicker = true },
-            onBackToNow = {
-                // 周视图与日视图共用同一回归动作：选中周与选中日一并回到当下
-                navigateTo(currentWeek, todayDay)
-            },
-            selectedDay = selectedDay,
-            todayDay = todayDay,
-            onSelectDay = { day -> navigateTo(selectedWeek, day) }
-        )
+    // 共享元素过渡作用域：以页面根容器承载（既提供根坐标，也承载过渡期间的浮层）
+    SharedTransitionLayout(modifier = modifier.fillMaxSize()) {
+        val scope = this
+        Column(modifier = Modifier.fillMaxSize()) {
+            TimetableControlBar(
+                viewMode = viewMode,
+                onViewModeChange = { viewMode = it },
+                sectionMode = sectionMode,
+                onSectionModeChange = { sectionMode = it },
+                selectedWeek = selectedWeek,
+                currentWeek = currentWeek,
+                onWeekStep = { step ->
+                    navigateTo((selectedWeek + step).coerceIn(1, MaxTeachingWeek), selectedDay)
+                },
+                onPickWeek = { showWeekPicker = true },
+                onBackToNow = {
+                    // 周视图与日视图共用同一回归动作：选中周与选中日一并回到当下
+                    navigateTo(currentWeek, todayDay)
+                },
+                selectedDay = selectedDay,
+                todayDay = todayDay,
+                onSelectDay = { day -> navigateTo(selectedWeek, day) }
+            )
 
-        AppPullToRefreshBox(
-            isRefreshing = isRefreshing || isSyncing,
-            onRefresh = { refreshAll() },
-            modifier = Modifier.weight(1f)
+            AppPullToRefreshBox(
+                isRefreshing = isRefreshing || isSyncing,
+                onRefresh = { refreshAll() },
+                modifier = Modifier.weight(1f)
+            ) {
+                val result = timetableResult
+                when {
+                    result == null && (isRefreshing || isSyncing) -> LoadingView(message = "正在加载课表...")
+                    result == null -> EmptyView(
+                        title = "暂无课表数据",
+                        description = cacheError.ifEmpty { "请下拉或使用「更多」页首行按钮手动刷新数据" }
+                    )
+                    result.cells.isEmpty() && result.unarranged.isEmpty() -> EmptyView(
+                        title = "本学期暂无排课",
+                        description = "教务系统尚未返回课程安排，稍后可下拉刷新重试"
+                    )
+                    else -> TimetableContent(
+                        result = result,
+                        viewMode = viewMode,
+                        pagerState = pagerState,
+                        sectionMode = sectionMode,
+                        currentWeek = currentWeek,
+                        isDark = isDark,
+                        selectedDetail = selectedCourseDetail.takeIf { detailShown },
+                        sharedTransitionScope = scope,
+                        onCourseClick = { cell, page -> openCourse(cell, page) }
+                    )
+                }
+            }
+        }
+
+        // 课程详情：居中卡片 + 背景模糊 + 遮罩（非弹窗，直接绘制在页面之上）
+        AnimatedVisibility(
+            visible = detailShown,
+            enter = fadeIn(tween(180)),
+            exit = fadeOut(tween(180))
         ) {
-            val result = timetableResult
-            when {
-                result == null && (isRefreshing || isSyncing) -> LoadingView(message = "正在加载课表...")
-                result == null -> EmptyView(
-                    title = "暂无课表数据",
-                    description = cacheError.ifEmpty { "请下拉或使用「更多」页首行按钮手动刷新数据" }
+            Box(modifier = Modifier.fillMaxSize()) {
+                // 遮罩：命中测试止于本层，下方课表的下拉刷新 / 翻页 / 纵向滚动一并被阻断；
+                // 点击卡片以外任意位置关闭
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = if (isDark) 0.55f else 0.35f))
+                        .dismissOnTap { closeCourse() }
                 )
-                result.cells.isEmpty() && result.unarranged.isEmpty() -> EmptyView(
-                    title = "本学期暂无排课",
-                    description = "教务系统尚未返回课程安排，稍后可下拉刷新重试"
-                )
-                else -> TimetableContent(
-                    result = result,
-                    viewMode = viewMode,
-                    pagerState = pagerState,
-                    sectionMode = sectionMode,
-                    currentWeek = currentWeek,
-                    isDark = isDark,
-                    onCourseClick = { selectedCourseDetail = it }
-                )
+                val detail = selectedCourseDetail
+                if (detail != null) {
+                    CourseDetailCard(
+                        cell = detail,
+                        page = selectedDetailPage,
+                        selectedWeek = selectedWeek,
+                        isDark = isDark,
+                        sharedTransitionScope = scope,
+                        animatedVisibilityScope = this@AnimatedVisibility,
+                        onDismiss = { closeCourse() },
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(horizontal = 24.dp)
+                    )
+                }
             }
         }
     }
@@ -243,17 +318,6 @@ fun TimetableScreen(
                 navigateTo(week, selectedDay)
             },
             onDismiss = { showWeekPicker = false }
-        )
-    }
-
-    val detailCell = selectedCourseDetail
-    if (detailCell != null) {
-        CourseDetailSheet(
-            cell = detailCell,
-            selectedWeek = selectedWeek,
-            isDark = isDark,
-            sheetState = sheetState,
-            onDismiss = { selectedCourseDetail = null }
         )
     }
 }
@@ -511,6 +575,8 @@ private fun <T> SegmentedToggle(
  * 自身不观察任何状态、不发起任何滚动，因此拖拽期间不可能被 effect 抢断。
  *
  * 每个页面的行高都基于全量课程计算（与当前页无关），保证翻页过程中网格高度恒定、不跳动。
+ *
+ * @param selectedDetail 当前展开详情的课程（null 表示卡片已关闭）；打开期间课表整体模糊
  */
 @Composable
 private fun TimetableContent(
@@ -520,13 +586,22 @@ private fun TimetableContent(
     sectionMode: SectionMode,
     currentWeek: Int,
     isDark: Boolean,
-    onCourseClick: (TimetableCell) -> Unit
+    selectedDetail: TimetableCell?,
+    sharedTransitionScope: SharedTransitionScope,
+    onCourseClick: (TimetableCell, Int) -> Unit
 ) {
     val isDayView = viewMode == TimetableViewMode.DAY
+    // 打开详情卡片时对课表做实时高斯模糊（Android 12+ 生效，低版本仅显示遮罩）
+    val blurRadius by animateDpAsState(
+        targetValue = if (selectedDetail != null) 12.dp else 0.dp,
+        animationSpec = tween(220),
+        label = "gridBlur"
+    )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .blur(blurRadius)
             .verticalScroll(rememberScrollState())
             .padding(bottom = LocalBottomContentInset.current + 16.dp)
     ) {
@@ -543,11 +618,14 @@ private fun TimetableContent(
                 cells = result.cells,
                 days = if (isDayView) listOf(dayOfPage(page)) else WeekDays,
                 selectedWeek = pageWeek,
+                page = page,
                 highlightToday = !isDayView && pageWeek == currentWeek,
                 sectionMode = sectionMode,
                 isDark = isDark,
                 dense = !isDayView,
-                onCourseClick = onCourseClick,
+                selectedDetail = selectedDetail,
+                sharedTransitionScope = sharedTransitionScope,
+                onCourseClick = { cell -> onCourseClick(cell, page) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = if (isDayView) 12.dp else 0.dp)
@@ -624,16 +702,34 @@ private fun UnarrangedList(courses: List<UnarrangedCourse>) {
     }
 }
 
-/** 课程详情底部面板。 */
+/**
+ * 共享元素键：课表块与详情卡片按「页码 + 排课 ID + 部位」配对。
+ *
+ * 页码参与配对，是因为分页器会预组合相邻页，同一课程可能同时出现在多页上；
+ * 带上页码可保证任意时刻同一 key 只有唯一的课表块。
+ */
+internal fun sharedKey(page: Int, cell: TimetableCell, part: String): String =
+    "p$page-course-${cell.id}-$part"
+
+/**
+ * 课程详情卡片：页面居中的定制卡片（非弹窗），与课表块做共享元素过渡。
+ *
+ * 参与过渡：背景容器、课程名、上课地点、任课教师；周次 / 节次 / 学时随卡片淡入。
+ *
+ * @param page 课程来源页码，与课表块配对使用（见 [sharedKey]）
+ */
 @Composable
-private fun CourseDetailSheet(
+private fun CourseDetailCard(
     cell: TimetableCell,
+    page: Int,
     selectedWeek: Int,
     isDark: Boolean,
-    sheetState: SheetState,
-    onDismiss: () -> Unit
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val key = remember(cell) {
+    val colorKey = remember(cell) {
         CourseColorPalette.keyOf(
             courseName = cell.courseName,
             courseSeq = cell.courseSeq,
@@ -644,57 +740,69 @@ private fun CourseDetailSheet(
     val active = remember(cell, selectedWeek) {
         AcademicParsers.isCourseActiveInWeek(cell.weeks, selectedWeek)
     }
-    val colors: CourseCardColors = remember(key, isDark, active) {
-        CourseColorPalette.cardColors(key = key, dark = isDark, muted = !active)
+    val colors: CourseCardColors = remember(colorKey, isDark, active) {
+        CourseColorPalette.cardColors(key = colorKey, dark = isDark, muted = !active)
     }
+    val shape = RoundedCornerShape(22.dp)
+    val divider = colors.content.copy(alpha = 0.16f)
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-    ) {
+    with(sharedTransitionScope) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 28.dp)
+            modifier = modifier
+                .sharedBounds(
+                    sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "bg")),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+                .shadow(elevation = 28.dp, shape = shape, ambientColor = Color.Black, spotColor = Color.Black)
+                .clip(shape)
+                .background(colors.container)
+                .border(1.dp, colors.border, shape)
+                .padding(horizontal = 20.dp, vertical = 18.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(colors.accent)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = cell.courseName,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = buildString {
-                    if (cell.courseSeq.isNotEmpty()) append("课序号 ").append(cell.courseSeq)
-                    if (!active) {
-                        if (isNotEmpty()) append(" · ")
-                        append("非本周课程")
-                    }
-                }.ifEmpty { " " },
-                fontSize = 12.sp,
-                color = if (active) MaterialTheme.colorScheme.outline else colors.accent
+                text = cell.courseName,
+                fontSize = 20.sp,
+                lineHeight = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.content,
+                modifier = Modifier.sharedBounds(
+                    sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "name")),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = cell.location.ifEmpty { "待定" },
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                color = colors.content.copy(alpha = 0.85f),
+                modifier = Modifier.sharedBounds(
+                    sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "location")),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+            )
+            Text(
+                text = cell.teacher.ifEmpty { "—" },
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                color = colors.content.copy(alpha = 0.85f),
+                modifier = Modifier.sharedBounds(
+                    sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "teacher")),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
             )
 
+            if (!active) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(text = "非本周课程", fontSize = 12.sp, color = colors.accent)
+            }
+
             Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = divider)
             Spacer(modifier = Modifier.height(6.dp))
 
-            DetailRow("上课地点", cell.location)
-            DetailRow("任课教师", cell.teacher)
-            DetailRow("上课周次", cell.weeks)
-            DetailRow(
+            CardDetailRow("上课周次", cell.weeks, colors.content)
+            CardDetailRow(
                 label = "节次安排",
                 value = buildString {
                     if (cell.sectionLabel.isNotEmpty()) append(cell.sectionLabel)
@@ -702,15 +810,20 @@ private fun CourseDetailSheet(
                         if (isNotEmpty()) append(" · ")
                         append("第 ${slot.period} 大节 ").append(slotRangeText(slot))
                     }
-                }
+                },
+                content = colors.content
             )
-            if (cell.hoursType.isNotEmpty()) DetailRow("学时类型", cell.hoursType)
+            if (cell.hoursType.isNotEmpty()) CardDetailRow("学时类型", cell.hoursType, colors.content)
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
             ) {
                 Text("关闭")
             }
@@ -718,24 +831,39 @@ private fun CourseDetailSheet(
     }
 }
 
+/** 卡片内的信息行：标签 + 值，均使用课程色系保证在色块上可读。 */
 @Composable
-private fun DetailRow(label: String, value: String) {
+private fun CardDetailRow(label: String, value: String, content: Color) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 7.dp)
+            .padding(vertical = 6.dp)
     ) {
         Text(
             text = label,
             fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.outline,
+            color = content.copy(alpha = 0.55f),
             modifier = Modifier.width(72.dp)
         )
         Text(
             text = value.ifEmpty { "—" },
-            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
+            color = content,
             modifier = Modifier.weight(1f)
         )
     }
+}
+
+/**
+ * 遮罩手势：点击卡片以外的任意位置即关闭。
+ *
+ * 命中测试在命中的同级节点处即停止，因此这层遮罩天然拦截下发课表的下拉刷新 / 翻页 / 纵向滚动；
+ * 只在 Main 阶段处理点击（不做 Initial 消费），卡片内部的按钮才能正常收到按压。
+ */
+@Composable
+private fun Modifier.dismissOnTap(onTap: () -> Unit): Modifier {
+    // 手势协程只启动一次，回调始终取最新引用
+    val currentOnTap by rememberUpdatedState(onTap)
+    return pointerInput(Unit) { detectTapGestures { currentOnTap() } }
 }
