@@ -50,6 +50,13 @@ const server = createServer((req, res) => {
         const demoBox = await page.locator('.workspace-preview').boundingBox();
         assert.ok(demoBox.x >= copyBox.x + copyBox.width, '桌面概览必须位于文字右侧');
         assert.ok(Math.abs((demoBox.y + demoBox.height / 2) - (copyBox.y + copyBox.height / 2)) < 2);
+        const positions = ['R'];
+        for (const row of await page.locator('.feature-row').all()) {
+          const copy = await row.locator('.feature-copy').boundingBox();
+          const preview = await row.locator('.app-preview, .visual-panel').boundingBox();
+          positions.push(preview.x > copy.x ? 'R' : 'L');
+        }
+        assert.equal(positions.join(''), 'RLRLR', '五个展示的图片必须左右交替');
       }
       assert.equal(await page.locator('.client-demo button, .client-demo input, .client-demo select, .client-demo a').count(), 0, '界面展示必须保持静态');
       assert.ok(await page.locator('.client-demo[data-view="dashboard"]').getByText('林同学，今天也从容一点。').isVisible());

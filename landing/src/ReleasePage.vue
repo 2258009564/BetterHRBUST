@@ -110,19 +110,19 @@ onUnmounted(() => motion?.revert())
     <section id="features" class="features section-container">
       <div class="overview-row"><div class="section-heading"><span class="eyebrow">概览</span><h2>重要的事，<br />一眼就看清。</h2><p>GPA、学分进度与今日课程，一屏掌握。<br />从概览开始，安排你的校园日常。</p></div>
       <div class="workspace-preview app-preview"><ClientDemo view="dashboard" compact :dark="dark" /></div></div>
-      <article class="feature-row">
+      <article class="feature-row reverse">
         <div class="feature-copy"><span class="feature-number">01 / 课表</span><h3>一周节奏，<br />心中有数。</h3><p>按周查看课程、教师和地点，区分单双周。打开课表，就知道今天该去哪里。</p><div class="tags"><span>每周课表</span><span>单双周</span><span>课程详情</span></div></div>
         <div class="app-preview"><ClientDemo view="timetable" compact :dark="dark" /></div>
       </article>
-      <article class="feature-row reverse">
+      <article class="feature-row">
         <div class="feature-copy"><span class="feature-number">02 / GPA 分析</span><h3>每一份努力，<br />都有清晰的刻度。</h3><p>汇总课程成绩、学分与五分制 GPA。必修课加权统计，成绩明细与学分进度放在一起，让学业情况更容易理解。</p><div class="tags"><span>五分制 GPA</span><span>加权平均</span><span>成绩明细</span></div></div>
         <div class="app-preview"><ClientDemo view="gpa" compact :dark="dark" /></div>
       </article>
-      <article class="feature-row">
+      <article class="feature-row reverse">
         <div class="feature-copy"><span class="feature-number">03 / 资料查找</span><h3>需要的资料，<br />不必翻来翻去。</h3><p>收录教务处公开下载栏目，按标题和分类搜索，直达学校原文与附件。学生证补办、缓考、四六级等表格，可以从这里查找。</p><div class="tags"><span>9 个分类</span><span>标题搜索</span><span>原站附件</span></div></div>
         <div class="app-preview"><ClientDemo view="resources" compact :dark="dark" /></div>
       </article>
-      <article class="feature-row reverse">
+      <article class="feature-row">
         <div class="feature-copy"><span class="feature-number">04 / 手机端与多端使用</span><h3>换个设备，<br />还是熟悉的日常。</h3><p>手机随身查看，桌面专注学习，浏览器直接使用。登录后同步数据，之后从本地缓存读取；每日首次打开或手动刷新时更新。教学评价助手按你配置的选项逐门处理，并核对学校返回的结果。</p><div class="tags"><span>离线缓存</span><span>原生 Android</span><span>教学评价</span></div></div>
         <div class="devices-demo visual-panel"><div class="mini-window"><div class="window-bar"><i></i><i></i><i></i></div><div class="mini-content"><img :src="logo" alt="" /><span>BetterHRBUST</span><div class="mini-lines"><i></i><i></i><i></i></div></div></div><div class="mini-phone"><div class="phone-notch"></div><img :src="logo" alt="" /><strong>今天，也从容一点。</strong><div class="mini-lines"><i></i><i></i><i></i></div></div></div>
       </article>
