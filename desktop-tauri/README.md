@@ -106,4 +106,5 @@ CI（`.github/workflows/build-desktop.yml`）：推送 main 自动构建并以 R
 - **应用图标**：更换时把新的正方形 PNG（建议 1024x1024、透明背景）放到
   `desktop-tauri/build/icon-source.png`，执行 `npm run icon` 重新生成全套，再 `npm run dist`
   （当前图标为项目吉祥物）。
-- 更新版本时同步修改 `desktop-tauri/package.json` 与 `src-tauri/tauri.conf.json` 的 `version`。
+- 更新版本时同步修改 `desktop-tauri/package.json`、`src-tauri/tauri.conf.json`
+  与 `src-tauri/Cargo.toml` 的 `version`（与 Android 端 `versionName` 保持一致）。

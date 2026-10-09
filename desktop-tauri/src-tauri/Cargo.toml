@@ -1,6 +1,6 @@
 [package]
 name = "betterhrbust-desktop"
-version = "1.0.0"
+version = "1.1.1"
 description = "BetterHRBUST - 哈理工教务在线 Windows 桌面客户端（Tauri 封装 + Rust 内置本地反向代理）"
 authors = ["BetterHRBUST"]
 license = "MIT"
