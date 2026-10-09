@@ -65,7 +65,7 @@
             </label>
             <UiInput
               v-model="form.username"
-              placeholder="请输入您的学号 (例如 2023000001)"
+              placeholder="请输入您的学号 (例如 2401234567)"
               autocomplete="username"
               clearable
               :disabled="isLoggingIn"

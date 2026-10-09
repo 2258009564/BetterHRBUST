@@ -20,6 +20,13 @@ const context = vm.createContext({
   AbortController, setTimeout, clearTimeout
 });
 vm.runInContext(source, context);
+const loginLabels = '<label>教务密码</label><label>安全验证码</label>';
+assert.equal(context.parseLoginFailureReason(loginLabels + '<p>用户名或密码错误</p>'), '学号或密码错误');
+assert.equal(context.parseLoginFailureReason(loginLabels + '<p>badCredentials</p>'), '学号或密码错误');
+assert.equal(context.parseLoginFailureReason(loginLabels + '<p>用户不存在</p>'), '该学号不存在');
+assert.equal(context.parseLoginFailureReason(loginLabels + '<p>验证码已过期</p>'), '验证码错误或已过期，请刷新重试');
+assert.equal(context.parseLoginFailureReason(loginLabels + '<script>const msg="验证码错误";</script>'), '登录失败，请检查学号与密码');
+
 await context.request('student/currcourse/currcourse.jsdo');
 assert.equal(calls[0].url, 'http://jwzx.hrbust.edu.cn/academic/student/currcourse/currcourse.jsdo');
 assert.equal(calls[0].options.credentials, 'include');

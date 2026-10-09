@@ -140,13 +140,16 @@ export function isLoginPage(html) {
  * 从登录失败页中提取错误原因
  */
 export function parseLoginFailureReason(html) {
-  const text = String(html || '');
-  if (text.includes('验证码')) return '验证码错误或已过期，请刷新重试';
-  if (text.includes('密码') || text.includes('badCredentials') || text.includes('Bad credentials')) {
-    return '学号或密码错误';
-  }
-  if (text.includes('用户名') || text.includes('用户不存在')) return '该学号不存在';
-  if (text.includes('锁定')) return '账号已被系统锁定，请稍后再试';
+  // 普通表单标签和前端脚本含“密码/验证码”，不能据此判定服务端错误。
+  const text = String(html || '')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ');
+  if (/锁定|已冻结|已禁用|accountLocked/i.test(text)) return '账号已被系统锁定，请稍后再试';
+  if (/用户不存在|学号不存在|用户名不存在/.test(text)) return '该学号不存在';
+  if (/验证码\s*(?:输入|校验|验证)?\s*(错误|已?过期|失效|不正确|无效)|captcha\s*(invalid|incorrect|expired)/i.test(text)) return '验证码错误或已过期，请刷新重试';
+  if (/密码\s*(?:输入)?\s*(错误|不正确|无效)|badCredentials|Bad credentials/i.test(text)) return '学号或密码错误';
   return '登录失败，请检查学号与密码';
 }
 

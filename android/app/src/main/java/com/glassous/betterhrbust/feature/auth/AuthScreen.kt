@@ -266,7 +266,7 @@ fun AuthScreen(
                         value = username,
                         onValueChange = { username = it },
                         label = { Text("学号") },
-                        placeholder = { Text("例如 2024000000") },
+                        placeholder = { Text("例如 2401234567") },
                         leadingIcon = {
                             Icon(imageVector = Icons.Default.Person, contentDescription = null)
                         },

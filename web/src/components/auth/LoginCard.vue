@@ -52,7 +52,7 @@
         <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">学号</label>
         <UiInput
           v-model="form.username"
-          placeholder="请输入教务学号 (如 2023000001)"
+          placeholder="请输入教务学号 (如 2401234567)"
           autocomplete="username"
           clearable
           :disabled="isLoggingIn"

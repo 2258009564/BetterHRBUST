@@ -33,6 +33,8 @@ class AcademicParsersTest {
         assertEquals("账号已被系统锁定，请稍后再试", AcademicParsers.parseLoginFailureReason(labels + "<p>账号已被系统锁定</p>"))
         assertEquals("该学号不存在", AcademicParsers.parseLoginFailureReason(labels + "<p>用户不存在</p>"))
         assertEquals("登录失败，请检查学号与密码", AcademicParsers.parseLoginFailureReason(labels))
+        assertEquals("学号或密码错误", AcademicParsers.parseLoginFailureReason(labels + "<p>用户名或密码错误</p>"))
+        assertEquals("登录失败，请检查学号与密码", AcademicParsers.parseLoginFailureReason(labels + "<script>const msg='验证码错误';</script>"))
     }
 
     @Test
