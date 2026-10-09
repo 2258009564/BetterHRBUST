@@ -294,4 +294,11 @@ class AcademicParsersTest {
         val calWeek = AcademicParsers.parseTeachingWeek(calHtml)
         assertEquals("Teaching week from calendarInfo fixture should be 6", 6, calWeek)
     }
+
+    @Test
+    fun testParseTeachingWeekReturnsZeroWhenPageIsNotRecognized() {
+        // 无法识别时返回 0（而非误判为第 1 周），刷新失败才不会把已保存的教学周写坏
+        assertEquals("空内容应返回 0", 0, AcademicParsers.parseTeachingWeek(""))
+        assertEquals("未知页面应返回 0", 0, AcademicParsers.parseTeachingWeek("<html><body>系统维护中</body></html>"))
+    }
 }

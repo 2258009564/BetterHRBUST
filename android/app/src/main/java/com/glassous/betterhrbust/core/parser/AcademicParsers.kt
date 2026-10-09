@@ -717,6 +717,12 @@ object AcademicParsers {
         )
     }
 
+    /**
+     * 解析教学周。
+     *
+     * @return 识别到的周次（1..26）；**无法识别时返回 0**，调用方据此避免把
+     * "解析失败"误当作"第 1 周"写入本地（刷新失败时不会把已保存的教学周写坏）。
+     */
     fun parseTeachingWeek(html: String): Int {
         val doc = Jsoup.parse(html)
         val bodyText = doc.text()
@@ -761,6 +767,7 @@ object AcademicParsers {
             if (num != null && num in 1..26) return num
         }
 
-        return 1
+        // 全部结构均无法识别：返回 0 表示"未知"，避免被当成第 1 周
+        return 0
     }
 }

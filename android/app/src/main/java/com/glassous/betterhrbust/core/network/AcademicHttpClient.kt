@@ -52,6 +52,8 @@ class AcademicHttpClient(
     }
 
     private fun executeAcademic(request: Request, preferredCharset: Charset?): String {
+        // 记录最初请求的地址：只有业务请求（非登录/登出/验证码流程）落到登录页才代表会话失效
+        val originUrl = request.url.toString()
         var current = request
         repeat(6) {
             val response = client.newCall(current).execute()
@@ -67,10 +69,16 @@ class AcademicHttpClient(
                     val target = current.url.resolve(location) ?: throw IOException("教务跳转地址无效")
                     current = current.newBuilder().url(resolveUrl(target.toString())).get().build()
                 } else {
-                    if (!response.isSuccessful) throw IOException("HTTP ${response.code}: ${response.message}")
+                    if (!response.isSuccessful) {
+                        if (isSessionLostByCode(originUrl, response.code)) {
+                            onSessionExpired?.invoke()
+                            throw SessionExpiredException("会话已过期，请重新登录")
+                        }
+                        throw IOException("HTTP ${response.code}: ${response.message}")
+                    }
                     val bytes = response.body?.bytes() ?: throw IOException("教务响应为空")
                     val html = CharsetDecoderHelper.decode(bytes, response.header("Content-Type"), preferredCharset)
-                    checkSessionExpiration(current.url.toString(), html)
+                    checkSessionExpiration(originUrl, current.url.toString(), html)
                     return html
                 }
             } finally {
@@ -82,13 +90,29 @@ class AcademicHttpClient(
 
     var onSessionExpired: (() -> Unit)? = null
 
-    private fun checkSessionExpiration(url: String, html: String) {
-        val isAuthEndpoint = url.contains("login") || url.contains("getCaptcha") || url.contains("j_acegi_security_check")
-        if (!isAuthEndpoint) {
-            if (com.glassous.betterhrbust.core.parser.AcademicParsers.isLoginPage(html)) {
-                onSessionExpired?.invoke()
-                throw SessionExpiredException("会话已过期，请重新登录")
-            }
+    /** 登录 / 登出 / 验证码等认证流程端点：其中的登录页跳转属于流程内的预期行为 */
+    private fun isAuthEndpoint(url: String): Boolean =
+        url.contains("login") || url.contains("logout") ||
+            url.contains("getCaptcha") || url.contains("j_acegi_security_check")
+
+    /** 鉴权失败状态码：业务请求遇到 401/403 等价于会话失效 */
+    private fun isSessionLostByCode(originUrl: String, code: Int): Boolean =
+        !isAuthEndpoint(originUrl) && code in listOf(401, 403)
+
+    /**
+     * 会话失效判定。
+     *
+     * 业务请求（非登录/登出流程）无论是被 302 跳转到登录页，还是直接返回登录页内容，
+     * 都视为会话已失效：回调通知上层（提示重新登录），并抛出 [SessionExpiredException]
+     * 让数据层走缓存回退，避免把登录页解析成空数据后覆盖本地缓存。
+     */
+    private fun checkSessionExpiration(originUrl: String, finalUrl: String, html: String) {
+        if (isAuthEndpoint(originUrl)) return
+        if (finalUrl.contains("login") ||
+            com.glassous.betterhrbust.core.parser.AcademicParsers.isLoginPage(html)
+        ) {
+            onSessionExpired?.invoke()
+            throw SessionExpiredException("会话已过期，请重新登录")
         }
     }
 

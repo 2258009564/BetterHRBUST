@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -43,6 +44,8 @@ import kotlinx.coroutines.launch
 
 /**
  * 顶部“登录状态已失效”通知栏，与 Web 端 AppHeader 保持一致。
+ *
+ * 调用方以浮层方式摆放（对齐顶部、覆盖在内容之上）：出现 / 收起时不会推移其它区域。
  * 支持「忽略」收起，收起后本轮失效不再打扰（下次手动刷新失败仍会重新提示）。
  */
 @Composable
@@ -55,6 +58,7 @@ fun SessionExpiredBanner(
     val bannerBorder = Color(0xFFFCD34D)
     val textColor = Color(0xFF92400E)
     val buttonBg = Color(0xFFD97706)
+    val interactionSource = remember { MutableInteractionSource() }
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val alpha by infiniteTransition.animateFloat(
@@ -70,11 +74,17 @@ fun SessionExpiredBanner(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            // 悬浮在内容之上：拦截横幅自身区域的触摸，避免误触到下层页面
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {}
+            ),
         shape = RoundedCornerShape(20.dp),
         color = bannerBg,
         border = BorderStroke(1.dp, bannerBorder),
-        shadowElevation = 2.dp
+        shadowElevation = 6.dp
     ) {
         Row(
             modifier = Modifier

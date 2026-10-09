@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -183,8 +182,8 @@ fun MainAppScaffold(
     val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    // 顶部让位：会话过期横幅已占据状态栏区域时不再重复让位
-    val topContentInset = if (showSessionBanner) 0.dp else statusBarInset
+    // 顶部让位：会话过期横幅为悬浮提示，不影响内容布局，内容始终按状态栏让位
+    val topContentInset = statusBarInset
     // 平板端导航坞竖排在左侧（见 [MainPagerScreen]），底部无需再为导航坞让位
     val isTablet = isTabletDevice()
     // 底部让位：主界面为底部导航坞让位，其它二级页面、平板端直接让位给系统导航条
@@ -210,15 +209,6 @@ fun MainAppScaffold(
                     // 重新登录覆盖层渲染 / 滑出期间冻结下层输入，避免触摸穿透
                     .then(if (reLoginRendered) Modifier.blockPointerInput() else Modifier)
             ) {
-                // 当会话已过期且在应用内主界面时，在顶部显示重新登录提示条
-                if (showSessionBanner) {
-                    SessionExpiredBanner(
-                        onReLoginClick = { showReLogin = true },
-                        onDismiss = { authRepo.dismissSessionPrompt() },
-                        modifier = Modifier.statusBarsPadding()
-                    )
-                }
-
                 NavHost(
                     navController = navController,
                     startDestination = startDestination,
@@ -275,6 +265,18 @@ fun MainAppScaffold(
                         )
                     }
                 }
+            }
+
+            // 会话已过期提示：悬浮在内容之上（不参与布局测量），出现 / 收起时其它区域不位移；
+            // 按声明顺序位于内容之上、重新登录覆盖层之下
+            if (showSessionBanner) {
+                SessionExpiredBanner(
+                    onReLoginClick = { showReLogin = true },
+                    onDismiss = { authRepo.dismissSessionPrompt() },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                )
             }
 
             // 重新登录覆盖层：与二级页面一致的滑入 / 滑出动画；关闭时保留内容直到滑出结束
