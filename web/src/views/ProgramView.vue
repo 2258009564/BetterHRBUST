@@ -98,7 +98,7 @@
             </div>
 
             <div class="flex justify-between text-xs text-zinc-500 pt-1">
-              <span>要求修读：{{ cat.required }} 学分<span v-if="cat.requiredCourses === 4"> · 10 选 4</span></span>
+              <span>要求修读：{{ cat.required }} 学分<span v-if="cat.electiveCandidates !== null"> · {{ cat.electiveCandidates > 0 ? cat.electiveCandidates + " 选 4" : "需选 4 门" }}</span></span>
               <span :class="cat.earned >= cat.required ? 'text-emerald-600 font-semibold' : ''">
                 已获通过：{{ cat.earned }} 学分
               </span>

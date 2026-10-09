@@ -242,6 +242,7 @@ class AcademicRepository(
         try {
             val html = client.get("showPersonalInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
             val parsed = AcademicParsers.parsePersonalInfo(html)
+            require(parsed.studentNumber.trim() == studentNumber.trim()) { "教务档案账号与当前登录账号不一致，已拒绝保存" }
 
             val encoded = json.encodeToString(parsed)
             // 统一以登录账号为缓存键（读写两侧一致），同时按页面学号再存一份以兼容其它入口
@@ -251,7 +252,7 @@ class AcademicRepository(
                 database.profileDao().insert(ProfileEntity(studentNumber = sNumber, json = encoded))
             }
             // 姓名落到 DataStore，缓存被清理后概览页仍能正确显示
-            if (parsed.realName.isNotBlank()) {
+            if (parsed.realName.isNotBlank() && prefs.preferencesFlow.firstOrNull()?.username == studentNumber) {
                 prefs.setRealName(parsed.realName)
             }
 

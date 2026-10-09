@@ -20,6 +20,6 @@ assert.equal(hasCombineSlotEnded(1,new Date(2026,9,9,9,50)),true);
 assert.equal([1,2,3,4,5,6].every(i=>hasCombineSlotEnded(i,new Date(2026,9,9,21,30))),true);
 console.log('通过：两门选修规则、0 学分排除、重复与补考、真实方案学分、70 分颜色阈值及课程结束边界');
 
-const direction = {id:'direction',name:'专业限选',property:'限选',requiredCredits:25,courses:Array.from({length:10},(_,i)=>({code:'DIR'+i,name:'方向课程'+i,credit:2.5}))};
+const direction = {id:'direction',name:'专业限选',property:'限选',requiredCredits:10,courses:Array.from({length:10},(_,i)=>({code:'DIR'+i,name:'方向课程'+i,credit:2.5}))};
 assert.equal(computeCreditsProgress([], [direction]).requiredTotal,10);
 assert.equal(computeCreditsProgress([], [direction]).categories[0].required,10);

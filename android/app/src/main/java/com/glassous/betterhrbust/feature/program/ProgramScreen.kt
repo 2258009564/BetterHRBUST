@@ -282,7 +282,7 @@ fun CurriculumGroupCard(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "要求 $requiredCredits 学分 · ${GpaCalculator.planGroupRequiredCourses(group)} 门",
+                        text = "要求 $requiredCredits 学分 · " + if (GpaCalculator.isProfessionalElectiveGroup(group) && group.courses.isNotEmpty()) "${group.courses.size} 选 4" else "${GpaCalculator.planGroupRequiredCourses(group)} 门",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )

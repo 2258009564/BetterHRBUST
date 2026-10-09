@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <!-- Initial Auth Checking State: Smooth Skeleton to prevent login card flash -->
     <div v-if="!authChecked && !hasCachedData" class="space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="academic-summary-grid grid gap-4">
         <div v-for="i in 4" :key="i" class="p-5 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#1c1e24] space-y-3">
           <div class="h-3 w-20 bg-zinc-200/70 dark:bg-zinc-800 animate-pulse rounded" />
           <div class="h-7 w-28 bg-zinc-200/80 dark:bg-zinc-800 animate-pulse rounded-md" />
@@ -22,7 +22,7 @@
     <!-- Authenticated State or Cached Offline State -->
     <template v-else>
       <!-- Top Metric Highlights -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="academic-summary-grid grid gap-4">
         <!-- GPA Card -->
         <UiCard customClass="relative overflow-hidden">
           <div class="flex items-center justify-between">
@@ -130,9 +130,7 @@
             </UiBadge>
           </div>
 
-          <div class="text-[11px] text-zinc-400 dark:text-zinc-500 leading-relaxed max-w-md min-w-0 break-words">
-            {{ statsScopeNote }}
-          </div>
+          <GpaCalculationHelp />
         </div>
       </UiCard>
 
@@ -285,6 +283,7 @@
 
 <script setup>
 import { computed, ref, onUnmounted } from 'vue';
+import GpaCalculationHelp from '@/components/GpaCalculationHelp.vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiBadge from '@/components/ui/UiBadge.vue';
@@ -292,7 +291,7 @@ import Icon from '@/components/icons/Icon.vue';
 import LoginCard from '@/components/auth/LoginCard.vue';
 import { useSession } from '@/composables/useSession.js';
 import { useAcademicData } from '@/composables/useAcademicData.js';
-import { buildAcademicStats, computeCreditsProgress, STATS_SCOPE_NOTE } from '@/services/academic/stats.js';
+import { buildAcademicStats, computeCreditsProgress } from '@/services/academic/stats.js';
 import { getCombineSlotTime, hasCombineSlotEnded } from '@/utils/periodTimes.js';
 import { getCourseColor } from '@/utils/courseColors.js';
 import { isCourseActiveInWeek } from '@/utils/courseWeeks.js';
@@ -304,7 +303,6 @@ const { isLoggedIn, authChecked, currentWeek } = useSession();
 const { scores, plan, timetableCombine, exams, notices, hasCachedData } = useAcademicData();
 
 const stats = computed(() => buildAcademicStats(scores.value));
-const statsScopeNote = STATS_SCOPE_NOTE;
 
 // 与"培养方案与学分"页共用同一函数，保证两页数据完全一致
 const creditsProgress = computed(() => computeCreditsProgress(scores.value, plan.value?.groups || [], { planTotalCredits: plan.value?.totalRequiredCredits }));

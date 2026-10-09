@@ -277,6 +277,8 @@ fun DashboardScreen(
                 }
             }
 
+            item { com.glassous.betterhrbust.core.ui.components.GpaCalculationHelp() }
+
             // Upcoming Exam Card (if any)
             if (upcomingExam != null) {
                 item {

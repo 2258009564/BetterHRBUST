@@ -70,6 +70,7 @@ const syncMeta = reactive({
   lastError: ''
 });
 
+let cacheGeneration = 0;
 const syncing = ref(false);
 const syncError = ref('');
 
@@ -149,6 +150,10 @@ async function syncAll({ markManual = false } = {}) {
 
   syncing.value = true;
   syncError.value = '';
+  const generation = cacheGeneration;
+  const account = studentNumber.value;
+  const expectedStudentId = studentId.value;
+  const isCurrent = () => generation === cacheGeneration && account === studentNumber.value && isLoggedIn.value;
 
   let expired = false;
   const failures = [];
@@ -156,12 +161,19 @@ async function syncAll({ markManual = false } = {}) {
   // 先取上下文：内部学生 ID 与当前学年学期是课表请求的必要参数
   try {
     const ctx = await academicApi.getStudentContext();
+    if (!isCurrent()) return { success: false, expired: false, message: '账号已切换，旧同步结果已丢弃' };
+    if (expectedStudentId && ctx.studentId && ctx.studentId !== expectedStudentId) {
+      clearDataCache();
+      markSessionExpired({ manual: markManual });
+      return { success: false, expired: true, message: '教务会话账号已变化，请重新登录' };
+    }
     if (ctx.studentId) studentId.value = ctx.studentId;
     if (ctx.year) currentSemester.yearId = ctx.year;
     if (ctx.term) currentSemester.termId = ctx.term;
     currentCourses.value = ctx.courses || [];
     writeJson(CACHE_KEYS.currentCourses, currentCourses.value);
   } catch (err) {
+    if (!isCurrent()) return { success: false, expired: false, message: '账号已切换，旧同步结果已丢弃' };
     if (isSessionExpiredError(err)) {
       syncing.value = false;
       markSessionExpired({ manual: markManual });
@@ -181,9 +193,11 @@ async function syncAll({ markManual = false } = {}) {
   const run = async (label, fn, apply) => {
     try {
       const res = await fn();
+      if (!isCurrent()) return false;
       apply(res);
       return true;
     } catch (err) {
+      if (!isCurrent()) return false;
       if (isSessionExpiredError(err)) {
         expired = true;
         return false;
@@ -224,6 +238,7 @@ async function syncAll({ markManual = false } = {}) {
       '个人档案',
       () => academicApi.getPersonalInfo(),
       res => {
+        if (String(res.studentNumber || '').trim() !== account) throw new Error('档案账号与当前登录账号不一致，已拒绝更新');
         Object.assign(userProfile, res);
         userProfile.internalId = sid;
         if (res.studentNumber) studentNumber.value = res.studentNumber;
@@ -267,6 +282,7 @@ async function syncAll({ markManual = false } = {}) {
   }
 
   await Promise.allSettled(tasks);
+  if (!isCurrent()) return { success: false, expired: false, message: '账号已切换，旧同步结果已丢弃' };
 
   if (expired) {
     syncing.value = false;
@@ -312,6 +328,7 @@ async function refreshAll() {
  * 读取指定周次的公告（优先本地缓存，命中失败时按需拉取一次）
  */
 async function loadNoticesForWeek(week) {
+  const generation = cacheGeneration;
   if (!week) return notices.value;
   const weekMap = readJson(CACHE_KEYS.noticeWeeks, {}) || {};
   const weekKey = String(week);
@@ -321,6 +338,7 @@ async function loadNoticesForWeek(week) {
   }
   try {
     const res = await academicApi.getCalendarInfo(week);
+    if (generation !== cacheGeneration) return [];
     const list = res.notices || [];
     weekMap[weekKey] = list;
     writeJson(CACHE_KEYS.noticeWeeks, weekMap);
@@ -335,6 +353,8 @@ async function loadNoticesForWeek(week) {
 
 /** 清空全部本地数据缓存（退出登录 / 切换账号时调用） */
 function clearDataCache() {
+  ++cacheGeneration;
+  syncing.value = false;
   Object.values(CACHE_KEYS).forEach(key => {
     try {
       storageRemoveItem(key);

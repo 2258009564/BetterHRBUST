@@ -1,0 +1,26 @@
+package com.glassous.betterhrbust.core.ui.components
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+
+@Composable
+fun GpaCalculationHelp() {
+    var open by remember { mutableStateOf(false) }
+    TextButton(onClick = { open = true }) { Text("GPA 计算说明") }
+    if (open) AlertDialog(onDismissRequest = { open = false },
+        title = { Text("GPA 计算说明") },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+            Text("五分制：低于60分为0绩点；60分以上按（成绩−50）÷10。优秀4.5、良好3.5、中等2.5、及格1.5、不及格0。\n")
+            Text("平均绩点 = Σ（课程绩点×学分）÷Σ学分，0学分及无法折算的成绩不参与加权。\n")
+            Text("基础GPA与学业风险按必修课统计。学位绩点包括学业课，另选最高E类一门，再排除该课，从剩余A–E类选最高一门，第二门可以仍为E类。其余通识选修不纳入。\n")
+            Text("例：3学分×2.0绩点加2学分×4.0绩点，除以5学分，平均为2.80。学位门槛为1.5，判断使用未舍入结果。\n")
+            Text("同一课程合并成绩，优先使用已通过且折算分最高的记录。重复正常记录不增加补考重修门数，一门补考或重修计一次。\n")
+            Text("低于70分标红提示，是否及格仍按教务结果。专业选修为X门候选选4门，所需学分读取学校方案。")
+        } }, confirmButton = { TextButton(onClick = { open = false }) { Text("知道了") } })
+}

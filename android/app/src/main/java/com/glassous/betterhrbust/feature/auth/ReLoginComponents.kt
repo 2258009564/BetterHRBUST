@@ -40,6 +40,7 @@ import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 
 /**
  * 顶部“登录状态已失效”通知栏，与 Web 端 AppHeader 保持一致。
@@ -210,6 +211,7 @@ fun ReLoginOverlay(
 
         isLoading = true
         coroutineScope.launch {
+            BetterHrbustApp.instance.syncManager.isSyncing.first { !it }
             authRepo.login(username.trim(), password, captcha.trim()).collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {

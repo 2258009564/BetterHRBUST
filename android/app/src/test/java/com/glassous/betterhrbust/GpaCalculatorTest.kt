@@ -164,11 +164,13 @@ class GpaCalculatorTest {
     }
 
     @Test
-    fun softwareDirectionCoursesRequireTenCreditsInsteadOfTwentyFive() {
-        val group = CurriculumGroup("direction", "专业限选", "限选", 25.0, 10,
+    fun professionalElectivesUseSchoolTenCreditRequirementAndChooseFour() {
+        val group = CurriculumGroup("direction", "专业限选", "限选", 10.0, 4,
             courses = (1..10).map { PlanCourseDetail("DIR$it", "方向课程$it", 2.5, 40, "限选") })
         assertEquals(10.0, GpaCalculator.computeCreditsProgress(emptyList(), listOf(group)).requiredTotal, 0.001)
         assertEquals(10.0, GpaCalculator.planGroupRequiredCredits(group), 0.001)
+        assertEquals(4, GpaCalculator.planGroupRequiredCourses(group))
+        assertEquals(20.0, GpaCalculator.planGroupRequiredCredits(group.copy(requiredCredits = 20.0)), 0.001)
     }
 
     @Test

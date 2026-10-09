@@ -389,14 +389,9 @@ export function buildAcademicStats(scores) {
  * @param {boolean} [options.requiredOnly] 是否只统计必修课，默认读取 EARNED_CREDITS_REQUIRED_ONLY
  * @returns {{ categories: Array, earnedTotal: number, requiredTotal: number, completionPercent: number, requiredOnly: boolean }}
  */
-export function isSoftwareDirectionGroup(group) {
-  const courses = [...new Map((group.courses || []).map(c => [c.code || c.name, c])).values()];
-  return ((courses.length === 10 && courses.every(c => Number(c.credit) === 2.5)) ||
-    (Number(group.requiredCourses) === 10 && Number(group.requiredCredits) === 25 && /专业|方向|软件/.test(group.name))) &&
-    (resolveProperty(group.property) !== 'required' || /选修|限选/.test(group.name));
-}
+export function isProfessionalElectiveGroup(group) { return /专业(?:方向)?(?:选修|限选)/.test(group.name); }
 
-export function planGroupRequiredCredits(group) { return isSoftwareDirectionGroup(group) ? 10 : Number(group.requiredCredits) || 0; }
+export function planGroupRequiredCredits(group) { return Number(group.requiredCredits) || 0; }
 
 
 export function computeCreditsProgress(scores, groups, options = {}) {
@@ -429,7 +424,8 @@ export function computeCreditsProgress(scores, groups, options = {}) {
         name: g.name,
         property: g.property,
         required: round1(planGroupRequiredCredits(g)),
-        requiredCourses: isSoftwareDirectionGroup(g) ? 4 : Number(g.requiredCourses) || 0,
+        requiredCourses: isProfessionalElectiveGroup(g) ? 4 : Number(g.requiredCourses) || 0,
+        electiveCandidates: isProfessionalElectiveGroup(g) ? (g.courses || []).length : null,
         earned: round1(earned)
       };
     });

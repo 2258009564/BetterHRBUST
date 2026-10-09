@@ -347,20 +347,13 @@ object GpaCalculator {
         )
     }
 
-    fun isSoftwareDirectionGroup(group: CurriculumGroup): Boolean {
-        val courses = group.courses.distinctBy { it.code.ifBlank { it.name } }
-        val optional = resolveProperty(group.property) != "required" || group.name.contains("选修") || group.name.contains("限选")
-        val tenCourses = courses.size == 10 && courses.all { it.credit == 2.5 }
-        val groupRequirement = group.requiredCourses == 10 && group.requiredCredits == 25.0 &&
-            Regex("专业|方向|软件").containsMatchIn(group.name)
-        return optional && (tenCourses || groupRequirement)
-    }
+    fun isProfessionalElectiveGroup(group: CurriculumGroup): Boolean =
+        Regex("专业(?:方向)?(?:选修|限选)").containsMatchIn(group.name)
 
-    fun planGroupRequiredCredits(group: CurriculumGroup): Double =
-        if (isSoftwareDirectionGroup(group)) 10.0 else group.requiredCredits
+    fun planGroupRequiredCredits(group: CurriculumGroup): Double = group.requiredCredits
 
     fun planGroupRequiredCourses(group: CurriculumGroup): Int =
-        if (isSoftwareDirectionGroup(group)) 4 else group.requiredCourses
+        if (isProfessionalElectiveGroup(group)) 4 else group.requiredCourses
 
     /**
      * 计算培养方案课组学分完成度（概览页与培养方案页共用，保证两侧口径一致）

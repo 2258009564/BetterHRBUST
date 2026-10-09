@@ -71,7 +71,8 @@
               </UiBadge>
             </div>
             <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-2">{{ stats.degree.gpa.toFixed(2) }}</div>
-            <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+            <GpaCalculationHelp />
+        <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
               学业课 + E 类最高一门 + 剩余 A–E 类最高一门，门槛 {{ stats.degree.threshold.toFixed(1) }}
             </div>
             <div class="text-[11px] mt-1" :class="stats.degree.allPassed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
@@ -294,6 +295,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import GpaCalculationHelp from '@/components/GpaCalculationHelp.vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiInput from '@/components/ui/UiInput.vue';

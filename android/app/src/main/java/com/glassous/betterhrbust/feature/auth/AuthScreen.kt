@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun AuthScreen(
@@ -123,6 +124,7 @@ fun AuthScreen(
 
         isLoading = true
         coroutineScope.launch {
+            BetterHrbustApp.instance.syncManager.isSyncing.first { !it }
             authRepo.login(username.trim(), password, captcha.trim()).collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {

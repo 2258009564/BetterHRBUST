@@ -21,7 +21,11 @@ class AuthRepository(
     companion object {
         /** 会话失效提示间隔：一周 */
         const val PROMPT_INTERVAL_MS = 7L * 24 * 60 * 60 * 1000
+        internal fun needsAccountPreparation(previous: String?, prepared: String?, target: String, hasSession: Boolean): Boolean =
+            !previous.isNullOrBlank() && previous != target && prepared != target && hasSession
     }
+
+    private var preparedLoginAccount: String? = null
 
     private val scope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
@@ -127,6 +131,15 @@ class AuthRepository(
     fun login(username: String, password: String, captcha: String): Flow<Resource<StudentContext>> = flow {
         emit(Resource.Loading)
         try {
+            val previous = prefs.preferencesFlow.firstOrNull()
+            if (needsAccountPreparation(previous?.username, preparedLoginAccount, username, client.cookieJar.hasSession())) {
+                client.logout()
+                preparedLoginAccount = username
+                _isSessionExpired.value = true
+                prefs.setSessionState(expired = true)
+                emit(Resource.Error("账号已切换，请填写新验证码后登录"))
+                return@flow
+            }
             val responseHtml = client.login(username, password, captcha)
             if (AcademicParsers.isLoginPage(responseHtml)) {
                 val errorReason = AcademicParsers.parseLoginFailureReason(responseHtml)
@@ -148,12 +161,26 @@ class AuthRepository(
                 return@flow
             }
 
-            // Save to preferences
+            val profile = AcademicParsers.parsePersonalInfo(client.get("showPersonalInfo.do", CharsetDecoderHelper.UTF_8))
+            if (profile.studentNumber.trim() != username.trim()) {
+                client.logout()
+                emit(Resource.Error("教务返回的账号与输入学号不一致，请刷新验证码重新登录"))
+                return@flow
+            }
+
+            _isSessionExpired.value = false
+            _shouldPromptReLogin.value = false
+            _sessionPromptDismissed.value = false
+            pendingManualPrompt = false
+            promptDecided = false
+            // 身份、姓名、密码和登录时间一次性写入，账号重建界面时不会读取旧账号字段。
             prefs.saveAuth(
                 username = username,
                 studentId = studentContext.studentId,
                 year = studentContext.year,
-                term = studentContext.term
+                term = studentContext.term,
+                realName = profile.realName,
+                savedPassword = password
             )
             // 记录登录时间并清理提示节流状态，重新开始一周计时
             prefs.setLastLoginAt(System.currentTimeMillis())
@@ -165,6 +192,7 @@ class AuthRepository(
             pendingManualPrompt = false
             promptDecided = false
 
+            preparedLoginAccount = null
             emit(Resource.Success(studentContext))
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
@@ -174,6 +202,7 @@ class AuthRepository(
     }
 
     fun logout(): Flow<Resource<Unit>> = flow {
+        preparedLoginAccount = null
         emit(Resource.Loading)
         _isSessionExpired.value = false
         _shouldPromptReLogin.value = false

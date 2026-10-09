@@ -64,3 +64,10 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(140, 145, 155, 0.45);
 }
+
+/* 按内容实际可用宽度排列，适配高 DPI 与浏览器缩放后的窄窗口。 */
+.academic-main { container-type: inline-size; }
+.academic-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (min-width: 1000px) { .academic-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container (max-width: 500px) { .academic-summary-grid { grid-template-columns: minmax(0, 1fr); } }
+.academic-main details { min-width: 0; overflow-wrap: anywhere; }

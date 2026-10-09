@@ -24,6 +24,7 @@
         size === 'sm' ? 'py-1.5 text-xs' : 'py-2',
         customClass
       ]"
+      @blur="$emit('blur', $event)"
       @input="$emit('update:modelValue', $event.target.value)"
       @keydown.enter="$emit('enter', $event)"
     />
@@ -81,5 +82,5 @@ defineProps({
   }
 });
 
-defineEmits(['update:modelValue', 'enter']);
+defineEmits(['update:modelValue', 'enter', 'blur']);
 </script>

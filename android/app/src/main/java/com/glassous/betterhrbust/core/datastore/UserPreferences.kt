@@ -110,8 +110,17 @@ class UserPreferencesManager(private val context: Context) {
         }
     }
 
-    suspend fun saveAuth(username: String, studentId: String, year: String, term: String) {
+    suspend fun saveAuth(username: String, studentId: String, year: String, term: String, realName: String = "", savedPassword: String? = null) {
         context.dataStore.edit { prefs ->
+            if (prefs[KEY_USERNAME] != username) {
+                prefs.remove(KEY_LAST_FULL_SYNC_DATE)
+                prefs.remove(KEY_SAVED_PASSWORD)
+            }
+            prefs[KEY_REAL_NAME] = realName
+            if (savedPassword != null) prefs[KEY_SAVED_PASSWORD] = savedPassword
+            prefs[KEY_LAST_LOGIN_AT] = System.currentTimeMillis()
+            prefs.remove(KEY_LAST_PROMPT_AT)
+            prefs.remove(KEY_SESSION_EXPIRED)
             prefs[KEY_USERNAME] = username
             prefs[KEY_STUDENT_ID] = studentId
             prefs[KEY_YEAR] = year

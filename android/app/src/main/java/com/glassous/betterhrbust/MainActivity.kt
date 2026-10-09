@@ -105,12 +105,14 @@ class MainActivity : ComponentActivity() {
                             .background(MaterialTheme.colorScheme.background)
                     )
                 } else {
+                    key((resolvedAuthState as? AuthState.Authenticated)?.studentId) {
                     MainAppScaffold(
                         authState = resolvedAuthState,
                         isSessionExpired = isSessionExpired,
                         shouldPromptReLogin = shouldPromptReLogin,
                         sessionPromptDismissed = sessionPromptDismissed
                     )
+                    }
                 }
             }
         }
