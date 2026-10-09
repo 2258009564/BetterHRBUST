@@ -58,14 +58,24 @@ onMounted(() => {
       cycle.fromTo(word, { opacity: 0, y: 35 }, { opacity: 1, y: 0, duration: 1.8, ease: 'sine.out' })
         .to(word, { opacity: 0, y: -25, duration: 1.5, ease: 'sine.in' }, '+=4')
     })
+    gsap.to('.scroll-cue .mouse', { y: 5, duration: 1.2, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+    gsap.to('.hero-content', { y: -45, opacity: .15, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: 1 } })
     gsap.to('.hero-ghost', { y: -70, x: -65, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: .8 } })
     gsap.from('.section-heading > *', { y: 30, opacity: 0, stagger: .12, duration: .8,
       scrollTrigger: { trigger: '.section-heading', start: 'top 85%', once: true } })
     gsap.from('.workspace-preview', { y: 55, opacity: 0, duration: 1,
       scrollTrigger: { trigger: '.workspace-preview', start: 'top 85%', once: true } })
     root.querySelectorAll('.feature-row').forEach(row => {
-      gsap.from(row.querySelectorAll('.feature-copy, .app-preview'), { y: 55, opacity: 0, duration: .9, stagger: .16,
-        ease: 'power3.out', scrollTrigger: { trigger: row, start: 'top 82%', once: true } })
+      const copy = row.querySelector('.feature-copy')
+      const preview = row.querySelector('.app-preview, .visual-panel')
+      const reveal = gsap.timeline({ scrollTrigger: { trigger: row, start: 'top 82%', once: true } })
+      reveal.from(copy.children, { y: 32, opacity: 0, duration: .85, stagger: .1, ease: 'power3.out' })
+      if (preview) {
+        reveal.from(preview, { y: 65, rotation: row.classList.contains('reverse') ? -2 : 2,
+          scale: .96, opacity: 0, duration: 1.15, ease: 'power3.out' }, .15)
+        gsap.fromTo(preview.firstElementChild, { y: 6 }, { y: -6, ease: 'none',
+          scrollTrigger: { trigger: row, start: 'top bottom', end: 'bottom top', scrub: 1 }, immediateRender: false })
+      }
     })
     gsap.from('.download-card', { y: 35, opacity: 0, stagger: .12, duration: .75,
       scrollTrigger: { trigger: '.download-grid', start: 'top 85%', once: true } })
@@ -98,8 +108,8 @@ onUnmounted(() => motion?.revert())
       <a class="scroll-cue" href="#features"><span class="mouse"></span>向下探索</a>
     </section>
     <section id="features" class="features section-container">
-      <div class="section-heading"><span class="eyebrow">概览</span><h2>重要的事，<br />一眼就看清。</h2><p>GPA、学分进度与今日课程，一屏掌握。<br />从概览开始，安排你的校园日常。</p></div>
-      <div class="workspace-preview app-preview"><ClientDemo view="dashboard" :dark="dark" /></div>
+      <div class="overview-row"><div class="section-heading"><span class="eyebrow">概览</span><h2>重要的事，<br />一眼就看清。</h2><p>GPA、学分进度与今日课程，一屏掌握。<br />从概览开始，安排你的校园日常。</p></div>
+      <div class="workspace-preview app-preview"><ClientDemo view="dashboard" compact :dark="dark" /></div></div>
       <article class="feature-row">
         <div class="feature-copy"><span class="feature-number">01 / 课表</span><h3>一周节奏，<br />心中有数。</h3><p>按周查看课程、教师和地点，区分单双周。打开课表，就知道今天该去哪里。</p><div class="tags"><span>每周课表</span><span>单双周</span><span>课程详情</span></div></div>
         <div class="app-preview"><ClientDemo view="timetable" compact :dark="dark" /></div>

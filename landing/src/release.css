@@ -88,3 +88,17 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outlin
   .site-footer { padding: 26px 24px; flex-wrap: wrap; gap: 18px; }.site-footer span:first-child { width: 100%; }.visual-panel { padding: 18px; }.lesson b { font-size: 9px; }.lesson span { font-size: 7px; }.week-grid { gap: 4px; }.hero-actions .button { font-size: 12px; padding: 12px 20px; }.closing h2 { font-size: 29px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; }.button { transition: none; } }
+
+/* 概览与功能展示统一采用左文右图；窄屏恢复自然阅读顺序。 */
+.overview-row { display: grid; grid-template-columns: .8fr 1.4fr; align-items: center; gap: 48px; margin-bottom: 125px; }
+.overview-row .section-heading, .overview-row .workspace-preview { margin-bottom: 0; }
+.overview-row h2 { font-size: clamp(30px, 3.3vw, 44px); }
+.feature-row { gap: 48px; grid-template-columns: .8fr 1.4fr; }
+.feature-row.reverse { grid-template-columns: 1.4fr .8fr; }
+.site-header { background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(16px); }
+.download-card { transition: border-color .25s, box-shadow .25s; }
+.download-card:hover { border-color: var(--accent); box-shadow: 0 16px 45px -30px var(--accent); }
+@media (max-width: 800px) {
+ .overview-row { grid-template-columns: 1fr; gap: 35px; margin-bottom: 75px; }
+ .feature-row, .feature-row.reverse { grid-template-columns: 1fr; gap: 35px; }
+}

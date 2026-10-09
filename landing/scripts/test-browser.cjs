@@ -40,6 +40,17 @@ const server = createServer((req, res) => {
       await page.getByRole('button', { name: '切换深色主题' }).click();
       assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
       assert.deepEqual(await page.locator('.client-demo').evaluateAll(elements => elements.map(element => element.dataset.view)), ['dashboard', 'timetable', 'gpa', 'resources']);
+      const sidebar = page.locator('.client-demo[data-view="dashboard"] .demo-sidebar');
+      assert.deepEqual(await sidebar.locator('.demo-nav-label').allTextContents(), ['教务核心', '培养与资源', '信息与系统']);
+      assert.equal(await sidebar.locator('.demo-nav > span').count(), 12);
+      assert.match(await sidebar.innerText(), /智能课程表/);
+      assert.match(await sidebar.innerText(), /成绩与GPA分析/);
+      if (viewport.width > 800) {
+        const copyBox = await page.locator('.overview-row .section-heading').boundingBox();
+        const demoBox = await page.locator('.workspace-preview').boundingBox();
+        assert.ok(demoBox.x >= copyBox.x + copyBox.width, '桌面概览必须位于文字右侧');
+        assert.ok(Math.abs((demoBox.y + demoBox.height / 2) - (copyBox.y + copyBox.height / 2)) < 2);
+      }
       assert.equal(await page.locator('.client-demo button, .client-demo input, .client-demo select, .client-demo a').count(), 0, '界面展示必须保持静态');
       assert.ok(await page.locator('.client-demo[data-view="dashboard"]').getByText('林同学，今天也从容一点。').isVisible());
       assert.match(await page.locator('.client-demo[data-view="gpa"]').innerText(), /4\.23/);
@@ -68,7 +79,7 @@ const server = createServer((req, res) => {
     await animated.goto(`http://127.0.0.1:${server.address().port}${prefix}`, { waitUntil: 'networkidle' });
     await animated.waitForFunction(() => [...document.querySelectorAll('.hero-letter')].every(letter => Number(getComputedStyle(letter).opacity) > .95));
     await animated.locator('.feature-row').first().scrollIntoViewIfNeeded();
-    await animated.waitForFunction(() => Number(getComputedStyle(document.querySelector('.feature-copy')).opacity) > .95);
+    await animated.waitForFunction(() => [...document.querySelector('.feature-copy').children].every(element => Number(getComputedStyle(element).opacity) > .95));
     await animated.emulateMedia({ reducedMotion: 'reduce' });
     await animated.waitForFunction(() => !document.querySelector('.hero-letter').style.transform && !document.querySelector('.shape').style.transform);
     assert.equal(await animated.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

@@ -8,10 +8,27 @@ import { getCourseColor, registerCourseColors } from '../../web/src/utils/course
 import catalog from '../../shared/resources.json'
 const props = defineProps({ view: { type: String, default: 'dashboard' }, compact: Boolean, dark: Boolean })
 const logo = `${import.meta.env.BASE_URL}BetterHRBUST.png`
-const tabs = [
-  { id: 'dashboard', label: '概览', icon: 'dashboard' }, { id: 'timetable', label: '课表', icon: 'timetable' },
-  { id: 'gpa', label: 'GPA 分析', icon: 'score' }, { id: 'resources', label: '资料查找', icon: 'notice' }
+const groups = [
+  { label: '教务核心', items: [
+    { id: 'dashboard', label: '概览', icon: 'dashboard' },
+    { id: 'timetable', label: '智能课程表', icon: 'timetable' },
+    { id: 'gpa', label: '成绩与GPA分析', icon: 'score' },
+    { id: 'evaluation', label: '教学评价助手', icon: 'course' },
+    { id: 'exam', label: '考试日程与倒计时', icon: 'exam' }
+  ] },
+  { label: '培养与资源', items: [
+    { id: 'program', label: '培养方案与学分', icon: 'program' },
+    { id: 'classroom', label: '空教室与自习', icon: 'classroom' },
+    { id: 'course', label: '全校课程名录', icon: 'course' },
+    { id: 'resources', label: '资料查找', icon: 'notice' }
+  ] },
+  { label: '信息与系统', items: [
+    { id: 'profile', label: '学籍档案与隐私', icon: 'profile' },
+    { id: 'notice', label: '教学公告与校历', icon: 'notice' },
+    { id: 'settings', label: '设置与系统状态', icon: 'settings' }
+  ] }
 ]
+const tabs = groups.flatMap(group => group.items)
 const names = ['高等数学', '数据结构', '计算机网络', '操作系统', '数据库原理', '软件工程']
 const grades = names.map((name, index) => ({ courseId: `DEMO-${index}`, courseName: name,
   score: [93, 95, 90, 88, 96, 92][index], credit: [4, 4, 3, 3, 2, 3][index], passed: true,
@@ -42,8 +59,10 @@ const title = computed(() => tabs.find(tab => tab.id === props.view)?.label)
   <div class="client-demo" :class="{ 'compact-demo': compact }" :data-view="view" :aria-label="title + '静态界面展示'">
     <aside class="demo-sidebar">
       <div class="demo-brand"><img :src="logo" alt="" /><strong>BetterHRBUST</strong></div>
-      <span class="demo-nav-label">教务核心</span>
-      <div class="demo-nav"><span v-for="tab in tabs" :key="tab.id" :class="{ selected: view === tab.id }"><Icon :name="tab.icon" custom-class="w-4 h-4" />{{ tab.label }}</span></div>
+      <div v-for="group in groups" :key="group.label" class="demo-nav-group">
+        <div class="demo-nav-label">{{ group.label }}</div>
+        <div class="demo-nav"><span v-for="tab in group.items" :key="tab.id" :class="{ selected: view === tab.id }"><Icon :name="tab.icon" custom-class="w-4 h-4" />{{ tab.label }}</span></div>
+      </div>
       <div class="demo-user"><span class="demo-avatar">林</span><div><strong>林同学</strong><small>2024000001 · 示例账户</small></div></div>
     </aside>
     <div class="demo-main">
