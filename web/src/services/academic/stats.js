@@ -169,6 +169,36 @@ export function hasCredits(records) {
   return (records || []).some(item => (Number(item.credit) || 0) > 0);
 }
 
+/**
+ * 同一公历年份内学期先后：春 → 夏 → 秋；未知学期值排在该年份最后。
+ * 兼容教务下拉框序号（`1` = 春，`2` = 秋，见 api.js 以及 docs/api/02-scores.md §1.8）。
+ */
+const TERM_RANK = new Map([
+  ['春', 0],
+  ['春季', 0],
+  ['1', 0],
+  ['夏', 1],
+  ['夏季', 1],
+  ['秋', 2],
+  ['秋季', 2],
+  ['2', 2]
+]);
+
+/**
+ * 学期时间轴排序键（走势图等需要按时间先后排列的场景使用）
+ *
+ * 教务成绩单的「学年」列是**该学期所在的公历年份**：如 2023 秋 → 2024 春 → 2024 秋
+ * 是连续三个学期（2023 级大一上的下一学期记为 2024 春），
+ * 因此同一「学年」值内必须先春后秋，跨学年按年份升序。
+ * 返回数值键，可直接相减比较；教务接口的返回顺序不可依赖，排序必须显式做。
+ */
+export function semesterSortKey(year, term) {
+  const yearNum = Number((String(year ?? '').match(/\d{4}/) || [])[0]) || 0;
+  const key = String(term ?? '').trim().replace(/\s/g, '');
+  const rank = TERM_RANK.has(key) ? TERM_RANK.get(key) : 3;
+  return yearNum * 10 + rank;
+}
+
 function courseKey(item) {
   return (item.courseId && item.courseId.trim()) || item.courseName || '';
 }

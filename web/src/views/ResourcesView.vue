@@ -4,7 +4,7 @@
       <p class="text-sm text-zinc-500">教务处公开资料目录：分类搜索，打开学校原文或附件。</p>
       <div class="flex flex-wrap gap-3 mt-4">
         <input v-model="query" aria-label="搜索资料" placeholder="搜索标题，例如：学生证、缓考、四六级" class="flex-1 min-w-56 p-3 border rounded-xl border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900" />
-        <select v-model="category" aria-label="资料分类" class="p-3 border rounded-xl border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"><option value="">全部分类</option><option v-for="item in catalog.categories" :key="item.name">{{ item.name }}</option></select>
+        <UiSelect v-model="category" :items="categoryItems" aria-label="资料分类" size="lg" plain custom-class="min-w-[10rem]" />
       </div>
       <p class="text-xs text-zinc-500 mt-4">共 {{ filtered.length }} 条结果 · 索引更新：{{ catalog.updatedAt.slice(0, 10) }} · <a :href="catalog.source" target="_blank" rel="noopener noreferrer" class="underline">教务处资料下载原站</a></p>
     </UiCard>
@@ -22,8 +22,13 @@
 import { computed, ref, watch } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
+import UiSelect from '@/components/ui/UiSelect.vue';
 import catalog from '../../../shared/resources.json';
 const query = ref(''), category = ref(''), page = ref(1);
+const categoryItems = computed(() => [
+  { label: '全部分类', value: '' },
+  ...catalog.categories.map(item => ({ label: item.name, value: item.name }))
+]);
 const filtered = computed(() => catalog.items.filter(item => (!category.value || item.category === category.value) &&
   (!query.value.trim() || item.title.toLowerCase().includes(query.value.trim().toLowerCase()))));
 const visible = computed(() => filtered.value.slice((page.value - 1) * 20, page.value * 20));

@@ -8,14 +8,14 @@
           <template #header-action>
             <div class="flex items-center gap-2">
               <span class="text-xs text-zinc-500">周次筛选：</span>
-              <select
+              <UiSelect
                 v-model="selectedWeek"
+                :items="weekItems"
+                aria-label="周次筛选"
+                size="sm"
+                custom-class="min-w-[8.5rem]"
                 @change="fetchNotices"
-                class="text-xs py-1 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none"
-              >
-                <option :value="0">当前周 (第 {{ currentWeek }} 周)</option>
-                <option v-for="w in 26" :key="w" :value="w">第 {{ w }} 周</option>
-              </select>
+              />
             </div>
           </template>
 
@@ -96,6 +96,7 @@ import { ref, computed } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiBadge from '@/components/ui/UiBadge.vue';
 import UiModal from '@/components/ui/UiModal.vue';
+import UiSelect from '@/components/ui/UiSelect.vue';
 import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
 import { useAcademicData } from '@/composables/useAcademicData.js';
@@ -113,6 +114,12 @@ const activeNotice = ref(null);
 const notices = computed(() =>
   selectedWeek.value === 0 ? cachedNotices.value || [] : weekNotices.value
 );
+
+// 周次筛选项：当前周 + 第 1-26 周
+const weekItems = computed(() => [
+  { label: `当前周 (第 ${currentWeek.value} 周)`, value: 0 },
+  ...Array.from({ length: 26 }, (_, i) => ({ label: `第 ${i + 1} 周`, value: i + 1 }))
+]);
 
 async function fetchNotices() {
   if (selectedWeek.value === 0) {

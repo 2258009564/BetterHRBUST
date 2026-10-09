@@ -18,25 +18,25 @@
             <!-- Campus Select -->
             <div class="flex items-center gap-2">
               <span class="text-xs text-zinc-500">校区 / 教学区：</span>
-              <select
+              <UiSelect
                 v-model="selectedArea"
-                class="text-xs py-1.5 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none"
-              >
-                <option value="all">全部校区</option>
-                <option v-for="a in areas" :key="a.id" :value="a.id">{{ a.name }}</option>
-              </select>
+                :items="areaItems"
+                aria-label="校区筛选"
+                size="sm"
+                custom-class="min-w-[8.5rem]"
+              />
             </div>
 
             <!-- Building Select -->
             <div class="flex items-center gap-2">
               <span class="text-xs text-zinc-500">教学楼：</span>
-              <select
+              <UiSelect
                 v-model="selectedBuilding"
-                class="text-xs py-1.5 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 outline-none"
-              >
-                <option value="all">全部教学楼</option>
-                <option v-for="b in buildings" :key="b.id" :value="b.id">{{ b.name }}</option>
-              </select>
+                :items="buildingItems"
+                aria-label="教学楼筛选"
+                size="sm"
+                custom-class="min-w-[8.5rem]"
+              />
             </div>
           </div>
         </div>
@@ -97,6 +97,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiButton from '@/components/ui/UiButton.vue';
 import UiBadge from '@/components/ui/UiBadge.vue';
+import UiSelect from '@/components/ui/UiSelect.vue';
 import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
 import { academicApi } from '@/services/academic/api.js';
@@ -108,6 +109,16 @@ const areas = ref([]);
 const buildings = ref([]);
 const selectedArea = ref('all');
 const selectedBuilding = ref('all');
+
+// 校区 / 教学楼筛选项（含"全部"）
+const areaItems = computed(() => [
+  { label: '全部校区', value: 'all' },
+  ...areas.value.map(a => ({ label: a.name, value: a.id }))
+]);
+const buildingItems = computed(() => [
+  { label: '全部教学楼', value: 'all' },
+  ...buildings.value.map(b => ({ label: b.name, value: b.id }))
+]);
 
 const defaultSampleRooms = [
   { campus: '西区', building: '新教学楼', name: '西-新A306', capacity: 120 },
