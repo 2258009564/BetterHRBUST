@@ -325,7 +325,7 @@ export function buildAcademicStats(scores) {
     courseCount: requiredCourses.length,
     rawCourseCount: list.length,
     dedupedCount: deduped.length,
-    retakeCount: deduped.filter(s => s.isRetake).length,
+    retakeCount: deduped.filter(s => s.isRetake && Number(s.credit) > 0).length,
     excellentRate: requiredCourses.length ? Math.round((overall.excCount / requiredCourses.length) * 100) : 0,
 
     // 学分（必修课口径：选修课不计数；重修/补考已合并去重）
@@ -390,12 +390,15 @@ export function buildAcademicStats(scores) {
  * @param {boolean} [options.requiredOnly] 是否只统计必修课，默认读取 EARNED_CREDITS_REQUIRED_ONLY
  * @returns {{ categories: Array, earnedTotal: number, requiredTotal: number, completionPercent: number, requiredOnly: boolean }}
  */
-export function planGroupRequiredCredits(group) {
+export function isSoftwareDirectionGroup(group) {
   const courses = [...new Map((group.courses || []).map(c => [c.code || c.name, c])).values()];
-  const tenChooseFour = courses.length === 10 && courses.every(c => Number(c.credit) === 2.5) &&
+  return ((courses.length === 10 && courses.every(c => Number(c.credit) === 2.5)) ||
+    (Number(group.requiredCourses) === 10 && Number(group.requiredCredits) === 25 && /专业|方向|软件/.test(group.name))) &&
     (resolveProperty(group.property) !== 'required' || /选修|限选/.test(group.name));
-  return tenChooseFour ? 10 : Number(group.requiredCredits) || 0;
 }
+
+export function planGroupRequiredCredits(group) { return isSoftwareDirectionGroup(group) ? 10 : Number(group.requiredCredits) || 0; }
+
 
 export function computeCreditsProgress(scores, groups, options = {}) {
   const requiredOnly = options.requiredOnly !== undefined ? !!options.requiredOnly : EARNED_CREDITS_REQUIRED_ONLY;
@@ -427,6 +430,7 @@ export function computeCreditsProgress(scores, groups, options = {}) {
         name: g.name,
         property: g.property,
         required: round1(planGroupRequiredCredits(g)),
+        requiredCourses: isSoftwareDirectionGroup(g) ? 4 : Number(g.requiredCourses) || 0,
         earned: round1(earned)
       };
     });

@@ -132,7 +132,7 @@ class GpaCalculatorTest {
         assertEquals("none", stats.risk.level)
         assertEquals(3.0, stats.totalCredits, 0.001)
         assertEquals(3.0, stats.earnedCredits, 0.001)
-        assertTrue(stats.degree.qualified)
+        assertFalse(stats.degree.qualified)
         assertTrue(stats.recommend.qualified)
         assertTrue(stats.earlyGraduation.qualified)
     }

@@ -13,7 +13,7 @@
     <template v-else>
       <!-- Top Action Bar（数据刷新统一由顶栏按钮完成） -->
       <div class="text-xs text-zinc-500">
-        基于教务培养方案 <code class="font-mono">studentScheduleShowByTerm.do</code> 与已修成绩单动态核对
+        基于教务培养方案 与已修成绩单动态核对
         <span class="ml-2 text-zinc-400">上次同步：{{ lastSyncText }}</span>
       </div>
 
@@ -30,7 +30,7 @@
               {{ creditsProgress.earnedTotal }} <span class="text-base font-normal text-zinc-400">/ {{ creditsProgress.requiredTotal || "待同步" }} 学分</span>
             </div>
             <div class="text-xs text-zinc-500 mt-1">
-              学生专业：<span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ userProfile.college }} · {{ userProfile.major }} ({{ userProfile.grade }}级)</span>
+              学生专业：<span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ userProfile.college }} · {{ userProfile.major }} ({{ userProfile.grade ? String(userProfile.grade).trim().replace(/(?:\s*级)+$/, '') + '级' : '—' }})</span>
             </div>
             <div class="text-[11px] text-zinc-400 mt-1">{{ earnedCreditsNote }}</div>
           </div>
@@ -98,13 +98,13 @@
             </div>
 
             <div class="flex justify-between text-xs text-zinc-500 pt-1">
-              <span>要求修读：{{ cat.required }} 学分</span>
+              <span>要求修读：{{ cat.required }} 学分<span v-if="cat.requiredCourses === 4"> · 10 选 4</span></span>
               <span :class="cat.earned >= cat.required ? 'text-emerald-600 font-semibold' : ''">
                 已获通过：{{ cat.earned }} 学分
               </span>
             </div>
 
-            <div v-if="isElectiveCategory(cat.property)" class="text-[11px] text-zinc-400 leading-relaxed">
+            <div v-if="creditsProgress.requiredOnly && isElectiveCategory(cat.property)" class="text-[11px] text-zinc-400 leading-relaxed">
               选修类课程学分不计入"已获得学分"，此处仅展示课组要求
             </div>
           </div>

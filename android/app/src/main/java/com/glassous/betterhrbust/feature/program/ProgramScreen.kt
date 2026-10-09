@@ -179,7 +179,7 @@ fun ProgramScreen(
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
                                             text = "${creditsProgress?.earnedTotal ?: 0.0} / " +
-                                                "${creditsProgress?.requiredTotal ?: 0.0} 学分",
+                                                creditsProgress?.requiredTotal?.takeIf { it > 0 }?.let { "$it 学分" } ?: "待同步",
                                             style = MaterialTheme.typography.headlineSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -282,7 +282,7 @@ fun CurriculumGroupCard(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "要求 $requiredCredits 学分 · ${group.requiredCourses} 门",
+                        text = "要求 $requiredCredits 学分 · ${GpaCalculator.planGroupRequiredCourses(group)} 门",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )

@@ -314,7 +314,7 @@ object GpaCalculator {
             courseCount = requiredCourses.size,
             rawCourseCount = scores.size,
             dedupedCount = deduped.size,
-            retakeCount = deduped.count { it.isRetake },
+            retakeCount = deduped.count { it.isRetake && it.item.credit > 0 },
             degree = DegreeStats(
                 gpa = degreeWeight.gpa,
                 courseCount = selectedDegreeCourses.size,
@@ -348,13 +348,20 @@ object GpaCalculator {
         )
     }
 
-    fun planGroupRequiredCredits(group: CurriculumGroup): Double {
+    fun isSoftwareDirectionGroup(group: CurriculumGroup): Boolean {
         val courses = group.courses.distinctBy { it.code.ifBlank { it.name } }
-        // 软件工程大三下方向选修：10 选 4，每门 2.5 学分。
-        val tenChooseFour = courses.size == 10 && courses.all { it.credit == 2.5 } &&
-            (resolveProperty(group.property) != "required" || group.name.contains("选修") || group.name.contains("限选"))
-        return if (tenChooseFour) 10.0 else group.requiredCredits
+        val optional = resolveProperty(group.property) != "required" || group.name.contains("选修") || group.name.contains("限选")
+        val tenCourses = courses.size == 10 && courses.all { it.credit == 2.5 }
+        val groupRequirement = group.requiredCourses == 10 && group.requiredCredits == 25.0 &&
+            Regex("专业|方向|软件").containsMatchIn(group.name)
+        return optional && (tenCourses || groupRequirement)
     }
+
+    fun planGroupRequiredCredits(group: CurriculumGroup): Double =
+        if (isSoftwareDirectionGroup(group)) 10.0 else group.requiredCredits
+
+    fun planGroupRequiredCourses(group: CurriculumGroup): Int =
+        if (isSoftwareDirectionGroup(group)) 4 else group.requiredCourses
 
     /**
      * 计算培养方案课组学分完成度（概览页与培养方案页共用，保证两侧口径一致）
