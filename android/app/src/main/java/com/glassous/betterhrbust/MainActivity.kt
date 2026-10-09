@@ -53,6 +53,8 @@ import com.glassous.betterhrbust.feature.classrooms.ClassroomsScreen
 import com.glassous.betterhrbust.feature.courses.CoursesScreen
 import com.glassous.betterhrbust.feature.dashboard.DashboardScreen
 import com.glassous.betterhrbust.feature.exams.ExamsScreen
+import com.glassous.betterhrbust.feature.evaluation.EvaluationScreen
+import com.glassous.betterhrbust.feature.resources.ResourcesScreen
 import com.glassous.betterhrbust.feature.profile.ProfileScreen
 import com.glassous.betterhrbust.feature.program.ProgramScreen
 import com.glassous.betterhrbust.feature.scores.ScoresScreen
@@ -283,7 +285,9 @@ private enum class SecondaryPage(val route: Any, val key: String) {
     PROGRAM(ProgramRoute, "program"),
     CLASSROOMS(ClassroomsRoute, "classrooms"),
     COURSES(CoursesRoute, "courses"),
-    PROFILE(ProfileRoute, "profile");
+    PROFILE(ProfileRoute, "profile"),
+    EVALUATION(EvaluationRoute, "evaluation"),
+    RESOURCES(ResourcesRoute, "resources");
 
     companion object {
         fun fromRoute(route: Any): SecondaryPage? = entries.firstOrNull { it.route == route }
@@ -443,6 +447,8 @@ fun MainPagerScreen(
                 2 -> ScoresScreen()
                 3 -> ExamsScreen()
                 4 -> NoticesSettingsScreen(
+                    onEvaluation = { secondaryKey = SecondaryPage.EVALUATION.key },
+                    onResources = { secondaryKey = SecondaryPage.RESOURCES.key },
                     onLogout = onLogout,
                     onReLogin = onReLogin
                 )
@@ -484,6 +490,8 @@ fun MainPagerScreen(
                         SecondaryPage.CLASSROOMS -> ClassroomsScreen(onBack = closeSecondaryPage)
                         SecondaryPage.COURSES -> CoursesScreen(onBack = closeSecondaryPage)
                         SecondaryPage.PROFILE -> ProfileScreen(onBack = closeSecondaryPage)
+                        SecondaryPage.EVALUATION -> EvaluationScreen(onBack = closeSecondaryPage)
+                        SecondaryPage.RESOURCES -> ResourcesScreen(onBack = closeSecondaryPage)
                     }
                 }
             }

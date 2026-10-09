@@ -40,6 +40,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoticesSettingsScreen(
+    onEvaluation: () -> Unit = {},
+    onResources: () -> Unit = {},
     onLogout: () -> Unit,
     onReLogin: () -> Unit,
     modifier: Modifier = Modifier
@@ -162,6 +164,12 @@ fun NoticesSettingsScreen(
                     }
                 }
 
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(onClick = onEvaluation) { Text("教学评价助手") }
+                        OutlinedButton(onClick = onResources) { Text("资料查找") }
+                    }
+                }
                 // Section: Academic Notices
                 item {
                     Text(

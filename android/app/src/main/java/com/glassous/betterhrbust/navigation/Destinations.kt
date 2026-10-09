@@ -39,6 +39,12 @@ data object ProfileRoute
 @Serializable
 data object SettingsRoute
 
+@Serializable
+data object EvaluationRoute
+
+@Serializable
+data object ResourcesRoute
+
 enum class TopLevelDestination(
     val route: Any,
     val selectedIcon: ImageVector,
