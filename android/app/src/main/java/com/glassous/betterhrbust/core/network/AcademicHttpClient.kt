@@ -145,22 +145,43 @@ class AcademicHttpClient(
     }
 
     suspend fun downloadCaptcha(): ByteArray = withContext(Dispatchers.IO) {
-        val url = resolveUrl("getCaptcha.do?_t=${System.currentTimeMillis()}")
-        val request = Request.Builder().url(url).build()
-        val response = client.newCall(request).execute()
-        if (!response.isSuccessful) {
-            throw IOException("获取验证码失败: HTTP ${response.code}")
+        var request = Request.Builder()
+            .url(resolveUrl("getCaptcha.do?_t=${System.currentTimeMillis()}"))
+            .header("Referer", resolveUrl("common/security/login.jsp"))
+            .build()
+        repeat(6) {
+            client.newCall(request).execute().use { response ->
+                if (response.code in listOf(301, 302, 303, 307, 308)) {
+                    val location = response.header("Location") ?: throw IOException("验证码跳转缺少目标地址")
+                    val target = request.url.resolve(location) ?: throw IOException("验证码跳转地址无效")
+                    request = request.newBuilder().url(resolveUrl(target.toString())).get().build()
+                } else {
+                    if (!response.isSuccessful) {
+                        val hint = if (response.code in listOf(502, 503, 504))
+                            "，教务服务或网络网关暂时不可用，请在手机浏览器检查 HTTP 教务网址，或切换网络后重试" else ""
+                        throw IOException("获取验证码失败: HTTP ${response.code}$hint")
+                    }
+                    val body = response.body ?: throw IOException("验证码返回为空")
+                    if (body.contentType()?.type != "image") throw IOException("教务未返回验证码图片，请检查网络或重新获取")
+                    val bytes = body.bytes()
+                    if (bytes.isEmpty()) throw IOException("验证码返回为空")
+                    return@withContext bytes
+                }
+            }
         }
-        response.body?.bytes() ?: throw IOException("验证码返回为空")
+        throw IOException("验证码重定向次数过多")
     }
 
     suspend fun checkCaptcha(code: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            val url = resolveUrl("checkCaptcha.do?captchaCode=$code")
+            val url = resolveUrl("checkCaptcha.do").toHttpUrl().newBuilder().addQueryParameter("captchaCode", code).build()
             val request = Request.Builder().url(url).post(FormBody.Builder().build()).build()
-            val response = client.newCall(request).execute()
-            val text = response.body?.string()?.trim()?.lowercase()
-            text == "true"
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) true // 预校验异常时交给主登录判断。
+                else response.body?.string()?.trim()?.lowercase() != "false"
+            }
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
         } catch (_: Exception) {
             true // 预校验网络异常时不阻塞主登录
         }

@@ -6,61 +6,40 @@ import okhttp3.HttpUrl
 import java.util.concurrent.ConcurrentHashMap
 
 class SessionCookieJar : CookieJar {
-    private val cookieStore = ConcurrentHashMap<String, MutableMap<String, Cookie>>()
+    private data class Key(val name: String, val domain: String, val path: String)
+    private val cookieStore = ConcurrentHashMap<Key, Cookie>()
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        val host = url.host
-        val hostCookies = cookieStore.computeIfAbsent(host) { ConcurrentHashMap() }
         for (cookie in cookies) {
-            hostCookies[cookie.name] = cookie
+            val key = Key(cookie.name, cookie.domain, cookie.path)
+            if (cookie.expiresAt <= System.currentTimeMillis()) cookieStore.remove(key)
+            else cookieStore[key] = cookie
         }
     }
 
-    override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        val host = url.host
-        val hostCookies = cookieStore[host] ?: return emptyList()
-        val validCookies = mutableListOf<Cookie>()
-        val currentTime = System.currentTimeMillis()
-
-        val iterator = hostCookies.values.iterator()
-        while (iterator.hasNext()) {
-            val cookie = iterator.next()
-            if (cookie.expiresAt < currentTime) {
-                iterator.remove()
-            } else if (cookie.matches(url)) {
-                validCookies.add(cookie)
-            }
+    private fun validCookies(): List<Cookie> {
+        val now = System.currentTimeMillis()
+        cookieStore.forEach { (key, cookie) ->
+            if (cookie.expiresAt <= now) cookieStore.remove(key, cookie)
         }
-        return validCookies
+        return cookieStore.values.filter { it.expiresAt > now }
     }
 
-    fun clear() {
-        cookieStore.clear()
-    }
+    override fun loadForRequest(url: HttpUrl): List<Cookie> =
+        validCookies().filter { it.matches(url) }.sortedByDescending { it.path.length }
 
-    fun hasSession(): Boolean {
-        for (map in cookieStore.values) {
-            if (map.containsKey("JSESSIONID")) return true
-        }
-        return false
-    }
+    fun clear() = cookieStore.clear()
 
-    fun getJSessionId(): String? {
-        for (map in cookieStore.values) {
-            val cookie = map["JSESSIONID"]
-            if (cookie != null) return cookie.value
-        }
-        return null
-    }
+    fun hasSession(): Boolean = getJSessionId() != null
+
+    fun getJSessionId(): String? = validCookies()
+        .filter { it.name == "JSESSIONID" }
+        .sortedByDescending { it.path.length }
+        .firstOrNull()?.value
 
     fun setJSessionId(host: String, value: String) {
-        val cookie = Cookie.Builder()
-            .domain(host)
-            .path("/academic")
-            .name("JSESSIONID")
-            .value(value)
-            .build()
-        val hostCookies = cookieStore.computeIfAbsent(host) { ConcurrentHashMap() }
-        hostCookies[cookie.name] = cookie
+        val cookie = Cookie.Builder().hostOnlyDomain(host).path("/academic")
+            .name("JSESSIONID").value(value).build()
+        cookieStore[Key(cookie.name, cookie.domain, cookie.path)] = cookie
     }
 }

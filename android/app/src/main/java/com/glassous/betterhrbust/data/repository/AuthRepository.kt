@@ -166,6 +166,8 @@ class AuthRepository(
             promptDecided = false
 
             emit(Resource.Success(studentContext))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "登录请求发生异常", e))
         }

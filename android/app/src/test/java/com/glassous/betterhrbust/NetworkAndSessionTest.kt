@@ -11,6 +11,28 @@ import java.nio.charset.Charset
 class NetworkAndSessionTest {
 
     @Test
+    fun cookiesWithSameNameKeepTheirPathsAndExpiredSessionIsRemoved() {
+        val jar = SessionCookieJar()
+        val url = "http://jwzx.hrbust.edu.cn/academic/login.jsp".toHttpUrl()
+        val root = Cookie.Builder().name("JSESSIONID").value("root")
+            .domain(url.host).path("/").build()
+        val academic = root.newBuilderForTest("academic", "/academic")
+        jar.saveFromResponse(url, listOf(root, academic))
+        assertEquals(listOf("academic", "root"), jar.loadForRequest(url).map { it.value })
+        val expired = Cookie.Builder().name("JSESSIONID").value("deleted")
+            .domain(url.host).path("/academic").expiresAt(0).build()
+        jar.saveFromResponse(url, listOf(expired))
+        assertEquals(listOf("root"), jar.loadForRequest(url).map { it.value })
+        jar.saveFromResponse(url, listOf(Cookie.Builder().name("JSESSIONID").value("deleted")
+            .domain(url.host).path("/").expiresAt(0).build()))
+        assertFalse(jar.hasSession())
+        assertNull(jar.getJSessionId())
+    }
+
+    private fun Cookie.newBuilderForTest(value: String, path: String): Cookie =
+        Cookie.Builder().name(name).value(value).domain(domain).path(path).build()
+
+    @Test
     fun testSessionCookieJarStorageAndRetrieval() {
         val cookieJar = SessionCookieJar()
         val url = "http://jwzx.hrbust.edu.cn/academic/login.jsp".toHttpUrl()

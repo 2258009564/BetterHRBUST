@@ -158,13 +158,18 @@ fun ReLoginBottomSheet(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     fun refreshCaptcha() {
+        if (isCaptchaLoading || isLoading) return
+        isCaptchaLoading = true
+        captchaBytes = null
+        captcha = ""
         coroutineScope.launch {
-            isCaptchaLoading = true
             try {
                 captchaBytes = authRepo.getCaptcha()
                 captcha = ""
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                errorMessage = "拉取验证码失败: ${e.message}"
+                errorMessage = e.message ?: "获取验证码失败，请切换网络后重试"
             } finally {
                 isCaptchaLoading = false
             }
@@ -176,15 +181,21 @@ fun ReLoginBottomSheet(
     }
 
     fun submitLogin() {
+        if (isLoading || isCaptchaLoading) return
+        if (captchaBytes == null) {
+            errorMessage = "请先获取验证码"
+            return
+        }
         if (username.isBlank() || password.isBlank()) {
             errorMessage = "请输入学号和密码"
             return
         }
-        if (captcha.isBlank()) {
+        if (!captcha.trim().matches(Regex("[0-9A-Za-z]{4}"))) {
             errorMessage = "请输入 4 位验证码"
             return
         }
 
+        isLoading = true
         coroutineScope.launch {
             authRepo.login(username.trim(), password, captcha.trim()).collect { resource ->
                 when (resource) {
@@ -361,7 +372,7 @@ fun ReLoginBottomSheet(
                     focusManager.clearFocus()
                     submitLogin()
                 },
-                enabled = !isLoading,
+                enabled = !isLoading && !isCaptchaLoading && captchaBytes != null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
