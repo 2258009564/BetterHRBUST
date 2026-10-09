@@ -156,6 +156,13 @@ class GpaCalculatorTest {
     }
 
     @Test
+    fun academicCoursesWithLetterNamesAndProfessionalElectivesAreRetained() {
+        val courses = listOf(item("MATH", courseName = "高等数学(A)", score = "85", credit = 3.0),
+            item("MAJOR", score = "90", credit = 2.5, property = "任选", courseGroup = "专业选修"))
+        assertEquals(listOf("MATH", "MAJOR"), GpaCalculator.degreeCourses(courses).map { it.courseId })
+    }
+
+    @Test
     fun duplicateNormalRecordIsNotRetakeAndTrueRetakeCountsOnce() {
         val normal = item("C01", score = "90", credit = 3.0)
         assertEquals(0, GpaCalculator.buildStats(listOf(normal, normal)).retakeCount)

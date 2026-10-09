@@ -26,3 +26,5 @@ assert.equal(computeCreditsProgress([], [direction]).categories[0].required,10);
 
 const ungraded = buildAcademicStats([course('VALID',90,3),{...course('PENDING',0,10),score:'缓考'}]);
 assert.equal(ungraded.degree.gpa,4);assert.equal(ungraded.degree.qualified,true);
+
+assert.deepEqual(degreeCourses([{...course('MATH',85,3),courseName:'高等数学(A)'},course('MAJOR',90,2.5,'专业选修','任选')]).map(s=>s.courseId),['MATH','MAJOR']);

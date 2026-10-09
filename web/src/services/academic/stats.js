@@ -217,7 +217,8 @@ export function dedupeScores(scores) {
 }
 
 export function electiveCategory(item) {
-  const text = `${item.courseGroup || ''} ${item.courseName || ''} ${item.property || ''}`.toUpperCase();
+  if (isRequired(item.property)) return null;
+  const text = `${item.courseGroup || ''} ${item.property || ''}`.toUpperCase();
   const match = text.match(/([ABCDE])\s*类|[（(]([ABCDE])[）)]/);
   return match ? match[1] || match[2] : null;
 }
@@ -226,7 +227,7 @@ export function degreeCourses(scores) {
   const courses = dedupeScores(scores).filter(s => Number(s.credit) > 0);
   const electives = courses.filter(s => electiveCategory(s));
   const rank = (a, b) => (parseScoreValue(b.score).estimated ?? -Infinity) - (parseScoreValue(a.score).estimated ?? -Infinity) || String(a.courseId).localeCompare(String(b.courseId));
-  const academic = courses.filter(s => !electiveCategory(s) && isDegreeCourse(s.property));
+  const academic = courses.filter(s => !electiveCategory(s) && (isDegreeCourse(s.property) || /专业/.test(s.courseGroup || '')));
   const firstE = electives.filter(s => electiveCategory(s) === 'E').sort(rank)[0];
   const second = firstE ? electives.filter(s => s !== firstE).sort(rank)[0] : undefined;
   return [...academic, firstE, second].filter(Boolean);

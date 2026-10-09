@@ -194,7 +194,8 @@ object GpaCalculator {
     fun isLowScore(score: String?): Boolean = parseScoreValue(score).estimated?.let { it < 70 } ?: false
 
     private fun electiveCategory(item: ScoreItem): Char? {
-        val text = "${item.courseGroup} ${item.courseName} ${item.property}".uppercase()
+        if (isRequired(item.property)) return null
+        val text = "${item.courseGroup} ${item.property}".uppercase()
         return Regex("([ABCDE])\\s*类|[（(]([ABCDE])[）)]").find(text)
             ?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.first()
     }
@@ -204,7 +205,7 @@ object GpaCalculator {
         val electives = courses.filter { electiveCategory(it) != null }
         val ranking = compareByDescending<ScoreItem> { parseScoreValue(it.score).estimated ?: Double.NEGATIVE_INFINITY }
             .thenBy { it.courseId }
-        val academic = courses.filter { electiveCategory(it) == null && isDegreeCourse(it.property) }
+        val academic = courses.filter { electiveCategory(it) == null && (isDegreeCourse(it.property) || it.courseGroup.contains("专业")) }
         val firstE = electives.filter { electiveCategory(it) == 'E' }.sortedWith(ranking).firstOrNull()
         val second = if (firstE != null) electives.filter { it !== firstE }.sortedWith(ranking).firstOrNull() else null
         return academic + listOfNotNull(firstE, second)
