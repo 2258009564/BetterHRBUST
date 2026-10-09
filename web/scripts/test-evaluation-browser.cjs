@@ -167,10 +167,35 @@ async function runScenario({ failSubmit = false } = {}) {
       studentNumber: 'test-student',
       internalId: '100001',
       realName: '测试用户',
+      grade: '2024级',
       status: '在籍'
     }));
   });
   await page.addScriptTag({ content: readFileSync(bundlePath, 'utf8') });
+  await page.getByRole('button', { name: '学籍档案与隐私', exact: true }).click();
+  await page.getByText('2024级', { exact: true }).waitFor();
+  assert.equal(await page.getByText('2024级 级', { exact: true }).count(), 0);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.getByRole('button', { name: '切换浅色模式', exact: true }).waitFor();
+  assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), true);
+  await page.getByRole('button', { name: '切换浅色模式', exact: true }).click();
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.getByRole('button', { name: '切换深色模式', exact: true }).click();
+  assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), true);
+  await page.getByRole('button', { name: '切换浅色模式', exact: true }).click();
+  assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), false);
+  await page.getByRole('button', { name: '资料查找', exact: true }).click();
+  await page.getByLabel('搜索资料').fill('补办学生证');
+  await page.getByText('补办学生证申请（新版）', { exact: true }).waitFor();
+  await page.getByLabel('资料分类').selectOption({ label: '学籍管理' });
+  const file = page.getByRole('link', { name: /补办学生证申请.*\.doc/ });
+  assert.match(await file.getAttribute('href'), /^http:\/\/jwzx\.hrbust\.edu\.cn\/homepage\/downloadTheolFile\.do\?id=/);
+  await page.getByLabel('搜索资料').fill('不存在的资料关键词');
+  await page.getByRole('status').filter({ hasText: '未找到匹配资料' }).waitFor();
+  await page.getByLabel('搜索资料').fill('');
+  await page.getByLabel('资料分类').selectOption('');
+  await page.getByRole('button', { name: '下一页', exact: true }).click();
+  await page.getByText('2 / 5', { exact: true }).waitFor();
   await page.getByRole('button', { name: '教学评价助手' }).click();
   await page.getByText('分布式系统 · 张老师').waitFor({ timeout: 10000 });
   await page.getByRole('button', { name: '读取问卷并配置' }).click();
@@ -217,6 +242,8 @@ async function runScenario({ failSubmit = false } = {}) {
   console.log(JSON.stringify({
     checks: [
       '评教列表解析通过',
+      '资料标题搜索、分类、附件链接、空结果与分页通过',
+      '客户端右上角主题开关、跟随系统变化与实际配色切换通过',
       '配置预览无 POST 通过',
       '提交前重新读取隐藏令牌通过',
       '选择的评分和中文评语按 GBK 表单提交通过',

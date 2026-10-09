@@ -37,6 +37,8 @@ class AcademicRepository(
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
             } catch (_: Exception) {}
         }
 
@@ -56,12 +58,16 @@ class AcademicRepository(
             database.timetableDao().insert(TimetableEntity(studentId = studentId, json = encoded))
 
             emit(Resource.Success(parsed, isOfflineCache = false))
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             if (localEntity != null) {
                 try {
                     val cached = json.decodeFromString<TimetableResult>(localEntity.json)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {}
             }
             emit(Resource.Error(e.message ?: "获取课表失败", e))
@@ -82,6 +88,8 @@ class AcademicRepository(
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
             } catch (_: Exception) {}
         }
 
@@ -102,12 +110,16 @@ class AcademicRepository(
             database.scoreDao().insert(ScoreEntity(studentId = studentId, json = encoded))
 
             emit(Resource.Success(parsed, isOfflineCache = false))
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             if (localEntity != null) {
                 try {
                     val cached = json.decodeFromString<ScoreResult>(localEntity.json)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {}
             }
             emit(Resource.Error(e.message ?: "获取成绩失败", e))
@@ -128,6 +140,8 @@ class AcademicRepository(
             if (parsed.isNotEmpty()) return parsed
         } catch (e: SessionExpiredException) {
             throw e
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             // 主接口异常时继续尝试备用接口
         }
@@ -152,6 +166,8 @@ class AcademicRepository(
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
             } catch (_: Exception) {}
         }
 
@@ -179,6 +195,8 @@ class AcademicRepository(
             database.examDao().insert(ExamEntity(studentId = studentId, json = encoded))
 
             emit(Resource.Success(parsed, isOfflineCache = false))
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             if (localEntity != null) {
                 try {
@@ -187,6 +205,8 @@ class AcademicRepository(
                     )
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {}
             }
             emit(Resource.Error(e.message ?: "获取考试安排失败", e))
@@ -209,6 +229,8 @@ class AcademicRepository(
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
             } catch (_: Exception) {}
         }
 
@@ -234,12 +256,16 @@ class AcademicRepository(
             }
 
             emit(Resource.Success(parsed, isOfflineCache = false))
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             if (localEntity != null) {
                 try {
                     val cached = json.decodeFromString<PersonalInfo>(localEntity.json)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {}
             }
             emit(Resource.Error(e.message ?: "获取个人档案失败", e))
@@ -260,6 +286,8 @@ class AcademicRepository(
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
             } catch (_: Exception) {}
         }
 
@@ -285,12 +313,16 @@ class AcademicRepository(
             database.curriculumDao().insert(CurriculumPlanEntity(studentId = studentId, json = encoded))
 
             emit(Resource.Success(parsed, isOfflineCache = false))
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             if (localEntity != null) {
                 try {
                     val cached = json.decodeFromString<CurriculumPlanResult>(localEntity.json)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {}
             }
             emit(Resource.Error(e.message ?: "获取培养方案失败", e))
@@ -303,6 +335,8 @@ class AcademicRepository(
             val html = client.get("teacher/teachresource/roomschedulequery.jsdo", preferredCharset = CharsetDecoderHelper.GBK)
             val options = AcademicParsers.parseClassroomQueryOptions(html)
             emit(Resource.Success(options))
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "获取教室选项失败", e))
         }
@@ -325,6 +359,8 @@ class AcademicRepository(
             )
             val list = AcademicParsers.parseCourseList(html)
             emit(Resource.Success(list))
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "课程检索失败", e))
         }
@@ -361,6 +397,8 @@ class AcademicRepository(
             prefs.setCurrentWeek(calendarInfo.currentWeek)
 
             emit(Resource.Success(calendarInfo.notices, isOfflineCache = false))
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             if (!localEntities.isNullOrEmpty()) {
                 val list = localEntities.map { NoticeItem(id = it.id, title = it.title, content = it.content, date = it.date) }
@@ -384,6 +422,8 @@ class AcademicRepository(
                     if (calWeek > 1) {
                         week = calWeek
                     }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {}
             }
 
@@ -393,6 +433,8 @@ class AcademicRepository(
             } else {
                 emit(1)
             }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             // listLeft.do 异常时兜底使用 calendarinfo/viewCalendarInfo.do
             try {
@@ -403,6 +445,8 @@ class AcademicRepository(
                     emit(calWeek)
                     return@flow
                 }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
             } catch (_: Exception) {}
             emit(1)
         }

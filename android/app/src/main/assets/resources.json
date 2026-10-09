@@ -1,0 +1,1426 @@
+{
+  "source": "http://jwzx.hrbust.edu.cn/homepage/info.do?columnId=344",
+  "updatedAt": "2026-10-09T06:21:02.987983+00:00",
+  "categories": [
+    {
+      "name": "教学管理",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=442",
+      "count": 24
+    },
+    {
+      "name": "教务管理",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=443",
+      "count": 8
+    },
+    {
+      "name": "学籍管理",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=444",
+      "count": 8
+    },
+    {
+      "name": "实践教学",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=445",
+      "count": 23
+    },
+    {
+      "name": "系统使用演示动画",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=2106",
+      "count": 3
+    },
+    {
+      "name": "教研论文教材认定",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=2730",
+      "count": 2
+    },
+    {
+      "name": "网络教学",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=3271",
+      "count": 5
+    },
+    {
+      "name": "多媒体教室管理",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=3508",
+      "count": 7
+    },
+    {
+      "name": "实验教学与实验室管理",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=3519",
+      "count": 17
+    }
+  ],
+  "items": [
+    {
+      "id": "5483",
+      "title": "26版（23版25级）教学大纲模板",
+      "category": "教学管理",
+      "date": "2026-09-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=5483&columnId=442",
+      "attachments": [
+        {
+          "title": "23版（25级）和26版教学大纲模板-理论、实验.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDBDCDDDECPDCDDLAOGKDKIDCDFLMLGKDKJLKMNDCDGLAOGLNMMNBKHLEPDLINJMEKDLAOFCNMAONMCNLKBKCMKLFNBOJCOGEGPGD"
+        },
+        {
+          "title": "23版（25级）和26版教学大纲模板-实践教学环节.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDBDCDDDFCPDCDDLAOGKDKIDCDFLMLGKDKJLKMNDCDGLAOGLNMMNBKHLEPDLINJMEKDLAOFCNMKLFLMPJLNMMNBKHLLLHLNNKCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1811",
+      "title": "缓考申请表",
+      "category": "学籍管理",
+      "date": "2026-06-11",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1811&columnId=444",
+      "attachments": [
+        {
+          "title": "缓考申请表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDJDJDHDBCPLLLKLPLMMJOKMHOLLBONCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "5427",
+      "title": "大学英语四六级考试缺考申请",
+      "category": "教务管理",
+      "date": "2026-06-04",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=5427&columnId=443",
+      "attachments": [
+        {
+          "title": "大学英语四六级考试缺考申请.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDADHDGDECPLEPDNBKHNDKCNDOPMLMEMBPJLMLGLPLMMKNEMILBLPLMMJOKMHOLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "d51c12f53cb2bb3a",
+      "title": "学生查询教学档案相关流程--转自校档案馆",
+      "category": "学籍管理",
+      "date": "2026-03-27",
+      "url": "https://dag.hrbust.edu.cn/2023/0410/c2723a85556/page.htm",
+      "attachments": []
+    },
+    {
+      "id": "3155",
+      "title": "申请办理哈尔滨理工大学普通全日制本专科毕业证明书、学位证明书相关说明",
+      "category": "学籍管理",
+      "date": "2025-11-18",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3155&columnId=2334",
+      "attachments": [
+        {
+          "title": "申请表.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDEDDDHDDCPCGCDDDDADADADDDLCGCDDDDFDIDDDBDLCGCDDDDEDJDCDADLCOHIGMHD"
+        }
+      ]
+    },
+    {
+      "id": "5226",
+      "title": "xx学院X季学期期中教学质量检查自检报告",
+      "category": "教务管理",
+      "date": "2025-10-27",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=5226&columnId=443",
+      "attachments": [
+        {
+          "title": "XX学院202X年春秋季学期期中教学质量检查自检报告.docx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDADGDBDECPFIFINBKHNELKDCDADCFIMEOKLELKMHOPLMLONBKHMGNKMGNKNGNALNMMNBKHNGMKMBLPLMOMLCOJNHNELMOMLBKILIOGCOGEGPGDHI"
+        }
+      ]
+    },
+    {
+      "id": "4782",
+      "title": "补办学生证申请（新版）",
+      "category": "学籍管理",
+      "date": "2024-06-28",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=4782&columnId=444",
+      "attachments": [
+        {
+          "title": "补办学生证申请（20260902）.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDBDCDJDECPLCLJLAOMNBKHMJPKNGKEMJOKMHOLKDKIDCDADCDGDADJDADCKDKJCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "4766",
+      "title": "2023年竞赛榜单",
+      "category": "实践教学",
+      "date": "2024-06-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=4766&columnId=445",
+      "attachments": [
+        {
+          "title": "2023竞赛榜单.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDHDHDGDECPDCDADCDDLOLKMIPMLAPBLFKFCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "4192",
+      "title": "哈尔滨理工大学实验室仪器设备维修申请表",
+      "category": "实验教学与实验室管理",
+      "date": "2023-04-03",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=4192&columnId=3519",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学实验室仪器设备维修申请表.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDHDEDDDCCPEDDKFMFFHDGFHCHDFMEBGEGNGJGOGJHDHEHCGBHEGPHCFMEEGFHDGLHEGPHAFMLJPOLGPLLBPFMAONLJKELEPDNBKHMKLFNBOJMKNCNCMHMGPHMJOILBLIMOKMNANOMJOKMHOLLBONCOHIGMHD"
+        }
+      ]
+    },
+    {
+      "id": "4110",
+      "title": "2023春实验课开课计划统计",
+      "category": "实验教学与实验室管理",
+      "date": "2023-03-16",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=4110&columnId=3519",
+      "attachments": [
+        {
+          "title": "2023春实验课开课计划统计.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDFDBDBDGCPDCDADCDDCGCDDCDGDBDEDJDLCGCDDCDDDEDFDEDLCGCDDDDJDFDGDEDLCGCDDDDFDIDDDIDLCGCDDCDEDDDCDADLCGCDDDDFDIDDDIDLCGCDDDDFDHDEDFDLCGCDDCDBDADBDADLCGCDDDDCDEDHDJDLCGCDDDDFDHDEDFDLCOHIGMHD"
+        }
+      ]
+    },
+    {
+      "id": "4109",
+      "title": "实验课教师调课审批表",
+      "category": "实验教学与实验室管理",
+      "date": "2023-03-15",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=4109&columnId=3519",
+      "attachments": [
+        {
+          "title": "实验课教师调课审批表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDFDBDBDFCPCGCDDCDDDEDFDEDLCGCDDDDJDFDGDEDLCGCDDDDFDIDDDIDLCGCDDDDFDIDEDDDLCGCDDDDFDIDDDIDLCGCDDDDADADADDDLCGCDDDDFDIDDDBDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "4077",
+      "title": "教师成绩更改申请表",
+      "category": "学籍管理",
+      "date": "2023-02-24",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=4077&columnId=444",
+      "attachments": [
+        {
+          "title": "教师成绩更改申请表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDFDBDADECPCGCDDCDFDJDEDFDLCGCDDCDEDADHDCDLCGCDDCDFDBDADEDLCGCDDDDCDEDIDJDLCGCDDCDGDDDFDGDLCGCDDCDFDJDBDDDLCGCDDDDADADADDDLCGCDDDDFDIDDDBDLCGCDDDDEDJDCDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3967",
+      "title": "学籍信息变更审批表（修改姓名、身份证号等个人信息）",
+      "category": "学籍管理",
+      "date": "2022-09-22",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3967&columnId=444",
+      "attachments": [
+        {
+          "title": "学籍信息变更审批表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDEDCDADICPCGCDDCDDDDDJDIDLCGCDDDDBDIDCDBDLCGCDDCDADEDEDJDLCGCDDCDEDGDIDHDLCGCDDCDBDEDGDEDLCGCDDCDGDDDFDGDLCGCDDCDDDEDFDHDLCGCDDCDFDCDADJDLCGCDDDDEDJDCDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3847",
+      "title": "化学品安全技术说明书",
+      "category": "实验教学与实验室管理",
+      "date": "2022-04-16",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3847&columnId=3519",
+      "attachments": [
+        {
+          "title": "化学品安全技术说明书.rar",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDDDEDJDICPCGCDDCDBDCDHDADLCGCDDCDDDDDJDIDLCGCDDCDBDGDJDHDLCGCDDCDDDEDDDDDLCGCDDCDADIDEDADLCGCDDCDFDCDBDGDLCGCDDCDGDEDBDFDLCGCDDDDFDIDCDIDLCGCDDCDGDBDCDGDLCGCDDCDADADHDADLCOHCGBHC"
+        }
+      ]
+    },
+    {
+      "id": "3846",
+      "title": "高等学校实验室安全检查项目表（2024年）",
+      "category": "实验教学与实验室管理",
+      "date": "2022-04-16",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3846&columnId=3519",
+      "attachments": [
+        {
+          "title": "附表1：高等学校实验室安全检查项目表(2024年).pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDIDEDHDCCPLILNLBONDBKDLKLINPLFMINBKHNAKDMKLFNBOJMKNCLALCMIKLLMOMLCOJMPOOMELPLBONCIDCDADCDEMEOKCJCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3826",
+      "title": "哈尔滨理工大学实验室配制试剂粘贴标签样式",
+      "category": "实验教学与实验室管理",
+      "date": "2022-03-28",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3826&columnId=3519",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学配制试剂标签样式.docx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDDDEDFDDCPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDDDHDBDJDHDLCGCDDCDBDADEDGDLCGCDDDDFDHDJDHDLCGCDDCDBDADFDIDLCGCDDCDGDGDDDBDLCGCDDDDBDGDBDEDLCGCDDCDGDGDHDJDLCGCDDCDEDDDDDFDLCOGEGPGDHI"
+        }
+      ]
+    },
+    {
+      "id": "1766",
+      "title": "实践类课程进行流程及经费使用",
+      "category": "实践教学",
+      "date": "2021-10-11",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1766&columnId=445",
+      "attachments": [
+        {
+          "title": "政教发[2023]11号《哈尔滨理工大学实践经费管理规定（修订）》.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDFDFDFDDCPCGCDDCDFDJDBDJDLCGCDDCDFDJDEDFDLCGCDDCDBDEDFDHDLFLDCDADCDDFNDBDBCGCDDCDBDEDJDFDLCGCDDBDCDCDJDIDLCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDDDEDFDEDLCGCDDDDGDDDEDBDLCGCDDDDCDEDGDDDLCGCDDDDGDBDFDDDLCGCDDDDBDGDEDJDLCGCDDCDJDHDADCDLCGCDDDDFDCDGDIDLCGCDDCDDDEDFDADLCGCDDGDFDCDIDIDLCGCDDCDADEDGDCDLCGCDDDDFDHDEDGDLCGCDDGDFDCDIDJDLCGCDDBDCDCDJDJDLCOHAGEGG"
+        },
+        {
+          "title": "哈尔滨理工大学实践教学环节申请2023.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDFDFDHDCCPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDDDEDFDEDLCGCDDDDGDDDEDBDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDJDGDBDFDLCGCDDDDDDEDBDADLCGCDDDDADADADDDLCGCDDDDFDIDDDBDLDCDADCDDCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3650",
+      "title": "实验室安全检查记录本",
+      "category": "实验教学与实验室管理",
+      "date": "2021-07-06",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3650&columnId=3519",
+      "attachments": [
+        {
+          "title": "实验室安全检查记录本.docx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDEDJDCCPCGCDDCDDDEDFDEDLCGCDDDDJDFDGDEDLCGCDDCDDDEDGDADLCGCDDCDDDEDDDDDLCGCDDCDADIDEDADLCGCDDCDGDIDBDGDLCGCDDCDGDFDJDHDLCGCDDDDFDHDGDADLCGCDDCDEDEDADFDLCGCDDCDGDEDBDCDLCIDBCJCOGEGPGDHI"
+        }
+      ]
+    },
+    {
+      "id": "3639",
+      "title": "哈尔滨理工大学本科教学实验室安全隐患整改回执单",
+      "category": "实验教学与实验室管理",
+      "date": "2021-07-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3639&columnId=3519",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学本科教学实验室安全隐患整改回执单.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDEDHDHCPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDGDEDBDCDLCGCDDDDBDBDIDFDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDDDEDFDEDLCGCDDDDJDFDGDEDLCGCDDCDDDEDGDADLCGCDDCDDDEDDDDDLCGCDDCDADIDEDADLCGCDDDDIDFDEDEDLCGCDDCDEDHDDDJDLCGCDDCDFDJDHDCDLCGCDDCDFDJDBDDDLCGCDDCDCDCDDDIDLCGCDDCDFDBDJDBDLCGCDDCDBDDDDDDDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3628",
+      "title": "哈尔滨理工大学实验室安全手册（试用)",
+      "category": "实验教学与实验室管理",
+      "date": "2021-06-21",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3628&columnId=3519",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学实验室安全手册（试用).docx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDIDDDECPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDDDEDFDEDLCGCDDDDJDFDGDEDLCGCDDCDDDEDGDADLCGCDDCDDDEDDDDDLCGCDDCDADIDEDADLCGCDDCDFDBDGDDDLCGCDDCDADIDHDGDLCGCDDGDFDCDIDIDLCGCDDDDFDHDJDHDLCGCDDCDJDJDJDCDLCJCOGEGPGDHI"
+        }
+      ]
+    },
+    {
+      "id": "3585",
+      "title": "哈尔滨理工大学实验报告",
+      "category": "实验教学与实验室管理",
+      "date": "2021-05-19",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3585&columnId=3519",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学实验报告（教务处）.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDCDHDJCPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDDDEDFDEDLCGCDDDDJDFDGDEDLCGCDDCDFDCDFDDDLCGCDDCDBDFDHDIDLCGCDDGDFDCDIDIDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDHDIDIDLCGCDDGDFDCDIDJDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3561",
+      "title": "哈尔滨理工大学学术期刊（国内）分类目录",
+      "category": "实践教学",
+      "date": "2021-05-06",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3561&columnId=445",
+      "attachments": [
+        {
+          "title": "qikan.zip",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDCDEDHCPHBGJGLGBGOCOHKGJHA"
+        }
+      ]
+    },
+    {
+      "id": "3532",
+      "title": "直播录播教室操作说明",
+      "category": "多媒体教室管理",
+      "date": "2021-04-15",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3532&columnId=3508",
+      "attachments": [
+        {
+          "title": "哈理工直播录播教室使用说明.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDBDDDICPCGCDDCDBDHDADEDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDDDADEDFDCDLCGCDDCDFDHDHDDDLCGCDDCDEDEDADFDLCGCDDCDFDHDHDDDLCGCDDCDFDJDEDFDLCGCDDCDDDEDGDADLCGCDDCDADDDFDBDLCGCDDCDJDJDJDCDLCGCDDDDFDIDCDIDLCGCDDCDGDBDCDGDLCIDBCJCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3531",
+      "title": "西区1号楼多媒体教室分布图",
+      "category": "多媒体教室管理",
+      "date": "2021-04-14",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3531&columnId=3508",
+      "attachments": [
+        {
+          "title": "西区1号楼多媒体教室分布图.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDBDCDICPCGCDDDDFDBDJDJDLCGCDDCDBDDDADGDLDBCGCDDCDBDEDJDFDLCGCDDCDHDADADEDLCGCDDCDCDIDBDADLCGCDDCDDDBDIDGDLCGCDDCDADDDADHDLCGCDDCDFDJDEDFDLCGCDDCDDDEDGDADLCGCDDCDADJDJDIDLCGCDDCDEDADGDHDLCGCDDCDCDCDHDADLCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3530",
+      "title": "南区1号楼多媒体教室分布图",
+      "category": "多媒体教室管理",
+      "date": "2021-04-14",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3530&columnId=3508",
+      "attachments": [
+        {
+          "title": "南区1号楼多媒体教室平面图.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDCDEDBCPCGCDDCDBDDDDDFDLCGCDDCDBDDDADGDLDBCGCDDCDBDEDJDFDLCGCDDCDHDADADEDLCGCDDCDCDIDBDADLCGCDDCDDDBDIDGDLCGCDDCDADDDADHDLCGCDDCDFDJDEDFDLCGCDDCDDDEDGDADLCGCDDCDEDBDHDJDLCGCDDDDIDHDFDEDLCGCDDCDCDCDHDADLCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3529",
+      "title": "南区3号楼多媒体教室分布图",
+      "category": "多媒体教室管理",
+      "date": "2021-04-14",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3529&columnId=3508",
+      "attachments": [
+        {
+          "title": "南区3号楼多媒体教室平面图.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDCDEDACPCGCDDCDBDDDDDFDLCGCDDCDBDDDADGDLDDCGCDDCDBDEDJDFDLCGCDDCDHDADADEDLCGCDDCDCDIDBDADLCGCDDCDDDBDIDGDLCGCDDCDADDDADHDLCGCDDCDFDJDEDFDLCGCDDCDDDEDGDADLCGCDDCDEDBDHDJDLCGCDDDDIDHDFDEDLCGCDDCDCDCDHDADLCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3528",
+      "title": "新主楼多媒体教室分布图",
+      "category": "多媒体教室管理",
+      "date": "2021-04-14",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3528&columnId=3508",
+      "attachments": [
+        {
+          "title": "新主楼多媒体教室分布图.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDBDCDGCPCGCDDCDGDADDDCDLCGCDDCDADADCDHDLCGCDDCDHDADADEDLCGCDDCDCDIDBDADLCGCDDCDDDBDIDGDLCGCDDCDADDDADHDLCGCDDCDFDJDEDFDLCGCDDCDDDEDGDADLCGCDDCDADJDJDIDLCGCDDCDEDADGDHDLCGCDDCDCDCDHDADLCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3527",
+      "title": "实验室主任安全工作责任书",
+      "category": "实验教学与实验室管理",
+      "date": "2021-04-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3527&columnId=3519",
+      "attachments": [
+        {
+          "title": "实验室主任安全工作责任书.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDIDEDHDECPKBLODBKBLPLILNLMPODDCAKBLGDPDPDPMKLFNBOJMKNCDPDPDPDPMEOKLGMILALCMIKLNEPAMIMOMKOJKBLHKDKIMKLFNBOJMKNCNGPHMIMOKDKJCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3526",
+      "title": "拟进实验室教职人员及外来学习人员安全责任书",
+      "category": "实验教学与实验室管理",
+      "date": "2021-04-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3526&columnId=3519",
+      "attachments": [
+        {
+          "title": "拟进实验室教职人员及外来学习人员安全责任书.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDIDEDHDGCPKBLODBKBLPLILNLMPODFCAKBLGDPDPDPNBKHNELKMNOCMALEMIMLNELBMKLFNBOJMKNCLALCMIKLNEPAMIMOMKOJKBLHCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3525",
+      "title": "每个实验室安全负责人安全工作责任书",
+      "category": "实验教学与实验室管理",
+      "date": "2021-04-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3525&columnId=3519",
+      "attachments": [
+        {
+          "title": "每个实验室安全负责人安全工作责任书.docx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDIDEDHDFCPKBLODBKBLPLILNLMPODECAKBLGDPDPDPMKLFNBOJMKNCDPDPDPDPMEOKLGMILALCMIKLNEPAMIMOMKOJKBLHKDKIMKLFNBOJMKNCKDKILHLPLMOEKDKJLALCMIKLLILKNEPAMIMLKDKJCOGEGPGDHI"
+        }
+      ]
+    },
+    {
+      "id": "3524",
+      "title": "哈尔滨理工大学自制教学仪器设备（装置）申请书",
+      "category": "实验教学与实验室管理",
+      "date": "2021-04-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3524&columnId=3519",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学自制教学仪器设备（装置）申请书.docx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDBDCDDCPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDDDDDCDFDIDLCGCDDCDBDADEDGDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDADCDADCDLCGCDDCDCDBDCDADLCGCDDDDFDHDHDEDLCGCDDCDCDHDJDBDLCGCDDGDFDCDIDIDLCGCDDDDFDADBDDDLCGCDDDDCDGDCDCDLCGCDDGDFDCDIDJDLCGCDDDDADADADDDLCGCDDDDFDIDDDBDLCGCDDCDADADHDADLCOGEGPGDHI"
+        }
+      ]
+    },
+    {
+      "id": "3522",
+      "title": "哈尔滨理工大学实验室危险废物管理台账",
+      "category": "实验教学与实验室管理",
+      "date": "2021-04-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3522&columnId=3519",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学实验室危险废物管理台账.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDDDBDJDDCPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDDDEDFDEDLCGCDDDDJDFDGDEDLCGCDDCDDDEDGDADLCGCDDCDBDDDGDBDLCGCDDDDIDFDADFDLCGCDDCDEDCDCDDDLCGCDDCDJDCDIDJDLCGCDDDDBDGDEDJDLCGCDDCDJDHDADCDLCGCDDCDBDEDIDIDLCGCDDDDGDBDDDEDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3521",
+      "title": "哈尔滨理工大学实验室化学品管理台帐",
+      "category": "实验教学与实验室管理",
+      "date": "2021-04-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3521&columnId=3519",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学实验室化学品管理台帐.xlsx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDHDFDBDFCPEEDKFMEEGPGDHFGNGFGOHEHDFMFHGFEDGIGBHECAEGGJGMGFHDFMHHHIGJGEFPGJDGGNHFHCGMGIGHHDDFGHGKDCDCFMEGGJGMGFFDHEGPHCGBGHGFFMEGGJGMGFFMDCDADCDECNDADEFMLJPOLGPLLBPFMAONLJKELEPDNBKHMKLFNBOJMKNCLLKPNBKHMGLHLJNMMAONMMKINFMKCOHIGMHDHI"
+        }
+      ]
+    },
+    {
+      "id": "3520",
+      "title": "哈尔滨理工大学假期实验室使用备案申请表（新版）",
+      "category": "实验教学与实验室管理",
+      "date": "2021-04-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3520&columnId=3519",
+      "attachments": [
+        {
+          "title": "附件3：哈尔滨理工大学假期实验室使用备案申请表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDDDHDJDACPCGCDDDDIDEDGDIDLCGCDDCDADCDBDEDLDDCGCDDGDFDDDADGDLCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDADFDFDBDLCGCDDCDGDDDJDJDLCGCDDCDDDEDFDEDLCGCDDDDJDFDGDEDLCGCDDCDDDEDGDADLCGCDDCDADDDFDBDLCGCDDCDJDJDJDCDLCGCDDCDCDHDJDBDLCGCDDCDGDGDJDGDLCGCDDDDADADADDDLCGCDDDDFDIDDDBDLCGCDDDDEDJDCDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3510",
+      "title": "西区1号楼（除7、9楼）、新主楼和南区3号楼多媒体中控讲台操作流程",
+      "category": "多媒体教室管理",
+      "date": "2021-04-02",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3510&columnId=3508",
+      "attachments": [
+        {
+          "title": "西区1号楼（除7、9楼）、新主楼和南区3号楼多媒体中控讲台操作流程.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDBDBDECPCGCDDDDFDBDJDJDLCGCDDCDBDDDADGDLDBCGCDDCDBDEDJDFDLCGCDDCDHDADADEDLCGCDDGDFDCDIDIDLCGCDDDDIDFDADADLDHCGCDDBDCDCDIDJDLDJCGCDDCDHDADADEDLCGCDDGDFDCDIDJDLCGCDDBDCDCDIDJDLCGCDDCDGDADDDCDLCGCDDCDADADCDHDLCGCDDCDHDADADEDLCGCDDCDBDGDEDEDLCGCDDCDBDDDDDFDLCGCDDCDBDDDADGDLDDCGCDDCDBDEDJDFDLCGCDDCDHDADADEDLCGCDDCDCDIDBDADLCGCDDCDDDBDIDGDLCGCDDCDADDDADHDLCGCDDCDADADBDDDLCGCDDCDFDFDBDBDLCGCDDDDFDHDGDCDLCGCDDCDBDEDIDIDLCGCDDCDFDIDADFDLCGCDDCDADDDBDGDLCGCDDCDHDJDGDJDLCGCDDDDBDCDEDDDLCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3509",
+      "title": "西区一号楼7楼、9楼和南区一号楼多媒体使用说明",
+      "category": "多媒体教室管理",
+      "date": "2021-04-02",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3509&columnId=3508",
+      "attachments": [
+        {
+          "title": "西区一号楼7楼、9楼和南区一号楼多媒体使用说明.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDBDDDCCPCGCDDDDFDBDJDJDLCGCDDCDBDDDADGDLCGCDDBDJDJDGDIDLCGCDDCDBDEDJDFDLCGCDDCDHDADADEDLDHCGCDDCDHDADADEDLCGCDDBDCDCDIDJDLDJCGCDDCDHDADADEDLCGCDDCDBDGDEDEDLCGCDDCDBDDDDDFDLCGCDDCDBDDDADGDLCGCDDBDJDJDGDIDLCGCDDCDBDEDJDFDLCGCDDCDHDADADEDLCGCDDCDCDIDBDADLCGCDDCDDDBDIDGDLCGCDDCDADDDADHDLCGCDDCDADDDFDBDLCGCDDCDJDJDJDCDLCGCDDDDFDIDCDIDLCGCDDCDGDBDCDGDLCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3507",
+      "title": "大学生创新创业训练项目报销流程(2026年6月29日)",
+      "category": "实践教学",
+      "date": "2021-03-30",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3507&columnId=445",
+      "attachments": []
+    },
+    {
+      "id": "3326",
+      "title": "2019版教学大纲模板（试行）——理论、实验、实践环节",
+      "category": "教学管理",
+      "date": "2020-06-08",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3326&columnId=442",
+      "attachments": [
+        {
+          "title": "政教发[2018] 15号《哈尔滨理工大学教学大纲编制规范及要求》",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDCDGDHCPCGCDDCDFDJDBDJDLCGCDDCDFDJDEDFDLCGCDDCDBDEDFDHDLFLDCDADBDIFNCADBDFCGCDDCDBDEDJDFDLCGCDDBDCDCDJDIDLCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDCDIDCDDDLCGCDDDDCDEDDDEDLCGCDDDDCDFDDDEDLCGCDDCDBDADEDGDLCGCDDDDFDCDGDIDLCGCDDDDDDFDDDJDLCGCDDCDBDEDFDADLCGCDDDDFDCDADBDLCGCDDCDHDHDBDEDLCGCDDBDCDCDJDJDLCOGEGPGD"
+        },
+        {
+          "title": "政教发[2018] 15号附件1",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDCDGDICPCGCDDCDFDJDBDJDLCGCDDCDFDJDEDFDLCGCDDCDBDEDFDHDLFLDCDADBDIFNCADBDFCGCDDCDBDEDJDFDLCGCDDDDIDEDGDIDLCGCDDCDADCDBDEDLDBCGCDDGDFDDDADGDLCOGEGPGDHI"
+        },
+        {
+          "title": "",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDCDGDJCPCGCDDCDFDJDBDJDLCGCDDCDFDJDEDFDLCGCDDCDBDEDFDHDLFLDCDADBDIFNCADBDFCGCDDCDBDEDJDFDLCGCDDDDIDEDGDIDLCGCDDCDADCDBDEDLDCCGCDDGDFDDDADGDLDCDADBDJCGCDDCDJDCDFDGDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDCDIDCDDDLCGCDDDDCDEDDDEDLCGCDDCDHDBDGDJDLCGCDDCDGDEDJDFDLDPDPCGCDDCDJDHDADCDLCGCDDDDFDHDHDADLCGCDDBDCDCDIDJDLCGCDDCDDDEDFDEDLCGCDDDDJDFDGDEDLCOGEGPGD"
+        },
+        {
+          "title": "政教发[2018] 15号附件2",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDEDHDCCPCGCDDCDFDJDBDJDLCGCDDCDFDJDEDFDLCGCDDCDBDEDFDHDLFLDCDADBDIFNCADBDFCGCDDCDBDEDJDFDLCGCDDDDIDEDGDIDLCGCDDCDADCDBDEDLDCCOGEGPGD"
+        },
+        {
+          "title": "政教发[2018] 15号附件3",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDEDHDDCPCGCDDCDFDJDBDJDLCGCDDCDFDJDEDFDLCGCDDCDBDEDFDHDLFLDCDADBDIFNCADBDFCGCDDCDBDEDJDFDLCGCDDDDIDEDGDIDLCGCDDCDADCDBDEDLDDCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3293",
+      "title": "学习与科技竞赛竞赛校发[2023] 44号",
+      "category": "实践教学",
+      "date": "2020-04-03",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3293&columnId=445",
+      "attachments": [
+        {
+          "title": "《哈尔滨理工大学大学生研究性学习与学科竞赛管理办法（试行》（校发〔2023〕44号）.zip",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDHDHDGDFCPKBLGLJPOLGPLLBPFMAONLJKELEPDNBKHLEPDNBKHMJPKNBNALOLPNANENBKHMPLANDOLNBKHLPMGLOLKMIPMLJNMMAONLAOMLHKIKDKIMKNENANAKBLHKDKINAKDLHKCKBLCDCDADCDDKBLDDEDELKMFKDKJCOHKGJHA"
+        }
+      ]
+    },
+    {
+      "id": "595",
+      "title": "任课教师调课审批表",
+      "category": "教务管理",
+      "date": "2020-03-16",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=595&columnId=443",
+      "attachments": [
+        {
+          "title": "任课教师调课审批表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDJDFDIDACPMIMOLPMOLNMMMKKGLFPHLPMOMJPDMFPKLBONCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "535",
+      "title": "本科试题模板",
+      "category": "教务管理",
+      "date": "2020-03-16",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=535&columnId=443",
+      "attachments": [
+        {
+          "title": "本科试题模板",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDFDEDCCPGLHDHJGCCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3286",
+      "title": "借用教室申请流程",
+      "category": "教务管理",
+      "date": "2020-03-16",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3286&columnId=443",
+      "attachments": [
+        {
+          "title": "借用教室申请表",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDCDBDDCPGBHAHAGMHJHCGPGPGNCOGEGPGD"
+        },
+        {
+          "title": "借用教室线上申请流程(手机端）.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDHDDDJDHCPEDDKFMFFHDGFHCHDFMEBGEGNGJGOGJHDHEHCGBHEGPHCFMEEGFHDGLHEGPHAFMMBPHLDMMCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3285",
+      "title": "教学日历模板",
+      "category": "教务管理",
+      "date": "2020-03-16",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3285&columnId=443",
+      "attachments": [
+        {
+          "title": "教学日历模板.docx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDCDBDCCPCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDGDADIDFDLCGCDDCDBDDDIDCDLCGCDDCDHDBDGDJDLCGCDDCDGDEDJDFDLCOGEGPGDHI"
+        }
+      ]
+    },
+    {
+      "id": "3245",
+      "title": "关于加强考风建设严肃考试纪律的通知",
+      "category": "教务管理",
+      "date": "2020-03-16",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3245&columnId=354",
+      "attachments": [
+        {
+          "title": "《哈尔滨理工大学关于教学工作会议、听课和巡考等工作的有关规定》.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDADIDICPDBCOGEGPGD"
+        },
+        {
+          "title": "《哈尔滨理工大学考试工作管理条例（修订）》.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDADIDJCPDCCOGEGPGD"
+        },
+        {
+          "title": "《监考守则》.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDADJDACPDDCOGEGPGD"
+        },
+        {
+          "title": "《哈尔滨理工大学学生考试违规行为认定及处理办法》.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDADJDBCPDECOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "773",
+      "title": "哈尔滨理工大学毕业设计（论文）经费使用说明",
+      "category": "实践教学",
+      "date": "2020-03-15",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=773&columnId=445",
+      "attachments": [
+        {
+          "title": "毕业设计经费使用办法.zip",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDEDBDIDBCPCGCDDCDHDGDADFDLCGCDDBDJDJDJDEDLCGCDDDDFDHDHDEDLCGCDDDDFDHDEDFDLCGCDDDDCDEDGDDDLCGCDDDDGDBDFDDDLCGCDDCDADDDFDBDLCGCDDCDJDJDJDCDLCGCDDCDBDBDFDADLCGCDDCDHDIDGDBDLCOHKGJHA"
+        }
+      ]
+    },
+    {
+      "id": "622",
+      "title": "毕业设计封皮",
+      "category": "实践教学",
+      "date": "2020-03-15",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=622&columnId=445",
+      "attachments": [
+        {
+          "title": "封皮8K.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDCDBDACPCGCDDCDDDFDFDDDLCGCDDDDADDDIDCDLDIELCOGEGPGD"
+        },
+        {
+          "title": "封皮B5.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDCDADJCPCGCDDCDDDFDFDDDLCGCDDDDADDDIDCDLECDFCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "2102",
+      "title": "黑龙江省大学生创新创业计划训练项目调整申请单",
+      "category": "实践教学",
+      "date": "2020-03-15",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=2102&columnId=445",
+      "attachments": [
+        {
+          "title": "黑龙江省大学生创新创业计划训练项目调整申请单.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDFDFDEDCCPCGCDDEDADGDFDHDLCGCDDEDADIDFDHDLCGCDDCDHDHDEDDDLCGCDDDDADEDGDFDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDJDJDIDDDLCGCDDCDBDADBDJDLCGCDDCDGDADDDCDLCGCDDCDBDADBDJDLCGCDDBDJDJDJDEDLCGCDDDDFDHDEDFDLCGCDDCDBDADBDADLCGCDDDDFDHDFDHDLCGCDDDDCDEDFDBDLCGCDDDDJDADDDDDLCGCDDDDADEDEDGDLCGCDDDDFDIDEDDDLCGCDDCDFDJDHDCDLCGCDDDDADADADDDLCGCDDDDFDIDDDBDLCGCDDCDBDDDDDDDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3276",
+      "title": "智慧树网络教学平台相关帮助手册",
+      "category": "网络教学",
+      "date": "2020-02-28",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3276&columnId=3271",
+      "attachments": [
+        {
+          "title": "智慧树教师教学手册.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDBDJDECPCGCDDCDGDCDDDEDLCGCDDCDEDJDDDFDLCGCDDCDGDGDEDBDLCGCDDCDFDJDEDFDLCGCDDCDEDADHDCDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDFDBDGDDDLCGCDDCDADIDHDGDLCOHAGEGG"
+        },
+        {
+          "title": "智慧树学生学习手册.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDBDJDFCPCGCDDCDGDCDDDEDLCGCDDCDEDJDDDFDLCGCDDCDGDGDEDBDLCGCDDCDDDDDJDIDLCGCDDCDJDJDIDDDLCGCDDCDDDDDJDIDLCGCDDCDADADGDEDLCGCDDCDFDBDGDDDLCGCDDCDADIDHDGDLCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3275",
+      "title": "超星网络教学平台相关帮助手册",
+      "category": "网络教学",
+      "date": "2020-02-28",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3275&columnId=3271",
+      "attachments": [
+        {
+          "title": "超星网络教学平台及学习通（2020教师版）.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDBDJDCCPCGCDDDDGDCDCDJDLCGCDDCDGDBDEDDDLCGCDDDDCDFDJDDDLCGCDDDDCDEDHDGDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDEDBDHDJDLCGCDDCDBDEDIDIDLCGCDDCDBDEDFDADLCGCDDCDDDDDJDIDLCGCDDCDADADGDEDLCGCDDDDGDIDJDADLCGCDDGDFDCDIDIDLDCDADCDACGCDDCDFDJDEDFDLCGCDDCDEDADHDCDLCGCDDCDJDCDFDGDLCGCDDGDFDCDIDJDLCOHAGEGG"
+        },
+        {
+          "title": "超星尔雅学生学习手册.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDBDJDDCPCGCDDDDGDCDCDJDLCGCDDCDGDBDEDDDLCGCDDCDDDFDHDCDLCGCDDDDIDFDJDHDLCGCDDCDDDDDJDIDLCGCDDCDJDJDIDDDLCGCDDCDDDDDJDIDLCGCDDCDADADGDEDLCGCDDCDFDBDGDDDLCGCDDCDADIDHDGDLCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3274",
+      "title": "通识任选课联系QQ群",
+      "category": "网络教学",
+      "date": "2020-02-28",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3274&columnId=3271",
+      "attachments": [
+        {
+          "title": "附件1通识任选课联系QQ群.xlsx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDBDJDBCPCGCDDDDIDEDGDIDLCGCDDCDADCDBDEDLDBCGCDDDDGDIDJDADLCGCDDDDFDHDIDCDLCGCDDCDADCDBDJDLCGCDDDDGDIDHDDDLCGCDDDDFDIDDDIDLCGCDDDDCDIDFDCDLCGCDDDDBDJDJDFDLFBFBCGCDDDDCDGDHDGDLCOHIGMHDHI"
+        }
+      ]
+    },
+    {
+      "id": "3273",
+      "title": "中国大学MOOC平台相关帮助手册",
+      "category": "网络教学",
+      "date": "2020-02-28",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3273&columnId=3271",
+      "attachments": [
+        {
+          "title": "中国大学MOOC老师使用指导手册.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDBDIDJCPCGCDDCDADADBDDDLCGCDDCDCDCDGDJDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLENEPEPEDCGCDDDDCDHDGDJDLCGCDDCDEDADHDCDLCGCDDCDADDDFDBDLCGCDDCDJDJDJDCDLCGCDDCDFDDDFDBDLCGCDDCDDDFDEDIDLCGCDDCDFDBDGDDDLCGCDDCDADIDHDGDLCOHAGEGG"
+        },
+        {
+          "title": "中国大学MOOC学生操作手册.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDBDJDACPCGCDDCDADADBDDDLCGCDDCDCDCDGDJDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLENEPEPEDCGCDDCDDDDDJDIDLCGCDDCDJDJDIDDDLCGCDDCDFDIDADFDLCGCDDCDADDDBDGDLCGCDDCDFDBDGDDDLCGCDDCDADIDHDGDLCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3272",
+      "title": "各网络教学平台学生端注册流程、学生名单导入或加入课程",
+      "category": "网络教学",
+      "date": "2020-02-28",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3272&columnId=3271",
+      "attachments": [
+        {
+          "title": "各网络教学平台学生端注册流程、学生名单导入或加入课程班流程.pdf",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDBDIDICPCGCDDCDBDFDADIDLCGCDDDDCDFDJDDDLCGCDDDDCDEDHDGDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDEDBDHDJDLCGCDDCDBDEDIDIDLCGCDDCDDDDDJDIDLCGCDDCDJDJDIDDDLCGCDDDDBDEDHDBDLCGCDDCDHDIDIDADLCGCDDCDADIDHDGDLCGCDDCDHDJDGDJDLCGCDDDDBDCDEDDDLCGCDDBDCDCDIDJDLCGCDDCDDDDDJDIDLCGCDDCDJDJDIDDDLCGCDDCDBDFDBDHDLCGCDDCDBDDDDDDDLCGCDDCDDDFDEDIDLCGCDDCDADIDDDHDLCGCDDCDFDBDBDADLCGCDDCDBDBDFDCDLCGCDDCDADIDDDHDLCGCDDDDFDIDDDIDLCGCDDDDBDCDEDDDLCGCDDCDJDGDHDHDLCGCDDCDHDJDGDJDLCGCDDDDBDCDEDDDLCOHAGEGG"
+        }
+      ]
+    },
+    {
+      "id": "3262",
+      "title": "校发【2019】13号《哈尔滨理工大学高水平教育教学成果奖励办法（试行）》",
+      "category": "教研论文教材认定",
+      "date": "2020-01-09",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3262&columnId=2730",
+      "attachments": [
+        {
+          "title": "校发【2019】13号《哈尔滨理工大学高水平教育教学成果奖励办法（试行）》docx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDBDHDACPCGCDDDDIDEDGDIDLCGCDDCDADCDBDEDLCOGEGPGDHI"
+        }
+      ]
+    },
+    {
+      "id": "3199",
+      "title": "主动降级、休学、复学、退学办理流程",
+      "category": "学籍管理",
+      "date": "2019-10-18",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3199&columnId=444",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学学籍异动告知单.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDADIDDDJCPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDDDDDJDIDLCGCDDDDBDIDCDBDLCGCDDCDEDDDCDCDLCGCDDCDBDBDGDADLCGCDDCDBDFDHDIDLCGCDDDDADGDJDDDLCGCDDCDBDDDDDDDLCOGEGPGD"
+        },
+        {
+          "title": "哈尔滨理工大学学籍异动申请表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDADFDEDBCPLJPOLGPLLBPFMAONLJKELEPDNBKHNBKHLMKONCOMLGKPMJOKMHOLLBONDCDADCDGDADECOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3198",
+      "title": "重修、补修课程免听手续的办理",
+      "category": "学籍管理",
+      "date": "2019-10-18",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3198&columnId=444",
+      "attachments": [
+        {
+          "title": "免听申请表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDADIDDDFCPCGCDDCDADIDBDDDLCGCDDCDBDFDEDIDLCGCDDDDADADADDDLCGCDDDDFDIDDDBDLCGCDDDDEDJDCDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "3029",
+      "title": "出国留学相关资料",
+      "category": "教务管理",
+      "date": "2019-01-03",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=3029&columnId=443",
+      "attachments": [
+        {
+          "title": "学位证.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDADIDHDFCPNBKHMOLLNGKECOGEGPGD"
+        },
+        {
+          "title": "毕业证.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDADIDHDGCPLBMPNCLFNGKECOGEGPGD"
+        },
+        {
+          "title": "在读证明.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDCDIDDDCCPCGCDDCDCDDDBDCDLCGCDDDDFDIDDDFDLCGCDDDDFDHDHDHDLCGCDDCDGDBDCDGDLCOGEGPGD"
+        },
+        {
+          "title": "英文成绩单模板.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDJDJDGDBCPCGCDDDDDDFDCDBDLCGCDDCDFDJDJDBDLCGCDDCDFDBDADEDLCGCDDDDCDEDIDJDLCGCDDCDBDDDDDDDLCGCDDCDHDBDGDJDLCGCDDCDGDEDJDFDLCOGEGPGD"
+        },
+        {
+          "title": "计分制证明-新.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDDDHDJDCCPCGCDDDDFDHDEDFDLCGCDDCDADJDJDIDLCGCDDCDBDADEDGDLCGCDDDDFDHDHDHDLCGCDDCDGDBDCDGDLCNCGCDDCDGDADDDCDLCOGEGPGD"
+        },
+        {
+          "title": "哈尔滨理工大学出国成绩单说明.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDFDBDCDICPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDADJDIDGDLCGCDDCDCDCDGDJDLCGCDDCDFDBDADEDLCGCDDDDCDEDIDJDLCGCDDCDBDDDDDDDLCGCDDDDFDIDCDIDLCGCDDCDGDBDCDGDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "2818",
+      "title": "校级校级优秀毕业设计（论文）及指导教师登记表",
+      "category": "实践教学",
+      "date": "2018-04-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=2818&columnId=445",
+      "attachments": [
+        {
+          "title": "校级优秀毕业设计（论文）及指导教师登记表.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDJDHDACPCGCDDCDGDGDFDHDLCGCDDDDCDEDCDDDLCGCDDCDADCDEDIDLCGCDDDDBDBDGDIDLCGCDDCDHDGDADFDLCGCDDBDJDJDJDEDLCGCDDDDFDHDHDEDLCGCDDDDFDHDEDFDLCGCDDGDFDCDIDIDLCGCDDDDFDHDHDADLCGCDDCDFDJDJDBDLCGCDDGDFDCDIDJDLCGCDDCDBDEDFDADLCGCDDCDFDDDFDBDLCGCDDCDDDFDEDIDLCGCDDCDFDJDEDFDLCGCDDCDEDADHDCDLCGCDDDDADDDDDBDLCGCDDDDFDHDGDADLCGCDDDDEDJDCDADLCOHIGMHD"
+        }
+      ]
+    },
+    {
+      "id": "2731",
+      "title": "2013-2019年教材教研论文认定",
+      "category": "教研论文教材认定",
+      "date": "2017-11-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=2731&columnId=2730",
+      "attachments": [
+        {
+          "title": "2013年教材认定结果.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDGDCDACPCGCDDCDFDJDEDFDLCGCDDCDGDEDEDIDLCGCDDDDFDHDEDIDLCGCDDCDDDEDFDADLCOHIGMHD"
+        },
+        {
+          "title": "2013年教研论文认定结果.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDGDCDBCPCGCDDCDFDJDEDFDLCGCDDDDADHDEDADLCGCDDDDFDHDHDADLCGCDDCDFDJDJDBDLCGCDDDDFDHDEDIDLCGCDDCDDDEDFDADLCOHIGMHD"
+        },
+        {
+          "title": "2014年教材认定结果.XLS",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDGDCDCCPCGCDDCDFDJDEDFDLCGCDDCDGDEDEDIDLCGCDDCDBDFDBDCDLCGCDDCDGDGDIDEDLCGCDDCDBDFDBDHDLCGCDDCDBDDDDDDDLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDDDBDCDLCGCDDDDCDEDEDHDLCGCDDGDFDCDIDJDLCOFIEMFD"
+        },
+        {
+          "title": "2014年教研论文认定结果.XLS",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDGDCDDCPCGCDDDDFDHDHDADLCGCDDCDFDJDJDBDLCGCDDCDBDFDBDCDLCGCDDCDGDGDIDEDLCGCDDCDBDFDBDHDLCGCDDCDBDDDDDDDLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDDDBDCDLCGCDDDDCDEDEDHDLCGCDDGDFDCDIDJDLCOFIEMFD"
+        },
+        {
+          "title": "2015年教材认定结果.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDFDIDFCPCGCDDCDFDJDEDFDLCGCDDCDGDEDEDIDLCGCDDCDBDFDBDCDLCGCDDCDGDGDIDEDLCGCDDCDBDFDBDHDLCGCDDCDBDDDDDDDLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDDDDDCDGDHDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDDDBDCDLCGCDDDDCDEDEDHDLCGCDDGDFDCDIDJDLCOHIGMHD"
+        },
+        {
+          "title": "2015年教研论文认定结果.XLS",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDFDIDGCPCGCDDDDFDHDHDADLCGCDDCDFDJDJDBDLCGCDDCDBDFDBDCDLCGCDDCDGDGDIDEDLCGCDDCDBDFDBDHDLCGCDDCDBDDDDDDDLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDDDDDCDGDHDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDDDBDCDLCGCDDDDCDEDEDHDLCGCDDGDFDCDIDJDLCOFIEMFD"
+        },
+        {
+          "title": "2016年教材认定结果.XLS",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDFDIDHCPCGCDDCDFDJDEDFDLCGCDDCDGDEDEDIDLCGCDDCDBDFDBDCDLCGCDDCDGDGDIDEDLCGCDDCDBDFDBDHDLCGCDDCDBDDDDDDDLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDDDDDCDGDHDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDDDBDCDLCGCDDDDCDEDEDHDLCGCDDGDFDCDIDJDLDBCOFIEMFD"
+        },
+        {
+          "title": "2016年教研论文认定结果.XLS",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDGDCDECPCGCDDDDFDHDHDADLCGCDDCDFDJDJDBDLCGCDDCDBDFDBDCDLCGCDDCDGDGDIDEDLCGCDDCDBDFDBDHDLCGCDDCDBDDDDDDDLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDDDDDCDGDHDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDDDBDCDLCGCDDDDCDEDEDHDLCGCDDGDFDCDIDJDLDBCOFIEMFD"
+        },
+        {
+          "title": "2017年教材认定结果.xlsx",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDJDADADDCPDCDADBDHCGCDDCDFDJDEDFDLCGCDDCDGDEDEDIDLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDDDDDCDGDHDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDDDBDCDLCGCDDDDCDEDEDHDLCGCDDGDFDCDIDJDLCOHIGMHDHI"
+        },
+        {
+          "title": "2017年教研论文认定结果.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDJDADADECPDCDADBDHCGCDDDDFDHDHDADLCGCDDCDFDJDJDBDLCGCDDDDFDHDEDIDLCGCDDCDDDEDFDADLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDDDDDCDGDHDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDDDBDCDLCGCDDDDCDEDEDHDLCGCDDGDFDCDIDJDLCOHIGMHD"
+        },
+        {
+          "title": "2018年教材认定结果.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDADDDBDBCPDCDADBDICGCDDCDFDJDEDFDLCGCDDCDGDEDEDIDLCGCDDDDFDHDEDIDLCGCDDCDDDEDFDADLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDDDDDCDGDHDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDDDBDCDLCGCDDDDCDEDEDHDLCGCDDGDFDCDIDJDLCOHIGMHD"
+        },
+        {
+          "title": "2018年教研论文认定结果.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDADCDJDICPDCDADBDICGCDDDDFDHDHDADLCGCDDCDFDJDJDBDLCGCDDDDFDHDEDIDLCGCDDCDDDEDFDADLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDDDDDCDGDHDLCGCDDCDFDJDEDFDLCGCDDCDBDBDFDDDLCGCDDCDCDDDBDCDLCGCDDDDCDEDEDHDLCGCDDGDFDCDIDJDLCOHIGMHD"
+        },
+        {
+          "title": "2019年高水平教材认定结果",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDBDBDHDECPDCDADBDJCGCDDCDEDBDIDADLCGCDDCDFDJDEDFDLCGCDDCDGDEDEDIDLCGCDDDDFDHDEDIDLCGCDDCDDDEDFDADLCGCDDDDCDEDGDHDLCGCDDCDGDFDCDEDLCGCDDGDFDCDIDIDLCGCDDCDBDEDFDHDLCGCDDCDEDADGDHDLCGCDDCDJDCDFDGDLCGCDDGDFDCDIDJDLCOHIGMHDHI"
+        }
+      ]
+    },
+    {
+      "id": "2256",
+      "title": "关于规范教研活动要求的规定（试行）",
+      "category": "教学管理",
+      "date": "2016-04-12",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=2256&columnId=442",
+      "attachments": [
+        {
+          "title": "关于规范教研活动要求的规定（试行）.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDGDIDIDDCPCGCDDCDADIDFDBDLCGCDDCDADBDBDADLCGCDDDDFDCDGDIDLCGCDDDDDDFDDDJDLCGCDDCDFDJDEDFDLCGCDDDDADHDEDADLCGCDDCDHDJDGDDDLCGCDDCDBDBDGDADLCGCDDDDFDCDADBDLCGCDDCDHDHDBDEDLCGCDDDDADDDEDADLCGCDDDDFDCDGDIDLCGCDDCDDDEDFDADLCGCDDGDFDCDIDIDLCGCDDDDFDHDJDHDLCGCDDDDEDIDJDCDLCGCDDGDFDCDIDJDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "2229",
+      "title": "各院、系教研活动记录表",
+      "category": "教学管理",
+      "date": "2016-03-15",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=2229&columnId=442",
+      "attachments": [
+        {
+          "title": "教研活动记录",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDGDIDDDBCPCGCDDCDFDJDEDFDLCGCDDDDADHDEDADLCGCDDCDHDJDGDDDLCGCDDCDBDBDGDADLCGCDDDDFDHDGDADLCGCDDCDEDEDADFDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "8cc5e1a05b8f014d",
+      "title": "教学日历上传演示动画",
+      "category": "系统使用演示动画",
+      "date": "2015-11-30",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=2106",
+      "attachments": [
+        {
+          "title": "教学日历上传演示动画",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloads/uploadjxrl.html"
+        }
+      ]
+    },
+    {
+      "id": "2116",
+      "title": "调课演示动画",
+      "category": "系统使用演示动画",
+      "date": "2015-10-20",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=2116&columnId=2106",
+      "attachments": []
+    },
+    {
+      "id": "a32ff50b6c3d72f8",
+      "title": "配课演示动画",
+      "category": "系统使用演示动画",
+      "date": "2015-10-09",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoArticleList.do?columnId=2106",
+      "attachments": [
+        {
+          "title": "配课演示动画",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloads/peike.exe"
+        }
+      ]
+    },
+    {
+      "id": "2097",
+      "title": "大学生创新创业训练计划项目承诺书",
+      "category": "实践教学",
+      "date": "2015-09-24",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=2097&columnId=445",
+      "attachments": [
+        {
+          "title": "20150924.zip",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDGDEDBDGCPDCDADBDFDADJDCDECOHKGJHA"
+        }
+      ]
+    },
+    {
+      "id": "1959",
+      "title": "本科毕业设计模板与撰写规范2015最终版",
+      "category": "实践教学",
+      "date": "2015-04-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1959&columnId=445",
+      "attachments": [
+        {
+          "title": "zhuanxieguifanmoban.zip",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDFDIDGDICPHKGIHFGBGOHIGJGFGHHFGJGGGBGOGNGPGCGBGOCOHKGJHA"
+        }
+      ]
+    },
+    {
+      "id": "1890",
+      "title": "哈尔滨理工大学本科人才培养方案调整备案表",
+      "category": "教学管理",
+      "date": "2015-01-04",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1890&columnId=442",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学本科人才培养方案调整备案表",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDEDEDFDCCPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDGDEDBDCDLCGCDDDDBDBDIDFDLCGCDDCDADBDFDEDLCGCDDCDFDBDGDFDLCGCDDCDCDFDCDBDLCGCDDCDADIDFDJDLCGCDDCDGDADEDBDLCGCDDCDGDGDJDGDLCGCDDDDFDIDEDDDLCGCDDCDFDJDHDCDLCGCDDCDCDHDJDBDLCGCDDCDGDGDJDGDLCGCDDDDEDJDCDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1888",
+      "title": "新入职教师信息登记表",
+      "category": "教学管理",
+      "date": "2015-01-04",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1888&columnId=442",
+      "attachments": [
+        {
+          "title": "新入职（外聘、在职）教师信息登记表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDBDJDBDDDGCPNAMCMIOLNGLAKDKIMNOCMGLIKBKCNENKNGLAKDKJLNMMMKKGNAMFMPKCLFMHLMMHLBONCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1886",
+      "title": "实践课笔记模板",
+      "category": "实践教学",
+      "date": "2014-12-29",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1886&columnId=445",
+      "attachments": [
+        {
+          "title": "moban.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDFDGDEDBCPGNGPGCGBGOCOHIGMHD"
+        }
+      ]
+    },
+    {
+      "id": "1656",
+      "title": "本科论文模板",
+      "category": "实践教学",
+      "date": "2014-04-29",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1656&columnId=445",
+      "attachments": [
+        {
+          "title": "本科论文模板B5.dot",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDEDJDEDCCPCGCDDCDGDEDBDCDLCGCDDDDBDBDIDFDLCGCDDDDFDHDHDADLCGCDDCDFDJDJDBDLCGCDDCDHDBDGDJDLCGCDDCDGDEDJDFDLECDFCOGEGPHE"
+        },
+        {
+          "title": "本科生16开论文模板.rar",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDEDJDEDDCPCGCDDCDGDEDBDCDLCGCDDDDBDBDIDFDLCGCDDCDJDJDIDDDLDBDGCGCDDCDEDDDCDADLCGCDDDDFDHDHDADLCGCDDCDFDJDJDBDLCGCDDCDHDBDGDJDLCGCDDCDGDEDJDFDLCOHCGBHC"
+        }
+      ]
+    },
+    {
+      "id": "1611",
+      "title": "哈尔滨理工大学实习安全与纪律承诺书",
+      "category": "实践教学",
+      "date": "2014-03-11",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1611&columnId=445",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学实习安全与纪律承诺书.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDEDIDDDFCPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDDDEDFDEDLCGCDDCDADADGDEDLCGCDDCDDDEDDDDDLCGCDDCDADIDEDADLCGCDDBDJDJDIDCDLCGCDDDDCDEDCDGDLCGCDDCDEDEDFDJDLCGCDDCDFDCDBDFDLCGCDDDDFDIDDDEDLCGCDDCDADADHDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1298",
+      "title": "xx学院201X年秋期中听课情况调查表",
+      "category": "教学管理",
+      "date": "2013-05-09",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1298&columnId=442",
+      "attachments": [
+        {
+          "title": "学院201X年秋期中听课情况调查表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDDDIDIDECPHIHICGCDDCDDDDDJDIDLCGCDDDDIDEDJDIDLDCDADBFICGCDDCDEDBDIDADLCGCDDDDBDBDHDJDLCGCDDCDGDDDJDJDLCGCDDCDADADBDDDLCGCDDCDBDFDEDIDLCGCDDDDFDIDDDIDLCGCDDCDEDHDHDDDLCGCDDCDADJDBDHDLCGCDDDDFDIDEDDDLCGCDDCDGDFDJDHDLCGCDDDDEDJDCDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1157",
+      "title": "哈尔滨理工大学新增实践教学环节申请",
+      "category": "实践教学",
+      "date": "2012-11-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1157&columnId=445",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学新增实践教学环节申请(080527执行).doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDDDDDGDECPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDGDADDDCDLCGCDDCDCDGDIDGDLCGCDDCDDDEDFDEDLCGCDDDDGDDDEDBDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDJDGDBDFDLCGCDDDDDDEDBDADLCGCDDDDADADADDDLCGCDDDDFDIDDDBDLCIDADIDADFDCDHCGCDDCDFDBDJDBDLCGCDDDDEDIDJDCDLCJCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1142",
+      "title": "哈尔滨理工大学实践教学环节总结",
+      "category": "实践教学",
+      "date": "2012-10-10",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1142&columnId=445",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学实践教学环节总结.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDDDDDDDICPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDDDEDFDEDLCGCDDDDGDDDEDBDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDJDGDBDFDLCGCDDDDDDEDBDADLCGCDDCDEDGDDDFDLCGCDDDDCDEDGDHDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1114",
+      "title": "毕业设计(论文)选题情况统计表",
+      "category": "实践教学",
+      "date": "2012-09-10",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1114&columnId=445",
+      "attachments": [
+        {
+          "title": "毕业设计(论文)选题情况统计表.XLS",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDJDIDECPCGCDDCDHDGDADFDLCGCDDBDJDJDJDEDLCGCDDDDFDHDHDEDLCGCDDDDFDHDEDFDLCICGCDDDDFDHDHDADLCGCDDCDFDJDJDBDLCJCGCDDDDGDIDHDDDLCGCDDDDJDADGDEDLCGCDDCDEDHDHDDDLCGCDDCDADJDBDHDLCGCDDDDCDEDHDJDLCGCDDDDFDHDEDFDLCGCDDDDEDJDCDADLCOFIEMFD"
+        }
+      ]
+    },
+    {
+      "id": "1113",
+      "title": "答辩委员会名单",
+      "category": "实践教学",
+      "date": "2012-09-10",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1113&columnId=445",
+      "attachments": [
+        {
+          "title": "答辩委员会名单.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDDDCDBDJCPCGCDDDDBDFDHDCDLCGCDDDDGDHDHDHDLCGCDDCDCDJDJDGDLCGCDDCDBDFDJDCDLCGCDDCDADCDFDADLCGCDDCDBDFDBDHDLCGCDDCDBDDDDDDDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1112",
+      "title": "实习日历(修改）",
+      "category": "实践教学",
+      "date": "2012-09-10",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1112&columnId=445",
+      "attachments": [
+        {
+          "title": "实习日历(执行）.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDEDGDIDHCPCGCDDCDDDEDFDEDLCGCDDCDADADGDEDLCGCDDCDGDADIDFDLCGCDDCDBDDDIDCDLCICGCDDCDFDBDJDBDLCGCDDDDEDIDJDCDLCGCDDGDFDCDIDJDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1111",
+      "title": "课程设计日历(修改）",
+      "category": "实践教学",
+      "date": "2012-09-10",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1111&columnId=445",
+      "attachments": [
+        {
+          "title": "课程设计日历(执行）.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDEDGDIDGCPCGCDDDDFDIDDDIDLCGCDDDDBDCDEDDDLCGCDDDDFDHDHDEDLCGCDDDDFDHDEDFDLCGCDDCDGDADIDFDLCGCDDCDBDDDIDCDLCICGCDDCDFDBDJDBDLCGCDDDDEDIDJDCDLCGCDDGDFDCDIDJDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1110",
+      "title": "哈尔滨理工大学实践教学计划表(20170825修改)",
+      "category": "实践教学",
+      "date": "2012-09-10",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1110&columnId=445",
+      "attachments": [
+        {
+          "title": "实践教学计划表2017.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDIDDDGDACPCGCDDCDDDEDFDEDLCGCDDDDGDDDEDBDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDDDFDHDEDFDLCGCDDCDBDADBDADLCGCDDDDEDJDCDADLDCDADBDHCOHIGMHD"
+        }
+      ]
+    },
+    {
+      "id": "1060",
+      "title": "哈尔滨理工大学优秀主讲教师推荐表",
+      "category": "教学管理",
+      "date": "2012-07-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1060&columnId=442",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学优秀主讲教师推荐表",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDJDHDCDHCPDCDADBDICGCDDCDEDBDIDADLCGCDDCDEDCDDDADLCGCDDCDGDCDIDADLCGCDDDDBDFDDDCDLCGCDDCDBDDDBDDDLCGCDDBDJDJDGDIDLCGCDDCDDDGDCDGDLCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDADCDEDIDLCGCDDDDBDBDGDIDLCGCDDCDADADCDHDLCGCDDDDFDHDGDCDLCGCDDCDFDJDEDFDLCGCDDCDEDADHDCDLCGCDDCDFDFDBDCDLCGCDDDDDDGDBDGDLCGCDDDDEDJDCDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "1059",
+      "title": "《哈尔滨理工大学“优秀主讲教师”评选条例》",
+      "category": "教学管理",
+      "date": "2012-07-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1059&columnId=442",
+      "attachments": []
+    },
+    {
+      "id": "1056",
+      "title": "教育部共享课建设",
+      "category": "教学管理",
+      "date": "2012-07-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1056&columnId=442",
+      "attachments": [
+        {
+          "title": "教育部共享课建设.PDF",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDDDBDCDBCPCGCDDCDFDJDEDFDLCGCDDDDCDJDEDGDLCGCDDDDHDADJDGDLCGCDDCDADIDEDJDLCGCDDCDADBDDDJDLCGCDDDDFDIDDDIDLCGCDDCDEDDDBDEDLCGCDDDDFDHDHDEDLCOFAEEEG"
+        }
+      ]
+    },
+    {
+      "id": "1055",
+      "title": "精品课建设申请表",
+      "category": "教学管理",
+      "date": "2012-07-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=1055&columnId=442",
+      "attachments": [
+        {
+          "title": "精品课建设申请表.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDDDBDCDHCPCGCDDDDBDJDDDEDLCGCDDCDBDGDJDHDLCGCDDDDFDIDDDIDLCGCDDCDEDDDBDEDLCGCDDDDFDHDHDEDLCGCDDDDADADADDDLCGCDDDDFDIDDDBDLCGCDDDDEDJDCDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "994",
+      "title": "专业建设立项申请书",
+      "category": "教学管理",
+      "date": "2012-05-23",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=994&columnId=442",
+      "attachments": [
+        {
+          "title": "专业建设立项申请书.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDHDGDECPCGCDDBDJDJDIDHDLCGCDDBDJDJDJDEDLCGCDDCDEDDDBDEDLCGCDDDDFDHDHDEDLCGCDDDDBDEDDDFDLCGCDDDDJDADDDDDLCGCDDDDADADADDDLCGCDDDDFDIDDDBDLCGCDDCDADADHDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "924",
+      "title": "哈尔滨理工大学大学生创新创业训练计划申请书(创新创业申请书）",
+      "category": "实践教学",
+      "date": "2012-04-13",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=924&columnId=445",
+      "attachments": [
+        {
+          "title": "1231213.zip",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDHDJDHDJCPDBDCDDDBDCDBDDCOHKGJHA"
+        }
+      ]
+    },
+    {
+      "id": "907",
+      "title": "教师网络培训申报名单（加盖部门公章）",
+      "category": "教学管理",
+      "date": "2012-03-29",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=907&columnId=442",
+      "attachments": [
+        {
+          "title": "教师网络培训申报名单（加盖部门公章）.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDGDCDCCPCGCDDCDFDJDEDFDLCGCDDCDEDADHDCDLCGCDDDDCDFDJDDDLCGCDDDDCDEDHDGDLCGCDDCDCDFDCDBDLCGCDDDDFDHDFDHDLCGCDDDDADADADDDLCGCDDCDFDCDFDDDLCGCDDCDBDFDBDHDLCGCDDCDBDDDDDDDLCGCDDGDFDCDIDIDLCGCDDCDBDBDFDCDLCGCDDDDADEDCDCDLCGCDDDDHDADJDGDLCGCDDDDIDDDHDGDLCGCDDCDADIDEDEDLCGCDDDDBDEDFDGDLCGCDDGDFDCDIDJDLCOHIGMHD"
+        }
+      ]
+    },
+    {
+      "id": "906",
+      "title": "教师教学差旅费报销存档（加盖部门公章）",
+      "category": "教学管理",
+      "date": "2012-03-29",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=906&columnId=442",
+      "attachments": [
+        {
+          "title": "教师教学差旅费报销存档（加盖部门公章）.xls",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDGDCDDCPCGCDDCDFDJDEDFDLCGCDDCDEDADHDCDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDEDADEDGDLCGCDDCDGDADFDDDLCGCDDDDGDBDFDDDLCGCDDCDFDCDFDDDLCGCDDDDIDBDEDEDLCGCDDCDDDDDIDEDLCGCDDCDGDHDCDDDLCGCDDGDFDCDIDIDLCGCDDCDBDBDFDCDLCGCDDDDADEDCDCDLCGCDDDDHDADJDGDLCGCDDDDIDDDHDGDLCGCDDCDADIDEDEDLCGCDDDDBDEDFDGDLCGCDDGDFDCDIDJDLCOHIGMHD"
+        }
+      ]
+    },
+    {
+      "id": "744",
+      "title": "“国家大学生创新创业训练计划”项目进展情况报告",
+      "category": "实践教学",
+      "date": "2011-09-29",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=744&columnId=445",
+      "attachments": [
+        {
+          "title": "国家大学生创新创业训练计划项目进展情况报告.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDDDJDIDGCPCGCDDCDCDCDGDJDLCGCDDCDDDEDHDIDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDCDJDJDIDDDLCGCDDCDBDADBDJDLCGCDDCDGDADDDCDLCGCDDCDBDADBDJDLCGCDDBDJDJDJDEDLCGCDDDDFDHDFDHDLCGCDDDDCDEDFDBDLCGCDDDDFDHDEDFDLCGCDDCDBDADBDADLCGCDDDDJDADDDDDLCGCDDDDADEDEDGDLCGCDDDDGDIDCDHDLCGCDDCDDDGDDDHDLCGCDDCDEDHDHDDDLCGCDDCDADJDBDHDLCGCDDCDFDCDFDDDLCGCDDCDBDFDHDIDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "457",
+      "title": "参加人才培养方案修订会的教师名单汇总",
+      "category": "教学管理",
+      "date": "2010-12-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=457&columnId=442",
+      "attachments": [
+        {
+          "title": "参加人才培养方案修订会的教师名单汇总",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDIDJCPCGCDDCDBDEDEDCDLCGCDDCDBDBDFDCDLCGCDDCDADBDFDEDLCGCDDCDFDBDGDFDLCGCDDCDCDFDCDBDLCGCDDCDADIDFDJDLCGCDDCDGDADEDBDLCGCDDCDGDGDJDGDLCGCDDCDADEDGDCDLCGCDDDDFDHDEDGDLCGCDDCDADCDFDADLCGCDDDDADDDEDADLCGCDDCDFDJDEDFDLCGCDDCDEDADHDCDLCGCDDCDBDFDBDHDLCGCDDCDBDDDDDDDLCGCDDCDHDHDBDJDLCGCDDCDEDGDDDFDLCOHIGMHD"
+        }
+      ]
+    },
+    {
+      "id": "456",
+      "title": "哈尔滨理工大学2010版本科多样化人才培养方案修订意见",
+      "category": "教学管理",
+      "date": "2010-12-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=456&columnId=442",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学2010版本科多样化人才培养方案修订意见",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDIDICPDCDADBDACGCDDCDJDCDFDGDLCGCDDCDGDEDBDCDLCGCDDDDBDBDIDFDLCGCDDCDCDIDBDADLCGCDDCDGDGDHDJDLCGCDDCDBDCDHDADLCGCDDCDADBDFDEDLCGCDDCDFDBDGDFDLCGCDDCDCDFDCDBDLCGCDDCDADIDFDJDLCGCDDCDGDADEDBDLCGCDDCDGDGDJDGDLCGCDDCDBDADEDGDLCGCDDCDDDEDFDADLCGCDDCDFDDDFDBDLCGCDDCDBDDDDDFDLCOHCGBHC"
+        }
+      ]
+    },
+    {
+      "id": "455",
+      "title": "哈尔滨理工大学院系领导评教考查表",
+      "category": "教学管理",
+      "date": "2010-12-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=455&columnId=442",
+      "attachments": [
+        {
+          "title": "哈尔滨理工大学院系领导评教考查表",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDIDGCPCGCDDCDBDHDADEDLCGCDDCDDDFDHDCDLCGCDDCDIDDDJDCDLCGCDDCDJDHDADCDLCGCDDCDEDADDDHDLCGCDDCDCDIDCDDDLCGCDDCDDDDDJDIDLCGCDDDDIDEDJDIDLCGCDDDDBDJDJDFDLCGCDDDDJDADEDGDLCGCDDCDDDFDEDIDLCGCDDDDFDHDIDADLCGCDDCDFDJDEDFDLCGCDDDDCDHDHDBDLCGCDDCDGDFDJDHDLCGCDDDDEDJDCDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "454",
+      "title": "普通高等学校本科教学工作水平评估专家听课评价表",
+      "category": "教学管理",
+      "date": "2010-12-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=454&columnId=442",
+      "attachments": [
+        {
+          "title": "普通高等学校本科教学工作水平评估专家听课评价表",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDIDFCPCGCDDCDGDCDCDCDLCGCDDDDGDIDJDADLCGCDDDDJDGDEDADLCGCDDDDBDFDGDBDLCGCDDCDDDDDJDIDLCGCDDCDGDGDFDHDLCGCDDCDGDEDBDCDLCGCDDDDBDBDIDFDLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDEDADDDHDLCGCDDCDADDDBDGDLCGCDDCDHDHDADADLCGCDDCDEDBDHDJDLCGCDDDDFDHDIDADLCGCDDCDADCDHDCDLCGCDDBDJDJDIDHDLCGCDDCDDDEDHDIDLCGCDDCDBDFDEDIDLCGCDDDDFDIDDDIDLCGCDDDDFDHDIDADLCGCDDCDADCDBDFDLCGCDDDDEDJDCDADLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "453",
+      "title": "校发 [2009] 43号关于印发《哈尔滨理工大学校级督学、院（部）级督导人员津贴计算与发放办法（试行）》的通知",
+      "category": "教学管理",
+      "date": "2010-12-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=453&columnId=442",
+      "attachments": [
+        {
+          "title": "校发 [2009] 43号关于印发《哈尔滨理工大学校级督学、院（部）级督导人员津贴计算与发放办法（试行）》的通知",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDIDECPCGCDDCDGDGDFDHDLCGCDDCDBDEDFDHDLFLDCDADADJFNDEDDCGCDDCDBDEDJDFDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "452",
+      "title": "校发 [2009] 42号关于印发《哈尔滨理工大学校院两级教学督导工作制度实施细则（试行）》的通知",
+      "category": "教学管理",
+      "date": "2010-12-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=452&columnId=442",
+      "attachments": [
+        {
+          "title": "校发 [2009] 42号关于印发《哈尔滨理工大学校院两级教学督导工作制度实施细则（试行）》的通知",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDIDDCPCGCDDCDGDGDFDHDLCGCDDCDBDEDFDHDLFLDCDADADJFNDEDCCGCDDCDBDEDJDFDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "451",
+      "title": "校发 [2009] 41号关于印发《哈尔滨理工大学三级教学管理人员津贴计算与发放办法（试行）》的通知",
+      "category": "教学管理",
+      "date": "2010-12-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=451&columnId=442",
+      "attachments": [
+        {
+          "title": "校发 [2009] 41号关于印发《哈尔滨理工大学三级教学管理人员津贴计算与发放办法（试行）》的通知",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDIDCCPCGCDDCDGDGDFDHDLCGCDDCDBDEDFDHDLFLDCDADADJFNDEDBCGCDDCDBDEDJDFDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "450",
+      "title": "全校性选修课选修指南",
+      "category": "教学管理",
+      "date": "2010-12-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=450&columnId=442",
+      "attachments": [
+        {
+          "title": "全校性选修课选修指南",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDIDBCPCGCDDCDADIDEDADLCGCDDCDGDGDFDHDLCGCDDCDEDGDBDFDLCGCDDDDGDIDHDDDLCGCDDCDADEDGDCDLCGCDDDDFDIDDDIDLCGCDDDDGDIDHDDDLCGCDDCDADEDGDCDLCGCDDCDFDDDFDBDLCGCDDCDBDDDDDFDLCOHIGMHD"
+        }
+      ]
+    },
+    {
+      "id": "449",
+      "title": "更新过的教学大纲模版（添加英文课程描述字段）.doc",
+      "category": "教学管理",
+      "date": "2010-12-01",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=449&columnId=442",
+      "attachments": [
+        {
+          "title": "更新过的教学大纲模版（添加英文课程描述字段）.doc",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDDDCDDDBCPCGCDDCDGDDDFDGDLCGCDDCDGDADDDCDLCGCDDDDGDIDADHDLCGCDDDDADDDEDADLCGCDDCDFDJDEDFDLCGCDDCDDDDDJDIDLCGCDDCDCDIDCDDDLCGCDDDDCDEDDDEDLCGCDDCDHDBDGDJDLCGCDDCDJDCDFDGDLCGCDDGDFDCDIDIDLCGCDDCDIDBDFDFDLCGCDDCDBDBDFDCDLCGCDDDDDDFDCDBDLCGCDDCDFDJDJDBDLCGCDDDDFDIDDDIDLCGCDDDDBDCDEDDDLCGCDDCDFDFDFDBDLCGCDDDDGDIDEDIDLCGCDDCDDDDDIDDDLCGCDDCDHDFDHDDDLCGCDDGDFDCDIDJDLCOGEGPGD"
+        }
+      ]
+    },
+    {
+      "id": "447",
+      "title": "2008年春季学期助教助课情况汇总表",
+      "category": "教学管理",
+      "date": "2010-11-30",
+      "url": "http://jwzx.hrbust.edu.cn/homepage/infoSingleArticle.do?articleId=447&columnId=442",
+      "attachments": [
+        {
+          "title": "2008年春季学期助教助课情况汇总表",
+          "url": "http://jwzx.hrbust.edu.cn/homepage/downloadTheolFile.do?id=DBCPDCDGDACPDCDADADICGCDDCDEDBDIDADLCGCDDCDGDBDEDJDLCGCDDCDDDDDJDFDLCGCDDCDDDDDJDIDLCGCDDCDGDDDJDJDLCGCDDCDBDBDGDBDLCGCDDCDFDJDEDFDLCGCDDCDBDBDGDBDLCGCDDDDFDIDDDIDLCGCDDCDEDHDHDDDLCGCDDCDADJDBDHDLCGCDDCDHDHDBDJDLCGCDDCDEDGDDDFDLCGCDDDDEDJDCDADLCGCDDGDFDCDIDIDLCGCDDCDDDDDJDIDLCGCDDDDIDEDJDIDLCGCDDCDBDFDBDHDLCGCDDDDBDCDBDGDLCGCDDGDFDCDIDJDLCOHIGMHD"
+        }
+      ]
+    }
+  ]
+}

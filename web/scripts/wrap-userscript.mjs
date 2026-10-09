@@ -41,7 +41,7 @@ const header = `// ==UserScript==
 // @version      ${version}
 // @description  哈理工教务在线(JWP/URP)现代化客户端:课表/成绩/考试/教学评价/空教室/GPA 分析,同源直连真实教务数据
 // @author       Glassous
-// @match        *://jwzx.hrbust.edu.cn/*
+// @match        *://jwzx.hrbust.edu.cn/academic/*
 // @run-at       document-end
 // @noframes
 // @grant        GM_registerMenuCommand

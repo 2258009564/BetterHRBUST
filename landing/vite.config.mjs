@@ -9,6 +9,7 @@ export default defineConfig({
   base: './',
   plugins: [vue(), tailwindcss()],
   resolve: {
+    dedupe: ['vue'],
     alias: {
       '@': path.resolve(process.cwd(), './src')
     }

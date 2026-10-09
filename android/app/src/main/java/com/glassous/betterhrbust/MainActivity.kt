@@ -19,6 +19,12 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -28,6 +34,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -53,6 +60,8 @@ import com.glassous.betterhrbust.feature.classrooms.ClassroomsScreen
 import com.glassous.betterhrbust.feature.courses.CoursesScreen
 import com.glassous.betterhrbust.feature.dashboard.DashboardScreen
 import com.glassous.betterhrbust.feature.exams.ExamsScreen
+import com.glassous.betterhrbust.feature.evaluation.EvaluationScreen
+import com.glassous.betterhrbust.feature.resources.ResourcesScreen
 import com.glassous.betterhrbust.feature.profile.ProfileScreen
 import com.glassous.betterhrbust.feature.program.ProgramScreen
 import com.glassous.betterhrbust.feature.scores.ScoresScreen
@@ -123,6 +132,9 @@ fun MainAppScaffold(
     sessionPromptDismissed: Boolean = false
 ) {
     val authRepo = remember { BetterHrbustApp.instance.authRepository }
+    val themePreferences by BetterHrbustApp.instance.preferencesManager.preferencesFlow.collectAsState(initial = null)
+    val themeScope = rememberCoroutineScope()
+    val themeIsDark = themePreferences?.darkTheme ?: isSystemInDarkTheme()
     val syncManager = remember { BetterHrbustApp.instance.syncManager }
     val updateRepo = remember { BetterHrbustApp.instance.updateRepository }
     val navController = rememberNavController()
@@ -171,11 +183,10 @@ fun MainAppScaffold(
     val showSessionBanner = !isAuthScreen && shouldPromptReLogin && !sessionPromptDismissed
 
     // 系统栏安全间距（dp）
-    val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     // 顶部让位：会话过期横幅已占据状态栏区域时不再重复让位
-    val topContentInset = if (showSessionBanner) 0.dp else statusBarInset
+    val topContentInset = 0.dp // 全局工具栏已为状态栏让位，页面不再重复添加顶边距。
     // 平板端导航坞竖排在左侧（见 [MainPagerScreen]），底部无需再为导航坞让位
     val isTablet = isTabletDevice()
     // 底部让位：主界面为底部导航坞让位，其它二级页面、平板端直接让位给系统导航条
@@ -196,12 +207,24 @@ fun MainAppScaffold(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp).height(48.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("BetterHRBUST", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    IconButton(onClick = {
+                        themeScope.launch { BetterHrbustApp.instance.preferencesManager.setDarkTheme(if (themeIsDark) "light" else "dark") }
+                    }) {
+                        Icon(if (themeIsDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (themeIsDark) "切换浅色模式" else "切换深色模式")
+                    }
+                }
                 // 当会话已过期且在应用内主界面时，在顶部显示重新登录提示条
                 if (showSessionBanner) {
                     SessionExpiredBanner(
                         onReLoginClick = { showReLoginSheet = true },
                         onDismiss = { authRepo.dismissSessionPrompt() },
-                        modifier = Modifier.statusBarsPadding()
+                        modifier = Modifier
                     )
                 }
 
@@ -283,7 +306,9 @@ private enum class SecondaryPage(val route: Any, val key: String) {
     PROGRAM(ProgramRoute, "program"),
     CLASSROOMS(ClassroomsRoute, "classrooms"),
     COURSES(CoursesRoute, "courses"),
-    PROFILE(ProfileRoute, "profile");
+    PROFILE(ProfileRoute, "profile"),
+    EVALUATION(EvaluationRoute, "evaluation"),
+    RESOURCES(ResourcesRoute, "resources");
 
     companion object {
         fun fromRoute(route: Any): SecondaryPage? = entries.firstOrNull { it.route == route }
@@ -443,6 +468,8 @@ fun MainPagerScreen(
                 2 -> ScoresScreen()
                 3 -> ExamsScreen()
                 4 -> NoticesSettingsScreen(
+                    onEvaluation = { secondaryKey = SecondaryPage.EVALUATION.key },
+                    onResources = { secondaryKey = SecondaryPage.RESOURCES.key },
                     onLogout = onLogout,
                     onReLogin = onReLogin
                 )
@@ -484,6 +511,8 @@ fun MainPagerScreen(
                         SecondaryPage.CLASSROOMS -> ClassroomsScreen(onBack = closeSecondaryPage)
                         SecondaryPage.COURSES -> CoursesScreen(onBack = closeSecondaryPage)
                         SecondaryPage.PROFILE -> ProfileScreen(onBack = closeSecondaryPage)
+                        SecondaryPage.EVALUATION -> EvaluationScreen(onBack = closeSecondaryPage)
+                        SecondaryPage.RESOURCES -> ResourcesScreen(onBack = closeSecondaryPage)
                     }
                 }
             }

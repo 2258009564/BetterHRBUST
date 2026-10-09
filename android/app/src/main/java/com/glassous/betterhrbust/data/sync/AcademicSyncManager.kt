@@ -29,6 +29,14 @@ class AcademicSyncManager(
     private val authRepo: AuthRepository
 ) {
 
+    companion object {
+        internal fun wasFullyRefreshed(results: List<Any>): Boolean = results.none {
+            it is Resource.Error || (it is Resource.Success<*> && it.isOfflineCache)
+        }
+    }
+
+    private val syncMutex = kotlinx.coroutines.sync.Mutex()
+
     /** 同步结果 */
     data class SyncOutcome(
         val success: Boolean,
@@ -67,71 +75,78 @@ class AcademicSyncManager(
      * @param manual 是否由用户手动刷新触发（失效时无条件要求重新登录）
      */
     suspend fun syncAll(manual: Boolean = false): SyncOutcome {
-        if (_isSyncing.value) {
+        if (!syncMutex.tryLock()) {
             return SyncOutcome(success = false, expired = false, message = "正在同步中，请稍候")
         }
 
-        // 手动刷新：随后的会话失效需要无条件要求重新登录
-        if (manual) authRepo.notifyManualRefreshIntent()
+        try {
+            // 手动刷新：随后的会话失效需要无条件要求重新登录
+            if (manual) authRepo.notifyManualRefreshIntent()
 
-        val snapshot = prefs.preferencesFlow.firstOrNull()
-            ?: return SyncOutcome(success = false, expired = false, message = "无法读取本地登录信息")
+            val snapshot = prefs.preferencesFlow.firstOrNull()
+                ?: return SyncOutcome(success = false, expired = false, message = "无法读取本地登录信息")
 
-        if (snapshot.studentId.isEmpty()) {
-            authRepo.markSessionExpired(true)
-            return SyncOutcome(success = false, expired = true, message = "当前未登录，请重新登录后再刷新数据")
-        }
+            if (snapshot.studentId.isEmpty()) {
+                authRepo.markSessionExpired(true)
+                return SyncOutcome(success = false, expired = true, message = "当前未登录，请重新登录后再刷新数据")
+            }
 
-        _isSyncing.value = true
-        _lastSyncMessage.value = ""
+            _isSyncing.value = true
+            _lastSyncMessage.value = ""
 
-        return try {
-            val studentId = snapshot.studentId
-            val results = coroutineScope {
-                val tasks = mutableListOf(
-                    async { academicRepo.getScores(studentId, forceRefresh = true).last() },
-                    async { academicRepo.getCurriculumPlan(studentId, forceRefresh = true).last() },
-                    async { academicRepo.getExams(studentId, forceRefresh = true).last() },
-                    async { academicRepo.getNotices(forceRefresh = true).last() },
-                    async { academicRepo.getTeachingWeek().last() }
-                )
-                if (snapshot.username.isNotEmpty()) {
-                    tasks.add(async { academicRepo.getPersonalInfo(snapshot.username, forceRefresh = true).last() })
-                }
-                if (snapshot.year.isNotEmpty() && snapshot.term.isNotEmpty()) {
-                    tasks.add(
-                        async {
-                            academicRepo.getTimetable(
-                                studentId = studentId,
-                                year = snapshot.year,
-                                term = snapshot.term,
-                                forceRefresh = true
-                            ).last()
-                        }
+            return try {
+                val studentId = snapshot.studentId
+                val results = coroutineScope {
+                    val tasks = mutableListOf(
+                        async { academicRepo.getScores(studentId, forceRefresh = true).last() },
+                        async { academicRepo.getCurriculumPlan(studentId, forceRefresh = true).last() },
+                        async { academicRepo.getExams(studentId, forceRefresh = true).last() },
+                        async { academicRepo.getNotices(forceRefresh = true).last() },
+                        async { academicRepo.getTeachingWeek().last() }
                     )
+                    if (snapshot.username.isNotEmpty()) {
+                        tasks.add(async { academicRepo.getPersonalInfo(snapshot.username, forceRefresh = true).last() })
+                    }
+                    if (snapshot.year.isNotEmpty() && snapshot.term.isNotEmpty()) {
+                        tasks.add(
+                            async {
+                                academicRepo.getTimetable(
+                                    studentId = studentId,
+                                    year = snapshot.year,
+                                    term = snapshot.term,
+                                    forceRefresh = true
+                                ).last()
+                            }
+                        )
+                    }
+                    tasks.awaitAll()
                 }
-                tasks.awaitAll()
-            }
 
-            if (authRepo.isSessionExpired.value) {
-                SyncOutcome(success = false, expired = true, message = "登录状态已失效，请重新登录后再刷新数据")
-            } else {
-                val failed = results.filterIsInstance<Resource.Error>()
-                prefs.setLastFullSyncDate(todayKey())
-                val message = if (failed.isEmpty()) {
-                    "数据已全部同步"
+                if (authRepo.isSessionExpired.value) {
+                    SyncOutcome(success = false, expired = true, message = "登录状态已失效，请重新登录后再刷新数据")
                 } else {
-                    "部分数据同步失败（${failed.size} 项）：${failed.first().message}"
+                    val failed = results.filterIsInstance<Resource.Error>()
+                    val cached = results.filterIsInstance<Resource.Success<*>>().count { it.isOfflineCache }
+                    val complete = wasFullyRefreshed(results)
+                    if (complete) prefs.setLastFullSyncDate(todayKey())
+                    val message = when {
+                        complete -> "数据已全部同步"
+                        failed.isNotEmpty() -> "部分数据同步失败（${failed.size} 项）：${failed.first().message}"
+                        else -> "${cached} 项未取得新数据，继续显示本地缓存，请稍后重试"
+                    }
+                    _lastSyncMessage.value = message
+                    SyncOutcome(success = complete, expired = false, message = message)
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val message = "同步异常：${e.message ?: "未知错误"}"
                 _lastSyncMessage.value = message
-                SyncOutcome(success = failed.isEmpty(), expired = false, message = message)
+                SyncOutcome(success = false, expired = authRepo.isSessionExpired.value, message = message)
             }
-        } catch (e: Exception) {
-            val message = "同步异常：${e.message ?: "未知错误"}"
-            _lastSyncMessage.value = message
-            SyncOutcome(success = false, expired = authRepo.isSessionExpired.value, message = message)
         } finally {
             _isSyncing.value = false
+            syncMutex.unlock()
         }
     }
 }
