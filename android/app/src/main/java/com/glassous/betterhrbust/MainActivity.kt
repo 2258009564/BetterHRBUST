@@ -1,5 +1,6 @@
 package com.glassous.betterhrbust
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -61,16 +62,24 @@ import com.glassous.betterhrbust.feature.scores.ScoresScreen
 import com.glassous.betterhrbust.feature.settings.NoticesSettingsScreen
 import com.glassous.betterhrbust.feature.timetable.TimetableScreen
 import com.glassous.betterhrbust.navigation.*
+import com.glassous.betterhrbust.widget.TimetableWidgetUpdater
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    /** 桌面小部件点击请求打开的一级 Tab 索引（null = 无待处理请求） */
+    private val pendingTab = MutableStateFlow<Int?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        pendingTab.value = intent?.requestedTab()
 
         setContent {
             val app = remember { BetterHrbustApp.instance }
+            val requestedTab by pendingTab.collectAsState()
             val prefs by app.preferencesManager.preferencesFlow.collectAsState(initial = null)
             // 会话状态初始为 null（尚未从 DataStore 读出）：
             // 若直接给 Unauthenticated 作为初值，会先渲染登录页再跳到首页，出现"一闪而过的登录页"
@@ -112,12 +121,38 @@ class MainActivity : ComponentActivity() {
                         isSessionExpired = isSessionExpired,
                         shouldPromptReLogin = shouldPromptReLogin,
                         sessionPromptDismissed = sessionPromptDismissed,
-                        dockCollapsed = prefs?.navigationDockCollapsed ?: false
+                        dockCollapsed = prefs?.navigationDockCollapsed ?: false,
+                        pendingTab = requestedTab,
+                        onPendingTabHandled = ::consumePendingTab
                     )
                     }
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingTab.value = intent.requestedTab()
+    }
+
+    /** 消费一次性跳转请求：同时移除意图 extra，避免配置变更重建后再次跳转 */
+    private fun consumePendingTab() {
+        intent?.removeExtra(EXTRA_OPEN_TAB)
+        pendingTab.value = null
+    }
+
+    /** 解析小部件携带的目标 Tab；extra 缺失或越界一律忽略 */
+    private fun Intent.requestedTab(): Int? = getIntExtra(EXTRA_OPEN_TAB, -1)
+        .takeIf { hasExtra(EXTRA_OPEN_TAB) && it in TopLevelDestination.entries.indices }
+
+    companion object {
+        /** 小部件点击时携带的一级 Tab 索引（见 [pendingTab]） */
+        const val EXTRA_OPEN_TAB = "com.glassous.betterhrbust.extra.OPEN_TAB"
+
+        /** 一级 Tab：课表（与 [TopLevelDestination] 顺序保持一致） */
+        val TAB_TIMETABLE: Int = TopLevelDestination.TIMETABLE.ordinal
     }
 }
 
@@ -128,11 +163,16 @@ fun MainAppScaffold(
     shouldPromptReLogin: Boolean = isSessionExpired,
     sessionPromptDismissed: Boolean = false,
     /** 持久化的导航坞折叠态（用户上次手动展开 / 折叠的结果） */
-    dockCollapsed: Boolean = false
+    dockCollapsed: Boolean = false,
+    /** 桌面小部件点击请求打开的一级 Tab（null = 无请求） */
+    pendingTab: Int? = null,
+    /** 消费小部件跳转请求（跳转后调用，避免重复触发） */
+    onPendingTabHandled: () -> Unit = {}
 ) {
     val authRepo = remember { BetterHrbustApp.instance.authRepository }
     val syncManager = remember { BetterHrbustApp.instance.syncManager }
     val updateRepo = remember { BetterHrbustApp.instance.updateRepository }
+    val prefsManager = remember { BetterHrbustApp.instance.preferencesManager }
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -176,6 +216,26 @@ fun MainAppScaffold(
         } else {
             lastAuthenticated = authenticated
         }
+    }
+
+    // 桌面小部件刷新：仅在「同步结束」与「会话被清理（退出登录）」两个时点各刷新一次，
+    // 其余更新交给系统周期（30 分钟）与日期 / 时区 / 开机广播兜底
+    val isSyncing by syncManager.isSyncing.collectAsState()
+    val scaffoldPrefs by prefsManager.preferencesFlow.collectAsState(initial = null)
+    val studentId = scaffoldPrefs?.studentId.orEmpty()
+    var previousSyncing by remember { mutableStateOf<Boolean?>(null) }
+    var previousStudentId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(isSyncing, studentId) {
+        val syncFinished = previousSyncing == true && !isSyncing
+        val sessionCleared = !previousStudentId.isNullOrEmpty() && studentId.isEmpty()
+        if (syncFinished || sessionCleared) TimetableWidgetUpdater.refreshAsync()
+        previousSyncing = isSyncing
+        previousStudentId = studentId
+    }
+
+    // 小部件跳转请求：仅在已登录时生效，未登录时丢弃（避免登录后突然跳到课表页）
+    LaunchedEffect(authState, pendingTab) {
+        if (pendingTab != null && authState !is AuthState.Authenticated) onPendingTabHandled()
     }
 
     // 会话失效提示按一周节流；仅在应提示且用户未忽略时展示顶部横幅
@@ -239,6 +299,8 @@ fun MainAppScaffold(
                         MainPagerScreen(
                             navController = navController,
                             dockCollapsed = dockCollapsed,
+                            pendingTab = pendingTab,
+                            onPendingTabHandled = onPendingTabHandled,
                             onLogout = {
                                 navController.navigate(AuthRoute) {
                                     popUpTo(MainRoute) { inclusive = true }
@@ -257,6 +319,8 @@ fun MainAppScaffold(
                         MainPagerScreen(
                             navController = navController,
                             dockCollapsed = dockCollapsed,
+                            pendingTab = pendingTab,
+                            onPendingTabHandled = onPendingTabHandled,
                             onLogout = {
                                 navController.navigate(AuthRoute) {
                                     popUpTo(DashboardRoute) { inclusive = true }
@@ -377,12 +441,17 @@ fun MainPagerScreen(
     onReLogin: () -> Unit,
     /** 持久化的导航坞折叠态，作为首帧状态（不播放动画） */
     dockCollapsed: Boolean = false,
+    /** 桌面小部件请求打开的一级 Tab（null = 无请求）；冷启动时直接作为首帧页，避免先闪一下概览页 */
+    pendingTab: Int? = null,
+    /** 消费小部件跳转请求（切页后调用） */
+    onPendingTabHandled: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val preferencesManager = remember { BetterHrbustApp.instance.preferencesManager }
-    val pagerState = rememberPagerState(pageCount = { 5 })
-    var tabIndex by rememberSaveable { mutableStateOf(0) }
+    val initialPage = (pendingTab ?: 0).coerceIn(0, TopLevelDestination.entries.lastIndex)
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { 5 })
+    var tabIndex by rememberSaveable { mutableStateOf(initialPage) }
     val currentTab = tabIndex
 
     // 平板端：导航坞竖排在左侧，页面内容让位其宽度 + 左侧安全距离（见 pagerModifier）
@@ -393,6 +462,15 @@ fun MainPagerScreen(
             .collect { (page, scrolling) ->
                 if (!scrolling && page != tabIndex) tabIndex = page
             }
+    }
+
+    // 小部件跳转请求（应用已在运行时经 onNewIntent 送达）：直接切到目标一级 Tab
+    LaunchedEffect(pendingTab) {
+        val target = pendingTab ?: return@LaunchedEffect
+        val index = target.coerceIn(0, TopLevelDestination.entries.lastIndex)
+        tabIndex = index
+        pagerState.scrollToPage(index)
+        onPendingTabHandled()
     }
 
     // 首帧落位到持久化的折叠态：用户手动展开 / 折叠后写回偏好，冷启动沿用

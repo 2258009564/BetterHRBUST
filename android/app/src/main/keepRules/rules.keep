@@ -14,6 +14,8 @@
 # ---------------------------------------------------------------
 -keep class com.glassous.betterhrbust.BetterHrbustApp { *; }
 -keep class com.glassous.betterhrbust.MainActivity { *; }
+# 桌面小部件：receiver 由系统按类名反射实例化，Glance 亦按类名管理各小部件实例
+-keep class com.glassous.betterhrbust.widget.** { *; }
 
 # ---------------------------------------------------------------
 # Room：保留数据库与 DAO 实现，实体字段名对应 SQLite 列名
