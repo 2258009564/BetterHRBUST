@@ -8,27 +8,44 @@ const root = ref(null)
 let ctx
 let mm
 
-// 识别访客系统：优先 UA-CH（Chromium 系），回退 UA 字符串；
-// Windows / Android 直达对应安装包，其余系统引导到下方「随处可用」自行挑选。
+// 系统识别（与屏幕尺寸无关）：合并 UA-CH、navigator.platform、UA 字符串三类信号，
+// 判定顺序处理两个经典误判——Android 的 UA 里含 "Linux"；iPadOS 13+ 会把自己伪装成 Mac（用触点数纠正）。
 const detectVisitorPlatform = () => {
-  const platform = navigator.userAgentData?.platform ?? ''
-  const ua = navigator.userAgent ?? ''
+  const signals = [
+    navigator.userAgentData?.platform ?? '',
+    navigator.platform ?? '',
+    navigator.userAgent ?? ''
+  ].join(' ')
+  const match = (pattern) => pattern.test(signals)
+  const isTouchMac = match(/mac/i) && (navigator.maxTouchPoints ?? 0) > 1
 
-  if (/android/i.test(platform) || /android/i.test(ua)) return 'android'
-  if (/windows/i.test(platform) || /windows|win32|win64/i.test(ua)) return 'windows'
+  if (isTouchMac || match(/iphone|ipad|ipod|\bios\b/i)) return 'ios'
+  if (match(/android/i)) return 'android'
+  if (match(/windows|win32|win64/i)) return 'windows'
+  if (match(/mac/i)) return 'mac'
+  if (match(/linux|x11|cros|chrome os/i)) return 'linux'
   return 'other'
 }
 
 const visitorPlatform = detectVisitorPlatform()
 
+// 已发布的两端直达安装包；Mac / Linux / iOS 尚未发布 → 按钮锁定并显示「敬请期待」；
+// 其余系统给「选择你的平台」，滑到下方「随处可用」自行挑选
 const primaryDownload = computed(() => {
-  if (visitorPlatform === 'android') {
-    return { label: '下载 Android 安装包', href: ANDROID_APK, logo: '/Android_logo.svg', external: true }
+  switch (visitorPlatform) {
+    case 'windows':
+      return { label: '下载 Windows 安装版', href: WINDOWS_SETUP, logo: '/Windows_logo.svg', external: true }
+    case 'android':
+      return { label: '下载 Android 安装包', href: ANDROID_APK, logo: '/Android_logo.svg', external: true }
+    case 'mac':
+      return { label: 'Mac 版敬请期待', locked: true }
+    case 'linux':
+      return { label: 'Linux 版敬请期待', locked: true }
+    case 'ios':
+      return { label: 'iOS 版敬请期待', locked: true }
+    default:
+      return { label: '选择你的平台', href: '#platforms', logo: '', external: false }
   }
-  if (visitorPlatform === 'windows') {
-    return { label: '下载 Windows 安装版', href: WINDOWS_SETUP, logo: '/Windows_logo.svg', external: true }
-  }
-  return { label: '选择你的平台', href: '#platforms', logo: '', external: false }
 })
 
 // 入场动画：吉祥物 → 标题 → 简介 → 按钮 → 徽章 依次淡入上移；
@@ -113,11 +130,12 @@ onUnmounted(() => {
       现代化哈理工教务在线 · 课程表 · 成绩 GPA · 考试日程
     </p>
 
-    <!-- 真实下载 / 入口按钮：按访客系统动态区分（Windows / Android 直达安装包） -->
+    <!-- 真实下载 / 入口按钮：按访客系统动态区分（Windows / Android 直达安装包，Mac / Linux / iOS 锁定敬请期待） -->
     <div
       class="hero-actions mt-10 flex w-full flex-col items-center justify-center gap-4 sm:w-auto sm:flex-row"
     >
       <a
+        v-if="!primaryDownload.locked"
         :href="primaryDownload.href"
         :target="primaryDownload.external ? '_blank' : undefined"
         :rel="primaryDownload.external ? 'noopener noreferrer' : undefined"
@@ -133,6 +151,15 @@ onUnmounted(() => {
         <PlatformIcon v-else name="download" class="h-5 w-5" />
         {{ primaryDownload.label }}
       </a>
+      <!-- 未发布平台：锁定态，不可点击 -->
+      <span
+        v-else
+        class="glass-card inline-flex w-full cursor-not-allowed select-none items-center justify-center gap-2.5 rounded-2xl px-8 py-4 text-base font-semibold text-white/45 sm:w-auto"
+        aria-disabled="true"
+      >
+        <PlatformIcon name="lock" class="h-5 w-5" />
+        {{ primaryDownload.label }}
+      </span>
       <a
         href="#platforms"
         class="glass-card inline-flex w-full items-center justify-center gap-3 rounded-2xl px-8 py-4 text-base font-semibold text-white/85 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 sm:w-auto"

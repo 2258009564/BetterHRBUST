@@ -63,6 +63,13 @@
       <polyline points="12 7.2 12 12 15.6 14.2" />
     </g>
 
+    <!-- 未识别/未发布平台：按钮锁定态用 -->
+    <g v-else-if="name === 'lock'">
+      <rect x="4.5" y="10.3" width="15" height="9.7" rx="2.6" />
+      <path d="M8 10.3V7.6a4 4 0 0 1 8 0v2.7" />
+      <circle cx="12" cy="15.1" r="0.7" fill="currentColor" stroke="none" />
+    </g>
+
     <g v-else-if="name === 'check'">
       <polyline points="20 6 9 17 4 12" />
     </g>
