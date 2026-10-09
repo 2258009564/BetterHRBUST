@@ -106,12 +106,12 @@ fun ExamsScreen(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(
-                        top = LocalTopContentInset.current + 8.dp,
+                        top = LocalTopContentInset.current + 32.dp,
                         bottom = LocalBottomContentInset.current + 24.dp
                     )
                 ) {
                     // 页面标题（作为滚动内容，可穿透状态栏）
-                    item { PageHeaderTitle("考试日程") }
+                    item { PageHeaderTitle("考试日程", emphasized = true) }
 
                     // Carousel of upcoming exams if any
                     if (upcomingExams.isNotEmpty()) {

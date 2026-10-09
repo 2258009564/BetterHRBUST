@@ -19,12 +19,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -34,7 +28,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -54,7 +47,7 @@ import com.glassous.betterhrbust.core.ui.components.rememberNavigationDockCollap
 import com.glassous.betterhrbust.core.ui.isTabletDevice
 import com.glassous.betterhrbust.core.ui.theme.BetterHRBUSTTheme
 import com.glassous.betterhrbust.feature.auth.AuthScreen
-import com.glassous.betterhrbust.feature.auth.ReLoginBottomSheet
+import com.glassous.betterhrbust.feature.auth.ReLoginOverlay
 import com.glassous.betterhrbust.feature.auth.SessionExpiredBanner
 import com.glassous.betterhrbust.feature.classrooms.ClassroomsScreen
 import com.glassous.betterhrbust.feature.courses.CoursesScreen
@@ -132,16 +125,16 @@ fun MainAppScaffold(
     sessionPromptDismissed: Boolean = false
 ) {
     val authRepo = remember { BetterHrbustApp.instance.authRepository }
-    val themePreferences by BetterHrbustApp.instance.preferencesManager.preferencesFlow.collectAsState(initial = null)
-    val themeScope = rememberCoroutineScope()
-    val themeIsDark = themePreferences?.darkTheme ?: isSystemInDarkTheme()
     val syncManager = remember { BetterHrbustApp.instance.syncManager }
     val updateRepo = remember { BetterHrbustApp.instance.updateRepository }
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    var showReLoginSheet by remember { mutableStateOf(false) }
+    var showReLogin by remember { mutableStateOf(false) }
+    // 重新登录覆盖层：与二级页面一致的滑入 / 滑出与预测性返回
+    var reLoginRendered by remember { mutableStateOf(false) }
+    val reLoginSlide = remember { Animatable(1f) }
     var initialized by remember { mutableStateOf(false) }
     var lastAuthenticated by remember { mutableStateOf(false) }
 
@@ -183,10 +176,11 @@ fun MainAppScaffold(
     val showSessionBanner = !isAuthScreen && shouldPromptReLogin && !sessionPromptDismissed
 
     // 系统栏安全间距（dp）
+    val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     // 顶部让位：会话过期横幅已占据状态栏区域时不再重复让位
-    val topContentInset = 0.dp // 全局工具栏已为状态栏让位，页面不再重复添加顶边距。
+    val topContentInset = if (showSessionBanner) 0.dp else statusBarInset
     // 平板端导航坞竖排在左侧（见 [MainPagerScreen]），底部无需再为导航坞让位
     val isTablet = isTabletDevice()
     // 底部让位：主界面为底部导航坞让位，其它二级页面、平板端直接让位给系统导航条
@@ -206,25 +200,18 @@ fun MainAppScaffold(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp).height(48.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("BetterHRBUST", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    IconButton(onClick = {
-                        themeScope.launch { BetterHrbustApp.instance.preferencesManager.setDarkTheme(if (themeIsDark) "light" else "dark") }
-                    }) {
-                        Icon(if (themeIsDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = if (themeIsDark) "切换浅色模式" else "切换深色模式")
-                    }
-                }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // 重新登录覆盖层渲染 / 滑出期间冻结下层输入，避免触摸穿透
+                    .then(if (reLoginRendered) Modifier.blockPointerInput() else Modifier)
+            ) {
                 // 当会话已过期且在应用内主界面时，在顶部显示重新登录提示条
                 if (showSessionBanner) {
                     SessionExpiredBanner(
-                        onReLoginClick = { showReLoginSheet = true },
+                        onReLoginClick = { showReLogin = true },
                         onDismiss = { authRepo.dismissSessionPrompt() },
-                        modifier = Modifier
+                        modifier = Modifier.statusBarsPadding()
                     )
                 }
 
@@ -283,13 +270,55 @@ fun MainAppScaffold(
                     }
                 }
             }
+
+            // 重新登录覆盖层：与二级页面一致的滑入 / 滑出动画；关闭时保留内容直到滑出结束
+            if (reLoginRendered) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { translationX = reLoginSlide.value * size.width }
+                        .background(MaterialTheme.colorScheme.background)
+                ) {
+                    CompositionLocalProvider(
+                        // 覆盖层上方无横幅，顶部让位固定为状态栏；底部让位固定为系统导航条
+                        LocalTopContentInset provides statusBarInset,
+                        LocalBottomContentInset provides navigationBarInset
+                    ) {
+                        ReLoginOverlay(onDismiss = { showReLogin = false })
+                    }
+                }
+            }
         }
     }
 
-    if (showReLoginSheet) {
-        ReLoginBottomSheet(
-            onDismiss = { showReLoginSheet = false }
-        )
+    // 覆盖层开合动画：打开时滑入，关闭时滑出后再卸载内容
+    LaunchedEffect(showReLogin) {
+        if (showReLogin) {
+            reLoginRendered = true
+            reLoginSlide.animateTo(0f, tween(SecondaryPageTransitionMillis))
+        } else if (reLoginRendered) {
+            reLoginSlide.animateTo(1f, tween(SecondaryPageTransitionMillis))
+            reLoginRendered = false
+        }
+    }
+
+    // 预测性返回：手势滑动过程实时跟手；进度完成（包括按键返回一次性的 1.0 事件）时，
+    // 统一交给滑出动画从当前位置补完剩余距离，避免按键返回时覆盖层被瞬间移出屏幕而没有滑出动画。
+    PredictiveBackHandler(enabled = showReLogin) { progress ->
+        try {
+            progress.collect { event ->
+                val target = event.progress.coerceIn(0f, 1f)
+                if (target < 1f) reLoginSlide.snapTo(target)
+            }
+            val remainingMillis = (SecondaryPageTransitionMillis * (1f - reLoginSlide.value))
+                .toInt()
+                .coerceAtLeast(1)
+            reLoginSlide.animateTo(1f, tween(remainingMillis))
+            showReLogin = false
+        } catch (cancellation: CancellationException) {
+            reLoginSlide.animateTo(0f, tween(SecondaryPageTransitionMillis))
+            throw cancellation
+        }
     }
 }
 

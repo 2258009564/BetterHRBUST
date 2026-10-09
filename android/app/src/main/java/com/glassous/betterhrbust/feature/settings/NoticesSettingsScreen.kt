@@ -124,7 +124,7 @@ fun NoticesSettingsScreen(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(
-                    top = LocalTopContentInset.current + 8.dp,
+                    top = LocalTopContentInset.current + 32.dp,
                     bottom = LocalBottomContentInset.current + 32.dp
                 )
             ) {
@@ -136,7 +136,7 @@ fun NoticesSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            PageHeaderTitle("更多", modifier = Modifier.weight(1f))
+                            PageHeaderTitle("更多", modifier = Modifier.weight(1f), emphasized = true)
                             FilledTonalIconButton(
                                 onClick = { refreshAll() },
                                 enabled = !isSyncing

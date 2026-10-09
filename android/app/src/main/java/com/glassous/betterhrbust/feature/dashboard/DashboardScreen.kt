@@ -24,6 +24,7 @@ import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.LoadingView
+import com.glassous.betterhrbust.core.ui.components.PageHeaderTitle
 import com.glassous.betterhrbust.core.util.GpaCalculator
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
@@ -155,10 +156,13 @@ fun DashboardScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(
-                    top = LocalTopContentInset.current + 8.dp,
+                    top = LocalTopContentInset.current + 32.dp,
                     bottom = LocalBottomContentInset.current + 24.dp
                 )
             ) {
+            // 页面标题（作为滚动内容，可穿透状态栏）
+            item { PageHeaderTitle("概览", emphasized = true) }
+
             // 关键统计卡片：显示 GPA 与 今日课程安排（n节）
             item {
                 Card(

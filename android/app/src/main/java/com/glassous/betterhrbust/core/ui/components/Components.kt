@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 
 /**
@@ -28,12 +29,14 @@ import com.glassous.betterhrbust.core.ui.LocalTopContentInset
  * 顶部安全距离由列表的 contentPadding 统一提供。
  *
  * @param onBack 传入时在标题左侧显示返回按钮（二级页面用），点击回调用于关闭该页面
+ * @param emphasized 顶层主页面（概览 / 考试 / 设置）使用：字号大幅加大
  */
 @Composable
 fun PageHeaderTitle(
     title: String,
     modifier: Modifier = Modifier,
-    onBack: (() -> Unit)? = null
+    onBack: (() -> Unit)? = null,
+    emphasized: Boolean = false
 ) {
     Row(
         modifier = modifier
@@ -55,7 +58,10 @@ fun PageHeaderTitle(
         }
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontSize = if (emphasized) 36.sp else MaterialTheme.typography.titleLarge.fontSize,
+                lineHeight = if (emphasized) 44.sp else MaterialTheme.typography.titleLarge.lineHeight
+            ),
             fontWeight = FontWeight.Bold
         )
     }
