@@ -24,6 +24,7 @@ import com.glassous.betterhrbust.BetterHrbustApp
 import com.glassous.betterhrbust.core.model.ScoreItem
 import com.glassous.betterhrbust.core.model.ScoreResult
 import com.glassous.betterhrbust.core.parser.AcademicParsers
+import com.glassous.betterhrbust.core.ui.AppTextFieldShape
 import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
@@ -31,6 +32,7 @@ import com.glassous.betterhrbust.core.ui.components.EmptyView
 import com.glassous.betterhrbust.core.ui.components.LoadingView
 import com.glassous.betterhrbust.core.ui.components.ResponsiveStatGrid
 import com.glassous.betterhrbust.core.ui.components.StatEntry
+import com.glassous.betterhrbust.core.ui.registerInputField
 import com.glassous.betterhrbust.core.util.GpaCalculator
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
@@ -287,8 +289,10 @@ fun ScoresScreen(
                                 }
                             },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .registerInputField(),
+                            shape = AppTextFieldShape
                         )
                     }
 

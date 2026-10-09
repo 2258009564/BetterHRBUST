@@ -37,6 +37,7 @@ import androidx.navigation.compose.rememberNavController
 import com.glassous.betterhrbust.core.model.AuthState
 import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
+import com.glassous.betterhrbust.core.ui.clearFocusOnTapOutside
 import com.glassous.betterhrbust.core.ui.components.NavigationDock
 import com.glassous.betterhrbust.core.ui.components.NavigationDockDestination
 import com.glassous.betterhrbust.core.ui.components.navigationDockInset
@@ -204,6 +205,8 @@ fun MainAppScaffold(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
+                // 全应用统一：点击任意非输入框区域（空白 / 按钮 / 顶部标题等）清除输入焦点、收起键盘
+                .clearFocusOnTapOutside()
         ) {
             Column(
                 modifier = Modifier

@@ -37,8 +37,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.glassous.betterhrbust.BetterHrbustApp
+import com.glassous.betterhrbust.core.ui.AppTextFieldShape
 import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
+import com.glassous.betterhrbust.core.ui.registerInputField
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
@@ -301,8 +303,10 @@ fun ReLoginOverlay(
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .registerInputField(),
+                shape = AppTextFieldShape
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -324,8 +328,10 @@ fun ReLoginOverlay(
                 visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .registerInputField(),
+                shape = AppTextFieldShape
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -347,8 +353,10 @@ fun ReLoginOverlay(
                         focusManager.clearFocus()
                         submitLogin()
                     }),
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .registerInputField(),
+                    shape = AppTextFieldShape
                 )
 
                 Box(

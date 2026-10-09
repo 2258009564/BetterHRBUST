@@ -13,8 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
+import com.glassous.betterhrbust.core.ui.AppTextFieldShape
 import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.LocalBottomContentInset
+import com.glassous.betterhrbust.core.ui.registerInputField
 import com.glassous.betterhrbust.data.repository.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -93,7 +95,10 @@ fun EvaluationScreen(onBack: () -> Unit) {
                 }
                 items(form.comments.indices.toList()) { index ->
                     OutlinedTextField(value = comments[index], onValueChange = { value -> comments = comments.toMutableList().also { it[index] = value } },
-                        label = { Text(form.comments[index].title) }, enabled = !running && !loading, modifier = Modifier.fillMaxWidth())
+                        label = { Text(form.comments[index].title) }, enabled = !running && !loading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .registerInputField(), shape = AppTextFieldShape)
                 }
                 item {
                     Button(enabled = !loading && !running && chosen.isNotEmpty(), onClick = {
