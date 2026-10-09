@@ -330,6 +330,12 @@ object AcademicParsers {
         return false
     }
 
+    /**
+     * DJB2 稳定哈希，映射到 12 个固定色板槽位。
+     *
+     * 课表配色已改用 [com.glassous.betterhrbust.core.ui.theme.CourseColorPalette] 的黄金角 HSL
+     * 方案（颜色数量不限），该函数仅作为通用稳定哈希保留，供其他场景与既有测试使用。
+     */
     fun hashCourseColor(key: String): Int {
         var hash = 5381L
         for (ch in key.replace(Regex("""\s+"""), "")) {

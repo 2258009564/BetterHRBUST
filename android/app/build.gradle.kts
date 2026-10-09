@@ -5,9 +5,33 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// ---------- 正式签名配置 ----------
+// CI 通过 GitHub Secrets 注入环境变量（见 .github/workflows/android.yml）；
+// 本地可写入 ~/.gradle/gradle.properties（androidKeystorePath / androidKeystorePassword /
+// androidKeyAlias / androidKeyPassword），密钥文件不入库。
+// 四项缺任意一项即视为未配置，release 退回未签名包，保证无密钥的 PR 构建仍可通过。
+val releaseKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: findProperty("androidKeystorePath") as String?
+val releaseKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: findProperty("androidKeystorePassword") as String?
+val releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: findProperty("androidKeyAlias") as String?
+val releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: findProperty("androidKeyPassword") as String?
+val releaseKeystoreFile = releaseKeystorePath?.let { file(it) }?.takeIf { it.exists() }
+val hasReleaseSigning = releaseKeystoreFile != null && releaseKeystorePassword != null &&
+    releaseKeyAlias != null && releaseKeyPassword != null
+
 android {
     namespace = "com.glassous.betterhrbust"
     compileSdk = 37
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.glassous.betterhrbust"
@@ -21,6 +45,10 @@ android {
 
     buildTypes {
         release {
+            // 存在正式密钥时启用签名，确保升级安装不报「签名不一致」；未配置密钥时保持未签名
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             // 依赖裁剪：R8 代码压缩 + 资源压缩（保守策略，见 src/main/keepRules/rules.keep）
             isMinifyEnabled = true
             isShrinkResources = true
