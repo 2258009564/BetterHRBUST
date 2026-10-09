@@ -16,6 +16,15 @@ class AcademicParsersTest {
     }
 
     @Test
+    fun loginLabelsDoNotOverrideTheActualFailure() {
+        val labels = "<form><label>教务密码</label><label>安全验证码</label></form>"
+        assertEquals("学号或密码错误", AcademicParsers.parseLoginFailureReason(labels + "<p>密码输入错误</p>"))
+        assertEquals("账号已被系统锁定，请稍后再试", AcademicParsers.parseLoginFailureReason(labels + "<p>账号已被系统锁定</p>"))
+        assertEquals("该学号不存在", AcademicParsers.parseLoginFailureReason(labels + "<p>用户不存在</p>"))
+        assertEquals("登录失败，请检查学号与密码", AcademicParsers.parseLoginFailureReason(labels))
+    }
+
+    @Test
     fun testStripHtmlComments() {
         val rawHtml = "<table><tr><th>课程号</th><!--<th>考试方式</th>--><th>课程名</th></tr><tr><td>U001</td><!--<td></td>--><td>离散数学</td></tr></table>"
         val clean = AcademicParsers.stripHtmlComments(rawHtml)
