@@ -561,7 +561,8 @@ export function parseCurriculumPlan(html) {
   }
 
   return {
-    groups
+    groups: [...new Map(groups.map(g => [g.id || g.name, g])).values()],
+    totalRequiredCredits: Number(doc.body.textContent.match(/(?:方案总学分|毕业总学分|总学分要求|要求总学分|总学分)\s*[：:=]?\s*([0-9]+(?:\.[0-9]+)?)/)?.[1]) || null
   };
 }
 

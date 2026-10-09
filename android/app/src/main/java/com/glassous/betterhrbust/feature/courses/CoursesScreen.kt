@@ -63,7 +63,7 @@ fun CoursesScreen(
         )
     ) {
         // 页面标题（作为滚动内容，可穿透状态栏）
-        item { PageHeaderTitle("全校课程", onBack = onBack) }
+        item { PageHeaderTitle("我的课程名录", onBack = onBack) }
 
         item {
             OutlinedTextField(

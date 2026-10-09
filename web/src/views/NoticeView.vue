@@ -4,7 +4,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Notices List -->
       <div class="lg:col-span-2 space-y-4">
-        <UiCard title="教学运行公告 (calendarinfo/viewCalendarInfo.do)">
+        <UiCard title="教学运行公告">
           <template #header-action>
             <div class="flex items-center gap-2">
               <span class="text-xs text-zinc-500">周次筛选：</span>

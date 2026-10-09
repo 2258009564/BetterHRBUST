@@ -181,7 +181,7 @@ const navGroups = [
     items: [
       { id: 'program', label: '培养方案与学分', icon: 'program' },
       { id: 'classroom', label: '空教室与自习', icon: 'classroom' },
-      { id: 'course', label: '全校课程名录', icon: 'course' },
+      { id: 'course', label: '我的课程名录', icon: 'course' },
       { id: 'resources', label: '资料查找', icon: 'notice' }
     ]
   },

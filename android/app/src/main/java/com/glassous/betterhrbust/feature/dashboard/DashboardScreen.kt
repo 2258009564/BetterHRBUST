@@ -119,13 +119,16 @@ fun DashboardScreen(
 
 
     // Today's courses
-    val today = remember { LocalDate.now() }
+    val clock by produceState(initialValue = java.time.LocalDateTime.now()) {
+        while (true) { value = java.time.LocalDateTime.now(); kotlinx.coroutines.delay(30_000) }
+    }
+    val today = clock.toLocalDate()
     val todayDayOfWeek = remember(today) { today.dayOfWeek.value } // 1=Monday .. 7=Sunday
     val currentWeek = prefs?.currentWeek ?: 1
 
-    val todayCourses = remember(timetable, todayDayOfWeek, currentWeek) {
+    val todayCourses = remember(timetable, todayDayOfWeek, currentWeek, clock) {
         timetable?.cells?.filter { cell ->
-            cell.day == todayDayOfWeek && AcademicParsers.isCourseActiveInWeek(cell.weeks, currentWeek)
+            cell.day == todayDayOfWeek && AcademicParsers.isCourseActiveInWeek(cell.weeks, currentWeek) && !com.glassous.betterhrbust.core.util.CourseSchedule.hasEnded(cell.sectionIndex, clock.toLocalTime())
         }?.sortedBy { it.sectionIndex } ?: emptyList()
     }
 
@@ -139,7 +142,7 @@ fun DashboardScreen(
         QuickNavGridItem("考试日程", Icons.Default.DateRange, com.glassous.betterhrbust.navigation.ExamsRoute),
         QuickNavGridItem("培养方案", Icons.Default.Bookmark, com.glassous.betterhrbust.navigation.ProgramRoute),
         QuickNavGridItem("空教室", Icons.Default.MeetingRoom, com.glassous.betterhrbust.navigation.ClassroomsRoute),
-        QuickNavGridItem("全校课程", Icons.Default.Search, com.glassous.betterhrbust.navigation.CoursesRoute),
+        QuickNavGridItem("我的课程名录", Icons.Default.Search, com.glassous.betterhrbust.navigation.CoursesRoute),
         QuickNavGridItem("学籍档案", Icons.Default.Badge, com.glassous.betterhrbust.navigation.ProfileRoute),
         QuickNavGridItem("通知与设置", Icons.Default.Settings, com.glassous.betterhrbust.navigation.SettingsRoute)
     )
@@ -206,14 +209,14 @@ fun DashboardScreen(
                                 .clickable { onNavigate(com.glassous.betterhrbust.navigation.TimetableRoute) }
                         ) {
                             Text(
-                                text = "${todayCourses.size} 节",
+                                text = "${todayCourses.size} 门",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.secondary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "今日课程安排",
+                                text = "今日剩余课程",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -262,16 +265,13 @@ fun DashboardScreen(
                             )
                             MiniStatColumn(
                                 label = "补考/重修",
-                                value = stats?.recommend?.let { "${it.retakeCount}/${it.retakeLimit}" } ?: "--"
+                                value = stats?.retakeCount?.toString() ?: "--"
                             )
                             MiniStatColumn(
                                 label = "挂科学分",
                                 value = stats?.risk?.failedCredits?.let { trimNumber(it) } ?: "--"
                             )
-                            MiniStatColumn(
-                                label = "提前毕业",
-                                value = if (stats?.earlyGraduation?.qualified == true) "达标" else "未达标"
-                            )
+
                         }
                     }
                 }
@@ -353,7 +353,7 @@ fun DashboardScreen(
                         ) {
                             Icon(imageVector = Icons.Outlined.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = "今天没有安排课程，好好休息吧！", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = "今日已无待上课程", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
