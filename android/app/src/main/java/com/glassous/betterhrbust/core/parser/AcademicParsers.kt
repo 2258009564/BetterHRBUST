@@ -55,8 +55,7 @@ object AcademicParsers {
 
     fun isLoginPage(html: String?): Boolean {
         if (html.isNullOrEmpty()) return false
-        val markers = listOf("j_acegi_security_check", "getCaptcha.do", "j_captcha")
-        return markers.any { html.contains(it) }
+        return Jsoup.parse(html).select("form[action*=j_acegi_security_check], input[name=j_captcha]").isNotEmpty()
     }
 
     fun parseLoginFailureReason(html: String?): String {
