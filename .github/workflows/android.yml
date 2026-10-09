@@ -124,7 +124,7 @@ jobs:
             echo "::error::该版本已发布，禁止覆盖既有安装包；请先提高 versionName/versionCode"
             exit 1
           fi
-          sha256sum "$APK" > "$APK.sha256"
+          (cd "$(dirname "$APK")" && sha256sum "$(basename "$APK")") > "$APK.sha256"
           gh release create "$TAG" "$APK" "$APK.sha256" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "BetterHRBUST Android ${TAG#android-}" --notes-file android/RELEASE_NOTES.md
       - name: 清理临时签名文件
         if: always()
