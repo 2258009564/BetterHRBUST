@@ -198,13 +198,18 @@ async function runScenario({ failSubmit = false } = {}) {
   await page.getByText('2024级', { exact: true }).waitFor();
   assert.equal(await page.getByText('2024级 级', { exact: true }).count(), 0);
   await page.emulateMedia({ colorScheme: 'dark' });
-  await page.getByRole('button', { name: '切换浅色模式', exact: true }).waitFor();
-  assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), true);
-  await page.getByRole('button', { name: '切换浅色模式', exact: true }).click();
+  // 顶栏已移除主题开关：跟随系统模式遇系统深色应自动生效
+  assert.equal(await page.getByRole('button', { name: '切换浅色模式', exact: true }).count(), 0);
+  await page.waitForFunction(() => document.documentElement.classList.contains('dark'));
+  // 主题切换改由设置页「外观与个性化设置」承担
+  await page.getByRole('button', { name: '设置与系统状态', exact: true }).click();
+  await page.getByText('外观与个性化设置', { exact: true }).waitFor();
+  await page.getByRole('button', { name: '浅色', exact: true }).click();
+  assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), false);
   await page.emulateMedia({ colorScheme: 'light' });
-  await page.getByRole('button', { name: '切换深色模式', exact: true }).click();
+  await page.getByRole('button', { name: '深色', exact: true }).click();
   assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), true);
-  await page.getByRole('button', { name: '切换浅色模式', exact: true }).click();
+  await page.getByRole('button', { name: '跟随系统', exact: true }).click();
   assert.equal(await page.locator('html').evaluate(element => element.classList.contains('dark')), false);
   await page.getByRole('button', { name: '概览', exact: true }).click();
   await page.getByText('今日剩余课程', { exact: true }).waitFor();
@@ -311,7 +316,7 @@ async function runScenario({ failSubmit = false } = {}) {
     checks: [
       '评教列表解析通过',
       '资料标题搜索、分类、附件链接、空结果与分页通过',
-      '客户端右上角主题开关、跟随系统变化与实际配色切换通过',
+      '顶栏不再显示主题开关，设置页主题切换、跟随系统变化与实际配色切换通过',
       '配置预览无 POST 通过',
       '提交前重新读取隐藏令牌通过',
       '选择的评分和中文评语按 GBK 表单提交通过',
