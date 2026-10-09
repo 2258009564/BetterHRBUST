@@ -111,7 +111,7 @@ index.jsp           → 必然 302 回登录页（它不是登录后的入口）
 ### 2.5 退出登录
 
 ```
-GET /academic/j_acegi_logout
+GET /academic/logout_security_check
 ```
 
 会销毁服务端会话。调用后需重新登录。

@@ -10,6 +10,31 @@ import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicInteger
 
 class CaptchaNetworkTest {
+    @Test fun logoutUsesOriginalPortalEndpointWithoutReportingNormalRedirectAsExpiration() = runBlocking {
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        val calls = AtomicInteger()
+        val expired = AtomicInteger()
+        server.createContext("/academic/logout_security_check") { exchange ->
+            calls.incrementAndGet()
+            exchange.responseHeaders.add("Location", "/academic/index.jsp")
+            exchange.sendResponseHeaders(302, -1); exchange.close()
+        }
+        server.createContext("/academic/index.jsp") { exchange ->
+            val body = "<form action='j_acegi_security_check'><input name='j_captcha'></form>".toByteArray()
+            exchange.sendResponseHeaders(200, body.size.toLong()); exchange.responseBody.use { it.write(body) }
+        }
+        server.start()
+        try {
+            val client = AcademicHttpClient(baseUrl = "http://127.0.0.1:${server.address.port}/academic/")
+            client.cookieJar.setJSessionId("127.0.0.1", "old-session")
+            client.onSessionExpired = { expired.incrementAndGet() }
+            client.logout()
+            assertEquals(1, calls.get())
+            assertEquals(0, expired.get())
+            assertFalse(client.cookieJar.hasSession())
+        } finally { server.stop(0) }
+    }
+
     @Test fun captchaRedirectStaysHttpAndSharesSessionCookie() = runBlocking {
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         val port = server.address.port

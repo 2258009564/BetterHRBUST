@@ -220,12 +220,12 @@ class AcademicRepository(
     ): Flow<Resource<PersonalInfo>> = flow {
         emit(Resource.Loading)
 
-        // 先按登录账号查找；未命中时兜底取最新一条，兼容历史上按"页面学号"写入的缓存
+        // 档案只按当前账号读取，禁止跨账号兜底。
         val localEntity = database.profileDao().getProfile(studentNumber).firstOrNull()
-            ?: database.profileDao().getLatest().firstOrNull()
         if (localEntity != null && !forceRefresh) {
             try {
                 val cached = json.decodeFromString<PersonalInfo>(localEntity.json)
+                require(cached.studentNumber.trim() == studentNumber.trim()) { "档案缓存账号不一致" }
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
@@ -245,12 +245,7 @@ class AcademicRepository(
             require(parsed.studentNumber.trim() == studentNumber.trim()) { "教务档案账号与当前登录账号不一致，已拒绝保存" }
 
             val encoded = json.encodeToString(parsed)
-            // 统一以登录账号为缓存键（读写两侧一致），同时按页面学号再存一份以兼容其它入口
             database.profileDao().insert(ProfileEntity(studentNumber = studentNumber, json = encoded))
-            val sNumber = parsed.studentNumber
-            if (sNumber.isNotEmpty() && sNumber != studentNumber) {
-                database.profileDao().insert(ProfileEntity(studentNumber = sNumber, json = encoded))
-            }
             // 姓名落到 DataStore，缓存被清理后概览页仍能正确显示
             if (parsed.realName.isNotBlank() && prefs.preferencesFlow.firstOrNull()?.username == studentNumber) {
                 prefs.setRealName(parsed.realName)
@@ -263,6 +258,7 @@ class AcademicRepository(
             if (localEntity != null) {
                 try {
                     val cached = json.decodeFromString<PersonalInfo>(localEntity.json)
+                require(cached.studentNumber.trim() == studentNumber.trim()) { "档案缓存账号不一致" }
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {

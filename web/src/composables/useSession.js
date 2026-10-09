@@ -38,6 +38,7 @@ const isSessionExpired = ref(storageGetItem(SESSION_EXPIRED_KEY) === 'true');
 const authChecked = ref(false);
 const isCheckingAuth = ref(false);
 const isLoggingIn = ref(false);
+const isPreparingAccount = ref(false);
 const showLoginModal = ref(false);
 const loginError = ref('');
 
@@ -58,6 +59,8 @@ let promptDecided = false;
 const studentId = ref(savedProfile?.internalId || ''); // 教务内部学生 ID
 const studentNumber = ref(savedProfile?.studentNumber || storageGetItem('saved_student_number') || '');
 let authGeneration = 0;
+let accountPreparation = null;
+let loginPreparationFailed = false;
 
 const activeTab = ref('dashboard');
 const previousTab = ref('dashboard');
@@ -267,21 +270,23 @@ async function checkAuth(options = {}) {
  */
 /** 切换账号前先结束旧服务端会话，再重新获取属于新会话的验证码。 */
 async function prepareLoginAccount(username) {
+  if (accountPreparation) return accountPreparation;
   const target = String(username || '').trim();
   const current = userProfile.studentNumber || studentNumber.value;
-  if (!target || !current || target === current || (!isLoggedIn.value && !isSessionExpired.value)) return false;
-  if (isLoggingIn.value) return false;
-  isLoggingIn.value = true;
-  try { await logout(); return true; }
-  finally { isLoggingIn.value = false; }
+  if (!target) return false;
+  if (!loginPreparationFailed && (!current || target === current || (!isLoggedIn.value && !isSessionExpired.value))) return false;
+  isPreparingAccount.value = true;
+  accountPreparation = (async () => { await logout(); return true; })()
+    .finally(() => { isPreparingAccount.value = false; accountPreparation = null; });
+  return accountPreparation;
 }
 
 async function login({ username, password, captcha, remember = true }) {
-  if (isLoggingIn.value) return { success: false, message: '登录正在处理中' };
+  if (isLoggingIn.value || isPreparingAccount.value) return { success: false, message: '登录或账号切换正在处理中，请稍候' };
   username = String(username).trim();
-  if (await prepareLoginAccount(username)) {
-    return { success: false, message: '账号已切换，请输入新验证码后登录' };
-  }
+  try {
+    if (await prepareLoginAccount(username)) return { success: false, message: '账号已切换，请输入新验证码后登录' };
+  } catch (error) { return { success: false, message: error.message || '无法退出旧账号，请重试' }; }
   isLoggingIn.value = true;
   isLoggedIn.value = false;
   storageRemoveItem(SESSION_FLAG_KEY);
@@ -332,6 +337,7 @@ async function login({ username, password, captcha, remember = true }) {
  * 登出（同时清理节流时间戳与本地数据缓存）
  */
 async function logout() {
+  loginPreparationFailed = true;
   ++authGeneration;
   isCheckingAuth.value = false;
   isLoggedIn.value = false;
@@ -354,6 +360,7 @@ async function logout() {
   currentSemester.name = '';
   studentNumber.value = '';
   await academicApi.logout();
+  loginPreparationFailed = false;
 }
 
 function setWeek(w) {
@@ -385,6 +392,7 @@ export function useSession() {
     authChecked,
     isCheckingAuth,
     isLoggingIn,
+    isPreparingAccount,
     showLoginModal,
     loginError,
     studentId,

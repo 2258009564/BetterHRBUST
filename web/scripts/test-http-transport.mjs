@@ -65,3 +65,8 @@ assert.equal(evaluation.html, '');
 assert.equal(redirectCalls.filter(call => call.options.method === 'POST').length, 3);
 assert.equal(redirected.isLoginPage('<script>var captcha="getCaptcha.do";</script><table>course</table>'), false);
 console.log('PASS: HTTP origin, shared cookies, GET/POST, no replay, manual redirect, login validation, pending evaluation');
+
+const { describeLoginFailure } = await import('../../tools/probe/lib/auth.mjs');
+assert.equal(describeLoginFailure(loginLabels + '<p>用户名或密码错误</p>'), '学号或密码错误');
+assert.equal(describeLoginFailure(loginLabels + '<p>验证码已过期</p>'), '验证码错误或已过期');
+assert.equal(describeLoginFailure(loginLabels + '<script>const msg="验证码错误";</script>'), '登录失败，请检查学号与密码');
