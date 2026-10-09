@@ -4,8 +4,8 @@
  *
  * 包装层职责(与业务代码解耦):
  *  1. 提供 userscript 元数据头;
- *  2. 提供「查看原版教务系统」的油猴菜单开关(应用为只读客户端,
- *     选课等写操作仍需原版页面;用 sessionStorage 记忆,仅对当前标签页生效);
+ *  2. 提供「查看原版教务系统」的油猴菜单开关(选课等操作仍需原版页面;
+ *     用 sessionStorage 记忆,仅对当前标签页生效);
  *  3. 内联应用主体。
  */
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -39,7 +39,7 @@ const header = `// ==UserScript==
 // @name         BetterHRBUST 教务工作台
 // @namespace    https://github.com/Glassous/BetterHRBUST
 // @version      ${version}
-// @description  哈理工教务在线(JWP/URP)现代化客户端:课表/成绩/考试/空教室/GPA 分析,同源直连真实教务数据
+// @description  哈理工教务在线(JWP/URP)现代化客户端:课表/成绩/考试/教学评价/空教室/GPA 分析,同源直连真实教务数据
 // @author       Glassous
 // @match        *://jwzx.hrbust.edu.cn/*
 // @run-at       document-end
