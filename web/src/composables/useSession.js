@@ -284,6 +284,11 @@ async function login({ username, password, captcha, remember = true }) {
   }
   isLoggingIn.value = true;
   isLoggedIn.value = false;
+  storageRemoveItem(SESSION_FLAG_KEY);
+  if (userProfile.studentNumber) {
+    isSessionExpired.value = true;
+    storageSetItem(SESSION_EXPIRED_KEY, 'true');
+  }
   isCheckingAuth.value = false;
   const generation = ++authGeneration;
   loginError.value = '';

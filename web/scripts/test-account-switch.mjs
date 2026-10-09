@@ -45,6 +45,13 @@ assert.equal((await session.login({username:B,password:'test',captcha:'0000'})).
 await data.syncAll();
 hold.resolve({scores:[{courseName:'迟到的甲课程'}]});await stale;
 assert.equal(data.scores.value[0].courseName,B+'课程','旧请求不能覆盖新账号');
+const originalLogin = api.login;
+api.login = async()=>({success:false,message:'学号或密码错误'});
+assert.equal((await session.login({username:B,password:'wrong',captcha:'0000'})).success,false);
+assert.equal(store.get('better_hrbust_has_session'),undefined);
+assert.equal(session.offlineMode.value,true,'失败重认证不会持久化为已登录');
+api.login = originalLogin;
+assert.equal((await session.login({username:B,password:'test',captcha:'0000'})).success,true);
 server=A;
 assert.equal(await session.checkAuth({light:true}),false,'外部会话切换不能拼接旧档案和新内部ID');
 assert.equal(data.scores.value.length,0);
