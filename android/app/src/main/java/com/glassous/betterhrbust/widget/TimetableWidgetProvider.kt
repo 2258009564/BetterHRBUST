@@ -26,7 +26,7 @@ import java.time.format.DateTimeFormatter
 class TimetableWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action in setOf(Intent.ACTION_DATE_CHANGED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED,ACTION_REFRESH,"android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED")) update(context)
+        if (intent.action in setOf(Intent.ACTION_BOOT_COMPLETED,Intent.ACTION_DATE_CHANGED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED,ACTION_REFRESH,"android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED")) update(context)
     }
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) = update(context)
     override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, options: Bundle) = update(context)

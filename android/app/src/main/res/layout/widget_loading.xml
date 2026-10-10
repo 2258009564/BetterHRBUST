@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小部件首次绑定 / 内容组合完成前的占位布局（Glance 组合完成后立即被真实内容替换）。
+  只放一个极简的应用名文本，避免小部件在绑定瞬间出现空白方块。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="@string/app_name"
+        android:textColor="?android:attr/textColorSecondary"
+        android:textSize="12sp" />
+</FrameLayout>

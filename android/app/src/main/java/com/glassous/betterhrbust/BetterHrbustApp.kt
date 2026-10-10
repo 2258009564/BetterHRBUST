@@ -78,6 +78,7 @@ class BetterHrbustApp : Application() {
     private suspend fun refreshWidgets() {
         try {
             com.glassous.betterhrbust.widget.TimetableWidgetProvider.refreshAll(this)
+            com.glassous.betterhrbust.widget.TimetableWidgetUpdater.refreshAll(this)
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (_: Exception) {

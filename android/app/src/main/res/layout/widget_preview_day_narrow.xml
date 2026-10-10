@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  日视图（窄版）小部件的选择器预览图（API 31+ 由 previewLayout 渲染，低版本回退 previewImage）。
+  仅作示意：固定文案与固定配色，不参与真实渲染。
+
+  注意：该布局由桌面端以小部件白名单充气器加载，只能使用允许的控件
+  （LinearLayout / FrameLayout / TextView 等）；`android.view.View`、`android.widget.Space`
+  均不在白名单内，色块与空白占位一律使用空的 `TextView`。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <!-- 顶部：窄版两行（今天 / 教学周） -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="今天 · 周三"
+        android:textColor="#1B1B1F"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="第 3 周"
+        android:textColor="#6F7278"
+        android:textSize="9sp" />
+
+    <!-- 第 1 大节 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="4dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="22dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="1"
+            android:textColor="#1B1B1F"
+            android:textSize="9sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_preview_cell"
+            android:backgroundTint="#D8E4F8"
+            android:padding="4dp"
+            android:text="高等数学"
+            android:textColor="#3A4A63"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- 第 2 大节 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="22dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="2"
+            android:textColor="#1B1B1F"
+            android:textSize="9sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_preview_cell"
+            android:backgroundTint="#F8E3D8"
+            android:padding="4dp"
+            android:text="大学物理"
+            android:textColor="#5A4034"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- 第 3 大节 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="22dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="3"
+            android:textColor="#1B1B1F"
+            android:textSize="9sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_preview_cell"
+            android:backgroundTint="#DDF0E3"
+            android:padding="4dp"
+            android:text="程序设计"
+            android:textColor="#2F4A38"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- 第 4 大节 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="22dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="4"
+            android:textColor="#1B1B1F"
+            android:textSize="9sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_preview_cell"
+            android:backgroundTint="#EDE0F8"
+            android:padding="4dp"
+            android:text="线性代数"
+            android:textColor="#463354"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- 第 5 / 6 大节：今天无课，收窄显示 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="18dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="22dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="5"
+            android:textColor="#9A9DA3"
+            android:textSize="9sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="18dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="22dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="6"
+            android:textColor="#9A9DA3"
+            android:textSize="9sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+</LinearLayout>

@@ -14,6 +14,38 @@
 # ---------------------------------------------------------------
 -keep class com.glassous.betterhrbust.BetterHrbustApp { *; }
 -keep class com.glassous.betterhrbust.MainActivity { *; }
+# 桌面小部件：receiver 由系统按类名反射实例化，Glance 亦按类名管理各小部件实例
+-keep class com.glassous.betterhrbust.widget.** { *; }
+-keepnames class com.glassous.betterhrbust.widget.**
+
+# ---------------------------------------------------------------
+# 桌面小部件运行栈（Glance / WorkManager / DataStore / protobuf）：
+# release 下小部件不显示的根因即「依赖裁剪」——
+#   · Glance 的会话与强制刷新 Worker 会被改名，且 (Context, WorkerParameters)
+#     构造函数在映射中消失；
+#   · WorkManager 只能通过 Class.forName(...).getDeclaredConstructor(...) 实例化 Worker；
+#   · Glance 的小部件状态用 DataStore + protobuf-lite 按类名装配序列化器。
+# 因此这一组依赖整体保守保留：不裁剪、不改名。
+# ---------------------------------------------------------------
+-keep class androidx.glance.** { *; }
+-keepclassmembers class androidx.glance.** { *; }
+-dontwarn androidx.glance.**
+
+# WorkManager：保留 Worker 类名与反射构造入口
+-keep class * extends androidx.work.ListenableWorker { *; }
+-keepnames class * extends androidx.work.ListenableWorker
+-keep class androidx.work.impl.** { *; }
+-keepnames class androidx.work.impl.**
+-keepclassmembers class androidx.work.** { *; }
+-dontwarn androidx.work.**
+
+# 小部件状态持久化：DataStore + protobuf-lite
+-keep class androidx.datastore.** { *; }
+-keepclassmembers class androidx.datastore.** { *; }
+-dontwarn androidx.datastore.**
+-keep class com.google.protobuf.** { *; }
+-keepclassmembers class com.google.protobuf.** { *; }
+-dontwarn com.google.protobuf.**
 
 # ---------------------------------------------------------------
 # Room：保留数据库与 DAO 实现，实体字段名对应 SQLite 列名
@@ -42,7 +74,8 @@
 -dontwarn org.openjsse.**
 
 # ---------------------------------------------------------------
-# 调试信息：保留行号，便于线上崩溃栈还原
+# 调试信息：保留行号，便于线上崩溃栈还原；
+# 同时保留泛型签名 / 内部类信息，供反射与序列化库按签名装配
 # ---------------------------------------------------------------
--keepattributes SourceFile,LineNumberTable
+-keepattributes SourceFile,LineNumberTable,Signature,InnerClasses,EnclosingMethod
 -renamesourcefileattribute SourceFile

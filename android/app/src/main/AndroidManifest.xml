@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- 小部件在开机后刷新一次，避免显示开机前的旧课表 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".BetterHrbustApp"
@@ -16,9 +18,11 @@
         android:theme="@style/Theme.BetterHRBUST"
         android:usesCleartextTraffic="true">
 
+        <!-- singleTop：小部件点击复用已有任务并走 onNewIntent，避免重建整个界面 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.BetterHRBUST">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -27,10 +31,64 @@
         </activity>
 
         <receiver android:name=".widget.TimetableWidgetProvider" android:exported="false" android:label="@string/widget_label">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/><action android:name="android.intent.action.DATE_CHANGED"/><action android:name="android.intent.action.TIME_SET"/><action android:name="android.intent.action.TIMEZONE_CHANGED"/><action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"/></intent-filter>
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/><action android:name="android.intent.action.BOOT_COMPLETED"/><action android:name="android.intent.action.DATE_CHANGED"/><action android:name="android.intent.action.TIME_SET"/><action android:name="android.intent.action.TIMEZONE_CHANGED"/><action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"/></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/timetable_widget_info"/>
         </receiver>
         <service android:name=".widget.WidgetListService" android:exported="false" android:permission="android.permission.BIND_REMOTEVIEWS"/>
+        <!-- ================= 桌面课表小部件（周视图 4×4） ================= -->
+        <receiver
+            android:name=".widget.TimetableWeekWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_week_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/timetable_week_widget_info" />
+        </receiver>
+
+        <!-- ================= 桌面课表小部件（日视图 2×4） ================= -->
+        <receiver
+            android:name=".widget.TimetableDayNarrowWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_day_narrow_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/timetable_day_narrow_widget_info" />
+        </receiver>
+
+        <!-- ================= 桌面课表小部件（日视图 4×4） ================= -->
+        <receiver
+            android:name=".widget.TimetableDayWideWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_day_wide_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/timetable_day_wide_widget_info" />
+        </receiver>
+
+        <!--
+          小部件刷新触发：跨天 / 手动改时间 / 时区变化 / 开机。
+          这些均为系统受保护广播，exported=false 亦能收到，避免被其它应用触发无谓刷新。
+        -->
+        <receiver
+            android:name=".widget.TimetableWidgetRefreshReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

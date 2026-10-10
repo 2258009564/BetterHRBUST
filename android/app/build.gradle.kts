@@ -117,6 +117,9 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.jsoup)
 
+    // Widget: Glance（桌面课表小部件）
+    implementation(libs.androidx.glance.appwidget)
+
     // Persistence: Room & DataStore
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
