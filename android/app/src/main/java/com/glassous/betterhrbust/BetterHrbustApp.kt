@@ -1,5 +1,8 @@
 package com.glassous.betterhrbust
 
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.collect
 import android.app.Application
 import android.content.pm.PackageManager
 import android.os.Build
@@ -12,6 +15,8 @@ import com.glassous.betterhrbust.data.repository.UpdateRepository
 import com.glassous.betterhrbust.data.sync.AcademicSyncManager
 
 class BetterHrbustApp : Application() {
+    private val widgetScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
 
     lateinit var database: AppDatabase
         private set
@@ -47,10 +52,37 @@ class BetterHrbustApp : Application() {
         }
         academicRepository = AcademicRepository(httpClient, database, preferencesManager)
         syncManager = AcademicSyncManager(academicRepository, preferencesManager, authRepository)
+        // 登录、退出、同步和教学周变动都刷新桌面；仅观察本地存储，不额外联网。
+        widgetScope.launch {
+            preferencesManager.preferencesFlow.collectLatest { prefs ->
+                kotlinx.coroutines.flow.combine(
+                    database.timetableDao().getTimetable(prefs.studentId),
+                    database.profileDao().getProfile(prefs.username)
+                ) { timetable, profile -> timetable to profile }.collect {
+                    refreshWidgets()
+                }
+            }
+        }
         updateRepository = UpdateRepository(
             currentVersion = resolveAppVersion(),
             prefs = preferencesManager
         )
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // 主进程存活时，系统主题/字号变化立即重算组件，而非复用旧密度布局。
+        widgetScope.launch { refreshWidgets() }
+    }
+
+    private suspend fun refreshWidgets() {
+        try {
+            com.glassous.betterhrbust.widget.TimetableWidgetProvider.refreshAll(this)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // 后续本地数据/系统更新会重试，不影响应用启动。
+        }
     }
 
     /** 读取当前应用版本号（versionName）；异常时回退为占位版本 */

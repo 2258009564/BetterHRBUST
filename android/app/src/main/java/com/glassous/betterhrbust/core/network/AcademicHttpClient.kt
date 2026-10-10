@@ -224,6 +224,8 @@ class AcademicHttpClient(
     }
 
     suspend fun logout() = withContext(Dispatchers.IO) {
+        // 切号前取消旧业务请求，避免迟到的响应重写会话 Cookie。
+        client.dispatcher.cancelAll()
         try {
             get("logout_security_check")
         } catch (cancelled: kotlinx.coroutines.CancellationException) {

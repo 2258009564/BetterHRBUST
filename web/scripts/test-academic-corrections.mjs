@@ -53,3 +53,12 @@ const trendLabels = [...termGroups.values()]
   .slice(-6)
   .map(g => `${g.year} ${g.term}`);
 assert.deepEqual(trendLabels, ['2023 秋', '2024 春', '2024 秋', '2025 春', '2025 秋', '2026 春']);
+
+// 门数是独立的上限检查，不能被另一项必修通过条件标红。
+for (let count=0;count<=3;count++) {
+ const records=[course('FAIL',50,3),...Array.from({length:count},(_,i)=>course('RET'+i,80,3,'','必修','重修'))];
+ const result=buildAcademicStats(records).recommend;
+ assert.equal(result.retakeCount,count);
+ assert.equal(result.retakeWithinLimit,count<=2);
+ assert.equal(result.qualified,false);
+}

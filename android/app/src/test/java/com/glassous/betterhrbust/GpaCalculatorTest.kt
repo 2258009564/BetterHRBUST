@@ -17,6 +17,14 @@ import org.junit.Test
  * 五级记分制：不及格 0 / 及格 1.5 / 中等 2.5 / 良好 3.5 / 优秀 4.5。
  */
 class GpaCalculatorTest {
+    @org.junit.Test fun retakeCountStatusUsesItsOwnInclusiveLimitEvenWithOtherUnpassedCourses() {
+        for (count in 0..3) {
+            val stats=com.glassous.betterhrbust.core.model.RecommendStats(retakeCount=count,retakeLimit=2,allPassed=false,qualified=false)
+            org.junit.Assert.assertEquals(count <= 2,stats.retakeWithinLimit)
+            org.junit.Assert.assertFalse(stats.qualified)
+        }
+    }
+
 
     private fun item(
         courseId: String,

@@ -385,6 +385,7 @@ export function buildAcademicStats(scores) {
       allPassed: recommendAllPassed,
       retakeCount,
       retakeLimit: RECOMMEND_RETAKE_LIMIT,
+      retakeWithinLimit: recommendRetakeOk,
       qualified: recommendQualified
     },
 

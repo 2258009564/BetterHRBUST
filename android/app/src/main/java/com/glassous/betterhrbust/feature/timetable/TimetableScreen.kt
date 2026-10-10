@@ -2,9 +2,6 @@ package com.glassous.betterhrbust.feature.timetable
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -94,7 +91,7 @@ fun TimetableScreen(
     var timetableResult by remember { mutableStateOf<TimetableResult?>(null) }
     var cacheError by remember { mutableStateOf("") }
 
-    val currentWeek = prefs?.currentWeek ?: 1
+    val currentWeek = prefs?.currentTeachingWeek ?: 1
     var selectedWeek by remember { mutableStateOf(currentWeek) }
     var viewMode by remember { mutableStateOf(TimetableViewMode.WEEK) }
     var sectionMode by remember { mutableStateOf(SectionMode.COMBINE) }
@@ -195,8 +192,8 @@ fun TimetableScreen(
     BackHandler(enabled = detailShown) { closeCourse() }
 
     // 教务当前周变化（同步完成后）跟随到新的当前周
-    LaunchedEffect(prefs?.currentWeek) {
-        val week = prefs?.currentWeek ?: return@LaunchedEffect
+    LaunchedEffect(prefs?.currentTeachingWeek) {
+        val week = prefs?.currentTeachingWeek ?: return@LaunchedEffect
         if (week != selectedWeek) navigateTo(week, selectedDay)
     }
 
@@ -243,8 +240,7 @@ fun TimetableScreen(
     }
 
     // 共享元素过渡作用域：以页面根容器承载（既提供根坐标，也承载过渡期间的浮层）
-    SharedTransitionLayout(modifier = modifier.fillMaxSize()) {
-        val scope = this
+    Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             TimetableControlBar(
                 viewMode = viewMode,
@@ -298,7 +294,6 @@ fun TimetableScreen(
                         currentWeek = currentWeek,
                         isDark = isDark,
                         selectedDetail = selectedCourseDetail.takeIf { detailShown },
-                        sharedTransitionScope = scope,
                         onCourseClick = { cell, page -> openCourse(cell, page) }
                     )
                 }
@@ -308,8 +303,8 @@ fun TimetableScreen(
         // 课程详情：居中卡片 + 背景模糊 + 遮罩（非弹窗，直接绘制在页面之上）
         AnimatedVisibility(
             visible = detailShown,
-            enter = fadeIn(tween(180)),
-            exit = fadeOut(tween(180))
+            enter = fadeIn(tween(180)) + androidx.compose.animation.scaleIn(initialScale = 0.96f, animationSpec = tween(180)),
+            exit = fadeOut(tween(180)) + androidx.compose.animation.scaleOut(targetScale = 0.96f, animationSpec = tween(180))
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 // 遮罩：命中测试止于本层，下方课表的下拉刷新 / 翻页 / 纵向滚动一并被阻断；
@@ -327,8 +322,6 @@ fun TimetableScreen(
                         page = selectedDetailPage,
                         selectedWeek = selectedWeek,
                         isDark = isDark,
-                        sharedTransitionScope = scope,
-                        animatedVisibilityScope = this@AnimatedVisibility,
                         onDismiss = { closeCourse() },
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -617,7 +610,6 @@ private fun TimetableContent(
     currentWeek: Int,
     isDark: Boolean,
     selectedDetail: TimetableCell?,
-    sharedTransitionScope: SharedTransitionScope,
     onCourseClick: (TimetableCell, Int) -> Unit
 ) {
     val isDayView = viewMode == TimetableViewMode.DAY
@@ -654,7 +646,6 @@ private fun TimetableContent(
                 isDark = isDark,
                 dense = !isDayView,
                 selectedDetail = selectedDetail,
-                sharedTransitionScope = sharedTransitionScope,
                 onCourseClick = { cell -> onCourseClick(cell, page) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -754,8 +745,6 @@ private fun CourseDetailCard(
     page: Int,
     selectedWeek: Int,
     isDark: Boolean,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -776,89 +765,77 @@ private fun CourseDetailCard(
     val shape = RoundedCornerShape(22.dp)
     val divider = colors.content.copy(alpha = 0.16f)
 
-    with(sharedTransitionScope) {
-        Column(
-            modifier = modifier
-                .sharedBounds(
-                    sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "bg")),
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-                .shadow(elevation = 28.dp, shape = shape, ambientColor = Color.Black, spotColor = Color.Black)
-                .clip(shape)
-                .background(colors.container)
-                .border(1.dp, colors.border, shape)
-                .padding(horizontal = 20.dp, vertical = 18.dp)
+
+    Column(
+        modifier = modifier
+
+            .shadow(elevation = 28.dp, shape = shape, ambientColor = Color.Black, spotColor = Color.Black)
+            .clip(shape)
+            .background(colors.container)
+            .border(1.dp, colors.border, shape)
+            .padding(horizontal = 20.dp, vertical = 18.dp)
+    ) {
+        Text(
+            text = cell.courseName,
+            fontSize = 20.sp,
+            lineHeight = 26.sp,
+            fontWeight = FontWeight.Bold,
+            color = colors.content,
+            modifier = Modifier
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = cell.location.ifEmpty { "待定" },
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+            color = colors.content.copy(alpha = 0.85f),
+            modifier = Modifier
+        )
+        Text(
+            text = cell.teacher.ifEmpty { "—" },
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+            color = colors.content.copy(alpha = 0.85f),
+            modifier = Modifier
+        )
+
+        if (!active) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(text = "非本周课程", fontSize = 12.sp, color = colors.accent)
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+        HorizontalDivider(color = divider)
+        Spacer(modifier = Modifier.height(6.dp))
+
+        CardDetailRow("上课周次", cell.weeks, colors.content)
+        CardDetailRow(
+            label = "节次安排",
+            value = buildString {
+                if (cell.sectionLabel.isNotEmpty()) append(cell.sectionLabel)
+                CombineSlots.getOrNull(cell.sectionIndex - 1)?.let { slot ->
+                    if (isNotEmpty()) append(" · ")
+                    append("第 ${slot.period} 大节 ").append(slotRangeText(slot))
+                }
+            },
+            content = colors.content
+        )
+        if (cell.hoursType.isNotEmpty()) CardDetailRow("学时类型", cell.hoursType, colors.content)
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            )
         ) {
-            Text(
-                text = cell.courseName,
-                fontSize = 20.sp,
-                lineHeight = 26.sp,
-                fontWeight = FontWeight.Bold,
-                color = colors.content,
-                modifier = Modifier.sharedBounds(
-                    sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "name")),
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = cell.location.ifEmpty { "待定" },
-                fontSize = 14.sp,
-                lineHeight = 18.sp,
-                color = colors.content.copy(alpha = 0.85f),
-                modifier = Modifier.sharedBounds(
-                    sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "location")),
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-            )
-            Text(
-                text = cell.teacher.ifEmpty { "—" },
-                fontSize = 14.sp,
-                lineHeight = 18.sp,
-                color = colors.content.copy(alpha = 0.85f),
-                modifier = Modifier.sharedBounds(
-                    sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "teacher")),
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-            )
-
-            if (!active) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(text = "非本周课程", fontSize = 12.sp, color = colors.accent)
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = divider)
-            Spacer(modifier = Modifier.height(6.dp))
-
-            CardDetailRow("上课周次", cell.weeks, colors.content)
-            CardDetailRow(
-                label = "节次安排",
-                value = buildString {
-                    if (cell.sectionLabel.isNotEmpty()) append(cell.sectionLabel)
-                    CombineSlots.getOrNull(cell.sectionIndex - 1)?.let { slot ->
-                        if (isNotEmpty()) append(" · ")
-                        append("第 ${slot.period} 大节 ").append(slotRangeText(slot))
-                    }
-                },
-                content = colors.content
-            )
-            if (cell.hoursType.isNotEmpty()) CardDetailRow("学时类型", cell.hoursType, colors.content)
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
-            ) {
-                Text("关闭")
-            }
+            Text("关闭")
         }
     }
+
 }
 
 /** 卡片内的信息行：标签 + 值，均使用课程色系保证在色块上可读。 */

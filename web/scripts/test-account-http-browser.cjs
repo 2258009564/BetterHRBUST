@@ -78,6 +78,12 @@ const server=createServer(async(req,res)=>{
   }
   await switchTo(B,'Student B');await switchTo(A,'Student A');
   assert.equal(posts,2,'每次切换只提交一次登录凭证');assert.deepEqual(https,[],'退出及未登录跳转不得访问HTTPS');assert.ok(profileReads>=3,'新身份读取不能复用缓存的旧档案');
+  await page.locator('aside').getByRole('button', {name:'概览',exact:true}).click();
+  for (const width of [1536,1280,960,768,390]) {
+   await page.setViewportSize({width,height:1000});
+   await page.waitForTimeout(150);
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1), `概览不应在有效宽度${width}px产生页面横向溢出`);
+  }
   console.log('通过：真实HTTP/Cookie复现旧退出404，修复后A→B→A、旧档案缓存、302跳转、验证码新会话和单次登录POST');
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

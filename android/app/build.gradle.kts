@@ -44,6 +44,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // 本地真机验证使用独立包名，保留维护者签名的正式版；默认 CI Debug 不变。
+            if (providers.gradleProperty("localWidgetPreview").orNull == "true") {
+                applicationIdSuffix = ".widgetpreview"
+                versionNameSuffix = "-widget-preview"
+            }
+        }
         release {
             // 存在正式密钥时启用签名，确保升级安装不报「签名不一致」；未配置密钥时保持未签名
             if (hasReleaseSigning) {

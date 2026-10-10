@@ -1,5 +1,6 @@
 package com.glassous.betterhrbust
 
+import androidx.lifecycle.lifecycleScope
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -65,6 +66,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            com.glassous.betterhrbust.widget.TimetableWidgetProvider.refreshAll(this@MainActivity)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -381,8 +389,10 @@ fun MainPagerScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val preferencesManager = remember { BetterHrbustApp.instance.preferencesManager }
-    val pagerState = rememberPagerState(pageCount = { 5 })
-    var tabIndex by rememberSaveable { mutableStateOf(0) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val initialTab = if ((context as? MainActivity)?.intent?.getBooleanExtra(com.glassous.betterhrbust.widget.TimetableWidgetProvider.OPEN_TIMETABLE, false) == true) 1 else 0
+    val pagerState = rememberPagerState(initialPage = initialTab, pageCount = { 5 })
+    var tabIndex by rememberSaveable { mutableStateOf(initialTab) }
     val currentTab = tabIndex
 
     // 平板端：导航坞竖排在左侧，页面内容让位其宽度 + 左侧安全距离（见 pagerModifier）

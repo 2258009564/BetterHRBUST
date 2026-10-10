@@ -47,6 +47,9 @@ interface ProfileDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: ProfileEntity)
 
+    @Query("DELETE FROM profile_cache WHERE studentNumber = :studentNumber")
+    suspend fun clear(studentNumber: String)
+
     @Query("DELETE FROM profile_cache")
     suspend fun clearAll()
 }

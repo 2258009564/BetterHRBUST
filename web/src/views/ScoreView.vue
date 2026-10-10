@@ -84,8 +84,8 @@
           <div class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30">
             <div class="flex items-center justify-between">
               <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200">推免资格自检</span>
-              <UiBadge size="sm" :variant="stats.recommend.qualified ? 'success' : 'warning'">
-                {{ stats.recommend.qualified ? '符合' : '需注意' }}
+              <UiBadge size="sm" :variant="stats.recommend.retakeWithinLimit ? 'success' : 'warning'">
+                {{ stats.recommend.retakeWithinLimit ? '良好' : '超过上限' }}
               </UiBadge>
             </div>
             <div class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-2">
@@ -94,8 +94,8 @@
             <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
               仅统计必修课的补考 + 重修累计门数，上限 {{ stats.recommend.retakeLimit }} 门
             </div>
-            <div class="text-[11px] mt-1" :class="stats.recommend.allPassed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
-              {{ stats.recommend.allPassed ? '必修课成绩全部合格' : '存在不合格的必修课' }}
+            <div class="text-[11px] mt-1" :class="stats.recommend.courseCount === 0 ? 'text-zinc-500' : stats.recommend.allPassed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+              {{ stats.recommend.courseCount === 0 ? '暂无必修成绩记录' : stats.recommend.allPassed ? '必修课成绩全部合格' : '存在不合格的必修课' }}
             </div>
           </div>
 

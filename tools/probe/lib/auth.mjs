@@ -10,8 +10,13 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { CookieJar } from './http.mjs';
 
+function visibleLoginText(html) {
+  return String(html || '').replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+}
+
 /** 登录页特征（出现即代表当前处于未登录状态） */
-const LOGIN_PAGE_MARKERS = ['j_acegi_security_check', 'getCaptcha.do', 'j_captcha'];
 
 /** 登录失败页特征 */
 const LOGIN_FAILURE_MARKERS = [
@@ -26,7 +31,10 @@ const LOGIN_FAILURE_MARKERS = [
 /** 判断 HTML 是否为登录页 */
 export function isLoginPage(html) {
   if (!html) return true;
-  return LOGIN_PAGE_MARKERS.some((m) => html.includes(m));
+  const content = String(html).replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  return /<form\b[^>]*\baction\s*=\s*["'][^"']*j_acegi_security_check/i.test(content)
+    || /<input\b[^>]*\bname\s*=\s*["']j_captcha["']/i.test(content);
 }
 
 /** 从登录失败页中提取可读原因 */
@@ -195,7 +203,7 @@ export async function submitLogin(client, credentials) {
 
   const html = res.text || '';
   const stillLoginPage = isLoginPage(html);
-  const hitFailureMarker = LOGIN_FAILURE_MARKERS.some((m) => html.includes(m));
+  const hitFailureMarker = LOGIN_FAILURE_MARKERS.some((m) => visibleLoginText(html).includes(m));
 
   // 失败典型特征：被重定向回登录页 / 页面含失败关键字
   if (stillLoginPage || hitFailureMarker) {

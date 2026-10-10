@@ -119,6 +119,12 @@ function executeRequest(url, { method = 'GET', headers = {}, body = null, referr
   }));
 }
 
+function visibleLoginText(html) {
+  return String(html || '').replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+}
+
 // 登录失败特征
 const LOGIN_FAILURE_MARKERS = [
   'badCredentials',
@@ -323,7 +329,7 @@ export async function postLogin(username, password, captcha) {
   if (!res.ok) throw new Error(`教务系统登录请求失败（HTTP ${res.status}），请稍后重试`);
 
   // 如果依然是登录页或者包含失败标记
-  if (isLoginPage(html) || LOGIN_FAILURE_MARKERS.some(m => html.includes(m))) {
+  if (isLoginPage(html) || LOGIN_FAILURE_MARKERS.some(m => visibleLoginText(html).includes(m))) {
     return {
       success: false,
       message: parseLoginFailureReason(html)

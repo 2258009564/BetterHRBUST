@@ -20,6 +20,15 @@ class AcademicRepository(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** 旧账号的网络请求即使迟到，也不能写入或显示到新会话中。 */
+    private suspend fun requireCurrentSession(snapshot: com.glassous.betterhrbust.core.datastore.AppPreferences?) {
+        val current = prefs.preferencesFlow.firstOrNull()
+        if (snapshot == null || current == null || snapshot.username != current.username ||
+            snapshot.studentId != current.studentId || snapshot.lastLoginAt != current.lastLoginAt) {
+            throw kotlinx.coroutines.CancellationException("账号已切换，旧请求已丢弃")
+        }
+    }
+
     fun getTimetable(
         studentId: String,
         year: String,
@@ -27,6 +36,8 @@ class AcademicRepository(
         forceRefresh: Boolean = false,
         cacheOnly: Boolean = false
     ): Flow<Resource<TimetableResult>> = flow {
+        val session = prefs.preferencesFlow.firstOrNull()
+        if (session?.studentId != studentId) throw kotlinx.coroutines.CancellationException("请求账号已失效")
         emit(Resource.Loading)
 
         // 1. Check local cache
@@ -34,6 +45,7 @@ class AcademicRepository(
         if (localEntity != null && !forceRefresh) {
             try {
                 val cached = json.decodeFromString<TimetableResult>(localEntity.json)
+                requireCurrentSession(session)
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
@@ -58,6 +70,7 @@ class AcademicRepository(
             if (parsed.cells.isEmpty() && parsed.unarranged.isEmpty() && localEntity != null) {
                 val cached = json.decodeFromString<TimetableResult>(localEntity.json)
                 if (cached.cells.isNotEmpty() || cached.unarranged.isNotEmpty()) {
+                    requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 }
@@ -65,8 +78,10 @@ class AcademicRepository(
 
             // Cache to database
             val encoded = json.encodeToString(parsed)
+            requireCurrentSession(session)
             database.timetableDao().insert(TimetableEntity(studentId = studentId, json = encoded))
 
+            requireCurrentSession(session)
             emit(Resource.Success(parsed, isOfflineCache = false))
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
@@ -74,6 +89,7 @@ class AcademicRepository(
             if (localEntity != null) {
                 try {
                     val cached = json.decodeFromString<TimetableResult>(localEntity.json)
+                    requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -89,12 +105,15 @@ class AcademicRepository(
         forceRefresh: Boolean = false,
         cacheOnly: Boolean = false
     ): Flow<Resource<ScoreResult>> = flow {
+        val session = prefs.preferencesFlow.firstOrNull()
+        if (session?.studentId != studentId) throw kotlinx.coroutines.CancellationException("请求账号已失效")
         emit(Resource.Loading)
 
         val localEntity = database.scoreDao().getScores(studentId).firstOrNull()
         if (localEntity != null && !forceRefresh) {
             try {
                 val cached = json.decodeFromString<ScoreResult>(localEntity.json)
+                requireCurrentSession(session)
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
@@ -121,14 +140,17 @@ class AcademicRepository(
             if (parsed.scores.isEmpty() && localEntity != null) {
                 val cached = json.decodeFromString<ScoreResult>(localEntity.json)
                 if (cached.scores.isNotEmpty()) {
+                    requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 }
             }
 
             val encoded = json.encodeToString(parsed)
+            requireCurrentSession(session)
             database.scoreDao().insert(ScoreEntity(studentId = studentId, json = encoded))
 
+            requireCurrentSession(session)
             emit(Resource.Success(parsed, isOfflineCache = false))
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
@@ -136,6 +158,7 @@ class AcademicRepository(
             if (localEntity != null) {
                 try {
                     val cached = json.decodeFromString<ScoreResult>(localEntity.json)
+                    requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -174,6 +197,8 @@ class AcademicRepository(
         forceRefresh: Boolean = false,
         cacheOnly: Boolean = false
     ): Flow<Resource<List<ExamItem>>> = flow {
+        val session = prefs.preferencesFlow.firstOrNull()
+        if (session?.studentId != studentId) throw kotlinx.coroutines.CancellationException("请求账号已失效")
         emit(Resource.Loading)
 
         val localEntity = database.examDao().getExams(studentId).firstOrNull()
@@ -183,6 +208,7 @@ class AcademicRepository(
                 val cached = AcademicParsers.refreshExamCountdown(
                     json.decodeFromString<List<ExamItem>>(localEntity.json)
                 )
+                requireCurrentSession(session)
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
@@ -206,14 +232,17 @@ class AcademicRepository(
                     json.decodeFromString<List<ExamItem>>(localEntity.json)
                 )
                 if (cached.isNotEmpty()) {
+                    requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 }
             }
 
             val encoded = json.encodeToString(parsed)
+            requireCurrentSession(session)
             database.examDao().insert(ExamEntity(studentId = studentId, json = encoded))
 
+            requireCurrentSession(session)
             emit(Resource.Success(parsed, isOfflineCache = false))
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
@@ -223,6 +252,7 @@ class AcademicRepository(
                     val cached = AcademicParsers.refreshExamCountdown(
                         json.decodeFromString<List<ExamItem>>(localEntity.json)
                     )
+                    requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -238,6 +268,8 @@ class AcademicRepository(
         forceRefresh: Boolean = false,
         cacheOnly: Boolean = false
     ): Flow<Resource<PersonalInfo>> = flow {
+        val session = prefs.preferencesFlow.firstOrNull()
+        if (session?.username != studentNumber) throw kotlinx.coroutines.CancellationException("请求账号已失效")
         emit(Resource.Loading)
 
         // 档案只按当前账号读取，禁止跨账号兜底。
@@ -246,6 +278,7 @@ class AcademicRepository(
             try {
                 val cached = json.decodeFromString<PersonalInfo>(localEntity.json)
                 require(cached.studentNumber.trim() == studentNumber.trim()) { "档案缓存账号不一致" }
+                requireCurrentSession(session)
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
@@ -264,25 +297,16 @@ class AcademicRepository(
             val parsed = AcademicParsers.parsePersonalInfo(html)
             require(parsed.studentNumber.trim() == studentNumber.trim()) { "教务档案账号与当前登录账号不一致，已拒绝保存" }
 
-            // 远端返回空（异常页 / 登录页被解析为空结果）时保留既有缓存，
-            // 避免一次失败的刷新把已持久化的档案永久覆盖为空
-            val parsedEmpty = parsed.studentNumber.isEmpty() && parsed.realName.isEmpty() &&
-                parsed.college.isEmpty() && parsed.className.isEmpty()
-            if (parsedEmpty && localEntity != null) {
-                val cached = json.decodeFromString<PersonalInfo>(localEntity.json)
-                if (cached.studentNumber.isNotEmpty() || cached.realName.isNotEmpty() || cached.college.isNotEmpty()) {
-                    emit(Resource.Success(cached, isOfflineCache = true))
-                    return@flow
-                }
-            }
-
             val encoded = json.encodeToString(parsed)
+            requireCurrentSession(session)
             database.profileDao().insert(ProfileEntity(studentNumber = studentNumber, json = encoded))
             // 姓名落到 DataStore，缓存被清理后概览页仍能正确显示
             if (parsed.realName.isNotBlank() && prefs.preferencesFlow.firstOrNull()?.username == studentNumber) {
-                prefs.setRealName(parsed.realName)
+                requireCurrentSession(session)
+                prefs.setRealName(parsed.realName, expected = session)
             }
 
+            requireCurrentSession(session)
             emit(Resource.Success(parsed, isOfflineCache = false))
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
@@ -290,7 +314,8 @@ class AcademicRepository(
             if (localEntity != null) {
                 try {
                     val cached = json.decodeFromString<PersonalInfo>(localEntity.json)
-                require(cached.studentNumber.trim() == studentNumber.trim()) { "档案缓存账号不一致" }
+                    require(cached.studentNumber.trim() == studentNumber.trim()) { "档案缓存账号不一致" }
+                    requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -306,12 +331,15 @@ class AcademicRepository(
         forceRefresh: Boolean = false,
         cacheOnly: Boolean = false
     ): Flow<Resource<CurriculumPlanResult>> = flow {
+        val session = prefs.preferencesFlow.firstOrNull()
+        if (session?.studentId != studentId) throw kotlinx.coroutines.CancellationException("请求账号已失效")
         emit(Resource.Loading)
 
         val localEntity = database.curriculumDao().getPlan(studentId).firstOrNull()
         if (localEntity != null && !forceRefresh) {
             try {
                 val cached = json.decodeFromString<CurriculumPlanResult>(localEntity.json)
+                requireCurrentSession(session)
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
@@ -343,14 +371,17 @@ class AcademicRepository(
             if (parsed.groups.isEmpty() && localEntity != null) {
                 val cached = json.decodeFromString<CurriculumPlanResult>(localEntity.json)
                 if (cached.groups.isNotEmpty()) {
+                    requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 }
             }
 
             val encoded = json.encodeToString(parsed)
+            requireCurrentSession(session)
             database.curriculumDao().insert(CurriculumPlanEntity(studentId = studentId, json = encoded))
 
+            requireCurrentSession(session)
             emit(Resource.Success(parsed, isOfflineCache = false))
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
@@ -358,6 +389,7 @@ class AcademicRepository(
             if (localEntity != null) {
                 try {
                     val cached = json.decodeFromString<CurriculumPlanResult>(localEntity.json)
+                    requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -409,6 +441,7 @@ class AcademicRepository(
         forceRefresh: Boolean = false,
         cacheOnly: Boolean = false
     ): Flow<Resource<List<NoticeItem>>> = flow {
+        val session = prefs.preferencesFlow.firstOrNull()
         emit(Resource.Loading)
 
         val localEntities = database.noticeDao().getNotices().firstOrNull()
@@ -442,10 +475,12 @@ class AcademicRepository(
             val entities = calendarInfo.notices.map {
                 NoticeEntity(id = it.id, title = it.title, content = it.content, date = it.date)
             }
+            requireCurrentSession(session)
             database.noticeDao().insertAll(entities)
 
             if (parsedUsable) {
-                prefs.setCurrentWeek(calendarInfo.currentWeek)
+                requireCurrentSession(session)
+                prefs.setCurrentWeek(calendarInfo.currentWeek, expected = session)
             }
 
             emit(Resource.Success(calendarInfo.notices, isOfflineCache = false))
@@ -462,6 +497,7 @@ class AcademicRepository(
     }
 
     fun getTeachingWeek(): Flow<Int> = flow {
+        val session = prefs.preferencesFlow.firstOrNull()
         try {
             val html = client.get("listLeft.do", preferredCharset = CharsetDecoderHelper.UTF_8)
             var week = AcademicParsers.parseTeachingWeek(html)
@@ -480,7 +516,8 @@ class AcademicRepository(
             }
 
             if (week in 1..26) {
-                prefs.setCurrentWeek(week)
+                requireCurrentSession(session)
+                prefs.setCurrentWeek(week, expected = session)
                 emit(week)
             } else {
                 emit(1)
@@ -494,7 +531,8 @@ class AcademicRepository(
                 val calWeek = AcademicParsers.parseCalendarInfo(calHtml).currentWeek
                 // 仅接受明确识别出的周次（>1），避免把"解析失败"误当第 1 周写坏本地教学周
                 if (calWeek > 1) {
-                    prefs.setCurrentWeek(calWeek)
+                    requireCurrentSession(session)
+                    prefs.setCurrentWeek(calWeek, expected = session)
                     emit(calWeek)
                     return@flow
                 }
