@@ -149,10 +149,13 @@ class WidgetDataUpdateTest {
             app.preferencesManager.saveAuth(b,bid,"2026","1")
             app.preferencesManager.setCurrentWeek(6)
             waitFor("测试课程B","A课程已更新")
+            assertTrue(com.glassous.betterhrbust.widget.TimetableWidgetLoader.load().hasSession)
             app.database.profileDao().insert(ProfileEntity(b,Json.encodeToString(PersonalInfo(studentNumber=a))))
             waitFor("打开应用核验账号","测试课程B")
+            assertFalse("原有组件也必须拒绝错误身份缓存",com.glassous.betterhrbust.widget.TimetableWidgetLoader.load().hasSession)
             app.preferencesManager.clearSession()
             waitFor("打开应用登录","测试课程B")
+            assertFalse(com.glassous.betterhrbust.widget.TimetableWidgetLoader.load().hasSession)
         } finally {
             instrumentation.runOnMainSync { host.deleteAppWidgetId(id);host.stopListening() }
             activity?.close()
