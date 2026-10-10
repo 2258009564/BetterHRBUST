@@ -40,24 +40,28 @@ function absoluteUrl(path) {
  * 统一请求执行:返回 { ok, status, contentType, buffer, finalUrl }
  */
 function executeRequest(url, { method = 'GET', headers = {}, body = null, referrer } = {}) {
-  if (location.protocol === 'http:' && location.hostname === 'jwzx.hrbust.edu.cn' &&
-      new URL(url, location.href).origin === location.origin) {
+  if (new URL(url, location.href).origin === location.origin &&
+      new URL(url, location.href).pathname.startsWith(BASE_PREFIX)) {
     return (async () => {
       const pathname = new URL(url, location.href).pathname;
       const login = pathname === '/academic/j_acegi_security_check';
       const evaluation = pathname.startsWith('/academic/eva/');
-      const manual = method.toUpperCase() === 'POST' && (login || evaluation);
+      const logout = pathname === '/academic/logout_security_check';
+      const context = pathname === '/academic/student/currcourse/currcourse.jsdo';
+      const manual = (method.toUpperCase() === 'POST' && (login || evaluation)) || logout || context;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
       try {
         const response = await PAGE_FETCH(url, {
-          method, headers, body, credentials: 'include',
+          method, headers: { ...headers, 'Cache-Control': 'no-cache' }, body, credentials: 'include', cache: 'no-store',
           ...(referrer ? { referrer } : {}),
           redirect: manual ? 'manual' : 'follow', signal: controller.signal
         });
         // 原站的 POST 成功响应可能跳转到不可用的 HTTPS；接收 Cookie 后只读 HTTP 状态。
         // 评教完成与否由调用方重新读取列表核对，302 本身不等于评教成功。
         if (manual && response.type === 'opaqueredirect') {
+          if (logout) return { ok: true, status: 202, contentType: '', buffer: new ArrayBuffer(0), finalUrl: url };
+          if (context) return executeRequest(absoluteUrl('common/security/login.jsp'));
           if (login) return executeRequest(absoluteUrl('student/currcourse/currcourse.jsdo'));
           return { ok: true, status: 202, contentType: '', buffer: new ArrayBuffer(0), finalUrl: url };
         }
@@ -103,7 +107,7 @@ function executeRequest(url, { method = 'GET', headers = {}, body = null, referr
     method,
     headers,
     body,
-    credentials: 'include', // 必传,携带与接收 Cookie
+    credentials: 'include', cache: 'no-store', // 私有数据不能复用旧账号的 HTTP 缓存
     ...(referrer ? { referrer } : {}),
     redirect: 'follow'
   }).then(async (response) => ({
@@ -113,6 +117,12 @@ function executeRequest(url, { method = 'GET', headers = {}, body = null, referr
     buffer: await response.arrayBuffer(),
     finalUrl: response.url
   }));
+}
+
+function visibleLoginText(html) {
+  return String(html || '').replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
 }
 
 // 登录失败特征
@@ -319,7 +329,7 @@ export async function postLogin(username, password, captcha) {
   if (!res.ok) throw new Error(`教务系统登录请求失败（HTTP ${res.status}），请稍后重试`);
 
   // 如果依然是登录页或者包含失败标记
-  if (isLoginPage(html) || LOGIN_FAILURE_MARKERS.some(m => html.includes(m))) {
+  if (isLoginPage(html) || LOGIN_FAILURE_MARKERS.some(m => visibleLoginText(html).includes(m))) {
     return {
       success: false,
       message: parseLoginFailureReason(html)
@@ -336,9 +346,9 @@ export async function postLogin(username, password, captcha) {
  * 登出
  */
 export async function postLogout() {
-  try {
-    await executeRequest(absoluteUrl('j_acegi_logout'), { method: 'GET' });
-  } catch {
-    // 静默忽略
-  }
+  const response = await executeRequest(absoluteUrl('logout_security_check'), { method: 'GET' });
+  if (!response.ok) throw new Error(`退出旧会话失败（HTTP ${response.status}），请重试`);
+  const probe = await executeRequest(absoluteUrl('student/currcourse/currcourse.jsdo'));
+  const html = await decodeResponse(probe.buffer, probe.contentType, 'gbk');
+  if (!probe.ok || !isLoginPage(html)) throw new Error('旧账号会话尚未结束，请重试后再输入验证码');
 }

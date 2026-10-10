@@ -16,7 +16,7 @@
 | 获取验证码 | GET | `getCaptcha.do` | 返回验证码图片（JPEG） |
 | 校验验证码 | POST | `checkCaptcha.do` | 返回 `true` / `false` |
 | 登录提交 | POST | `j_acegi_security_check` | Acegi 表单认证 |
-| 退出登录 | GET | `j_acegi_logout` | 销毁会话 |
+| 退出登录 | GET | `logout_security_check` | 销毁会话 |
 | 左侧菜单树 | GET | `listLeft.do` | 菜单、教学周、全部 `moduleId` |
 | 按类型筛选菜单 | GET | `listLeft.do?moduleType=` | 按权限类别枚举菜单 |
 | 顶部导航页 | GET | `top.jsp` | 页面顶部，含退出入口 |
@@ -133,7 +133,7 @@ function plaintext(s, salt) { return s; }
 ### 1.5 退出登录
 
 ```
-GET /academic/j_acegi_logout
+GET /academic/logout_security_check
 ```
 
 销毁服务端会话。调用后再访问受保护接口会回落登录页。

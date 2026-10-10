@@ -195,7 +195,7 @@ const props = defineProps({
 
 const emit = defineEmits(['success']);
 
-const { isLoggingIn, loginError, login, prepareLoginAccount, studentNumber, isLoggedIn, userProfile, showLoginPageExpiredHint } =
+const { isLoggingIn, isPreparingAccount, loginError, login, prepareLoginAccount, studentNumber, isLoggedIn, userProfile, showLoginPageExpiredHint } =
   useSession();
 
 const showPassword = ref(false);
@@ -212,18 +212,27 @@ const form = reactive({
 });
 
 const canSubmit = computed(() => {
-  return form.username.trim() && form.password.trim() && form.captcha.trim().length === 4;
+  return !isPreparingAccount.value && !captchaLoading.value && !captchaError.value && form.username.trim() && form.password.trim() && form.captcha.trim().length === 4;
 });
 
 async function prepareAccount() {
-  if (await prepareLoginAccount(form.username)) refreshCaptcha();
+  try { if (await prepareLoginAccount(form.username)) await refreshCaptcha(); }
+  catch (error) { errorMessage.value = error.message; captchaImgUrl.value = ''; captchaError.value = true; captchaLoading.value = false; }
 }
 
-function refreshCaptcha() {
+async function refreshCaptcha() {
   captchaLoading.value = true;
   captchaError.value = false;
+  captchaImgUrl.value = '';
   form.captcha = '';
-  captchaImgUrl.value = academicApi.getCaptchaUrl();
+  try {
+    await prepareLoginAccount(form.username);
+    captchaImgUrl.value = academicApi.getCaptchaUrl();
+  } catch (error) {
+    errorMessage.value = error.message || '无法准备新账号的验证码，请重试';
+    captchaLoading.value = false;
+    captchaError.value = true;
+  }
 }
 
 function onCaptchaLoadError() {

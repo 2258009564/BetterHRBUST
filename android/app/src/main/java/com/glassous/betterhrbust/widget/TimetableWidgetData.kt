@@ -85,7 +85,8 @@ internal data class TimetableWidgetData(
     /** 周视图行（按大节升序，6 个大节全部保行，无课行由渲染层收窄） */
     val weekRows: List<WidgetWeekRow>,
     /** 日视图行（按大节升序，6 个大节全部保行，无课行由渲染层收窄） */
-    val todayRows: List<WidgetDaySlot>
+    val todayRows: List<WidgetDaySlot>,
+    val todayDate: LocalDate = LocalDate.now()
 ) {
     /** 本周是否有任何课程 */
     val hasWeekCourses: Boolean get() = weekRows.any { it.occupied }
@@ -118,24 +119,30 @@ internal object TimetableWidgetLoader {
         val app = BetterHrbustApp.instance
         val todayDay = LocalDate.now().dayOfWeek.value
 
-        val prefs = runCatching { app.preferencesManager.preferencesFlow.firstOrNull() }.getOrNull()
-        if (prefs == null || prefs.studentId.isEmpty()) return TimetableWidgetData.empty(todayDay)
+        // 与双日组件共享已核验的账号快照；错误身份缓存不进入原有组件。
+        val snapshot = WidgetDataSource.load(app) ?: return TimetableWidgetData.empty(todayDay)
+        if (snapshot.message.isNotEmpty()) return TimetableWidgetData.empty(todayDay)
+        val prefs = snapshot.prefs
 
         val timetable = runCatching {
             app.database.timetableDao().getTimetable(prefs.studentId).firstOrNull()?.json
                 ?.let { json.decodeFromString<TimetableResult>(it) }
         }.getOrNull() ?: TimetableResult()
 
-        val week = prefs.currentWeek.coerceIn(1, MaxTeachingWeek)
+        val week = (snapshot.week ?: return TimetableWidgetData.empty(todayDay)).coerceIn(1, MaxTeachingWeek)
         // CourseColorPalette 约定仅主线程访问（与 App 内取色共用同一张槽位表），故在 Main 上取色
         val styles = withContext(Dispatchers.Main) { resolveStyles(timetable.cells, week) }
 
+        val current = app.preferencesManager.preferencesFlow.firstOrNull()
+        if (current?.username != prefs.username || current.studentId != prefs.studentId || current.lastLoginAt != prefs.lastLoginAt)
+            return TimetableWidgetData.empty(todayDay)
         return TimetableWidgetData(
             hasSession = true,
             hasTimetable = timetable.cells.isNotEmpty() || timetable.unarranged.isNotEmpty(),
             currentWeek = week,
             todayDay = todayDay,
             weekRows = buildWeekRows(timetable.cells, styles),
+            todayDate = snapshot.date,
             todayRows = buildTodayRows(timetable.cells, styles, todayDay)
         )
     }

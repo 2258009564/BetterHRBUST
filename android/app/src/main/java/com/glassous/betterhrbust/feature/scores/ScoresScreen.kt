@@ -256,9 +256,10 @@ fun ScoresScreen(
                                 FeatureAlgorithmRow(
                                     title = "② 推免资格自检",
                                     value = stats?.recommend?.let { "${it.retakeCount}/${it.retakeLimit}" } ?: "--",
-                                    qualified = stats?.recommend?.qualified == true,
+                                    qualified = stats?.recommend?.retakeWithinLimit == true,
+                                    statusText = stats?.recommend?.let { if (it.retakeWithinLimit) "良好" else "超过上限 / 需注意" } ?: "暂无数据",
                                     detail = stats?.recommend?.let {
-                                        "补考 + 重修累计，上限 ${it.retakeLimit} 门"
+                                        "补考 + 重修累计，上限 ${it.retakeLimit} 门 · " + if (it.courseCount == 0) "暂无必修成绩记录" else if (it.allPassed) "必修成绩全部合格" else "仍有未合格的必修成绩"
                                     } ?: "暂无数据"
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
@@ -599,7 +600,8 @@ private fun FeatureAlgorithmRow(
     title: String,
     value: String,
     qualified: Boolean,
-    detail: String
+    detail: String,
+    statusText: String? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -628,7 +630,7 @@ private fun FeatureAlgorithmRow(
                 color = if (qualified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
             )
             Text(
-                text = if (qualified) "达标 / 符合" else "未达标 / 需注意",
+                text = statusText ?: if (qualified) "达标 / 符合" else "未达标 / 需注意",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline
             )

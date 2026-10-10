@@ -39,7 +39,7 @@ internal val WidgetTimeColumnWidth = 16.dp
 
 /** 顶部标题行 / 星期表头行高。 */
 internal val WidgetHeaderHeight = 20.dp
-internal val WidgetWeekdayHeight = 15.dp
+internal val WidgetWeekdayHeight = 28.dp
 
 /**
  * 无课大节行的高度上限：保持「无课行收窄」的观感，

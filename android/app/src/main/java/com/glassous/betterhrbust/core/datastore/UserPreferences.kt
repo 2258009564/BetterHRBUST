@@ -15,6 +15,7 @@ data class AppPreferences(
     val year: String = "",
     val term: String = "2",
     val currentWeek: Int = 1,
+    val currentWeekReferenceDate: String = "",
     val selectedWeek: Int = 1,
     /** 课表视图形态的持久化标识（`TimetableViewMode.name`：WEEK / DAY） */
     val timetableViewMode: String = "WEEK",
@@ -42,14 +43,22 @@ data class AppPreferences(
     val lastUpdateCheckAt: Long = 0L,
     /** 导航坞折叠态（用户手动在坞内展开 / 折叠后持久化，冷启动沿用） */
     val navigationDockCollapsed: Boolean = false,
-)
+) {
+    fun teachingWeekOn(date: java.time.LocalDate): Int? =
+        com.glassous.betterhrbust.core.util.TeachingWeek.resolve(currentWeek, currentWeekReferenceDate, date)
 
-class UserPreferencesManager(private val context: Context) {
+    /** 老缓存没有参考日期时保留原周次；有效同步结果离线按日期推进。 */
+    val currentTeachingWeek: Int
+        get() = teachingWeekOn(java.time.LocalDate.now()) ?: currentWeek
+}
+
+class UserPreferencesManager(context: Context, private val store: DataStore<Preferences> = context.dataStore) {
     companion object {
         private val KEY_USERNAME = stringPreferencesKey("username")
         private val KEY_STUDENT_ID = stringPreferencesKey("student_id")
         private val KEY_YEAR = stringPreferencesKey("year")
         private val KEY_TERM = stringPreferencesKey("term")
+        private val KEY_WEEK_REFERENCE_DATE = stringPreferencesKey("week_reference_date")
         private val KEY_CURRENT_WEEK = intPreferencesKey("current_week")
         private val KEY_SELECTED_WEEK = intPreferencesKey("selected_week")
         private val KEY_TIMETABLE_VIEW_MODE = stringPreferencesKey("timetable_view_mode")
@@ -66,7 +75,7 @@ class UserPreferencesManager(private val context: Context) {
         private val KEY_NAVIGATION_DOCK_COLLAPSED = booleanPreferencesKey("navigation_dock_collapsed")
     }
 
-    val preferencesFlow: Flow<AppPreferences> = context.dataStore.data.map { prefs ->
+    val preferencesFlow: Flow<AppPreferences> = store.data.map { prefs ->
         val darkThemeStr = prefs[KEY_DARK_THEME] ?: "system"
         val darkThemeBool = when (darkThemeStr) {
             "dark" -> true
@@ -79,6 +88,7 @@ class UserPreferencesManager(private val context: Context) {
             year = prefs[KEY_YEAR] ?: "",
             term = prefs[KEY_TERM] ?: "2",
             currentWeek = prefs[KEY_CURRENT_WEEK] ?: 1,
+            currentWeekReferenceDate = prefs[KEY_WEEK_REFERENCE_DATE] ?: "",
             selectedWeek = prefs[KEY_SELECTED_WEEK] ?: 1,
             timetableViewMode = prefs[KEY_TIMETABLE_VIEW_MODE] ?: "WEEK",
             timetableSectionMode = prefs[KEY_TIMETABLE_SECTION_MODE] ?: "COMBINE",
@@ -96,15 +106,17 @@ class UserPreferencesManager(private val context: Context) {
     }
 
     /** 记录真实姓名（用于概览页展示） */
-    suspend fun setRealName(name: String) {
-        context.dataStore.edit { prefs ->
+    suspend fun setRealName(name: String, expected: AppPreferences? = null) {
+        store.edit { prefs ->
+            if (expected != null && (prefs[KEY_USERNAME] != expected.username ||
+                (prefs[KEY_LAST_LOGIN_AT] ?: 0L) != expected.lastLoginAt)) return@edit
             if (name.isBlank()) prefs.remove(KEY_REAL_NAME) else prefs[KEY_REAL_NAME] = name
         }
     }
 
     /** 记住登录密码（仅存本地，便于免重复输入） */
     suspend fun setSavedPassword(password: String) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             if (password.isEmpty()) prefs.remove(KEY_SAVED_PASSWORD) else prefs[KEY_SAVED_PASSWORD] = password
         }
     }
@@ -116,17 +128,22 @@ class UserPreferencesManager(private val context: Context) {
      * 用户看过一次提示（或点了忽略）后，再次启动应用不再重复弹出，
      * 而是继续按一周节流来决定下一次提示时机。
      */
-    suspend fun setSessionState(expired: Boolean) {
-        context.dataStore.edit { prefs ->
+    suspend fun setSessionState(expired: Boolean, expected: AppPreferences? = null) {
+        store.edit { prefs ->
+            if (expected != null && (prefs[KEY_USERNAME] != expected.username ||
+                (prefs[KEY_LAST_LOGIN_AT] ?: 0L) != expected.lastLoginAt)) return@edit
             if (expired) prefs[KEY_SESSION_EXPIRED] = true else prefs.remove(KEY_SESSION_EXPIRED)
         }
     }
 
     suspend fun saveAuth(username: String, studentId: String, year: String, term: String, realName: String = "", savedPassword: String? = null) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             if (prefs[KEY_USERNAME] != username) {
                 prefs.remove(KEY_LAST_FULL_SYNC_DATE)
                 prefs.remove(KEY_SAVED_PASSWORD)
+                prefs.remove(KEY_WEEK_REFERENCE_DATE)
+                prefs.remove(KEY_CURRENT_WEEK)
+                prefs.remove(KEY_SELECTED_WEEK)
             }
             prefs.remove(KEY_LAST_FULL_SYNC_DATE)
             prefs[KEY_REAL_NAME] = realName
@@ -143,28 +160,32 @@ class UserPreferencesManager(private val context: Context) {
 
     /** 记录上一次成功登录时间 */
     suspend fun setLastLoginAt(timestamp: Long) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[KEY_LAST_LOGIN_AT] = timestamp
         }
     }
 
     /** 记录上一次会话失效提示时间 */
-    suspend fun setLastPromptAt(timestamp: Long) {
-        context.dataStore.edit { prefs ->
+    suspend fun setLastPromptAt(timestamp: Long, expected: AppPreferences? = null) {
+        store.edit { prefs ->
+            if (expected != null && (prefs[KEY_USERNAME] != expected.username ||
+                (prefs[KEY_LAST_LOGIN_AT] ?: 0L) != expected.lastLoginAt)) return@edit
             if (timestamp <= 0L) prefs.remove(KEY_LAST_PROMPT_AT) else prefs[KEY_LAST_PROMPT_AT] = timestamp
         }
     }
 
     /** 记录上一次全量同步日期（yyyy-MM-dd） */
-    suspend fun setLastFullSyncDate(date: String) {
-        context.dataStore.edit { prefs ->
+    suspend fun setLastFullSyncDate(date: String, expected: AppPreferences? = null) {
+        store.edit { prefs ->
+            if (expected != null && (prefs[KEY_USERNAME] != expected.username ||
+                (prefs[KEY_LAST_LOGIN_AT] ?: 0L) != expected.lastLoginAt)) return@edit
             prefs[KEY_LAST_FULL_SYNC_DATE] = date
         }
     }
 
     /** 记录上一次版本更新检测时间（毫秒时间戳，用于启动静默检测的按天节流） */
     suspend fun setLastUpdateCheckAt(timestamp: Long) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             if (timestamp <= 0L) prefs.remove(KEY_LAST_UPDATE_CHECK_AT)
             else prefs[KEY_LAST_UPDATE_CHECK_AT] = timestamp
         }
@@ -172,45 +193,48 @@ class UserPreferencesManager(private val context: Context) {
 
     /** 记忆导航坞折叠态（用户手动在坞内展开 / 折叠后调用，冷启动沿用） */
     suspend fun setNavigationDockCollapsed(collapsed: Boolean) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[KEY_NAVIGATION_DOCK_COLLAPSED] = collapsed
         }
     }
 
     suspend fun setSelectedWeek(week: Int) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[KEY_SELECTED_WEEK] = week
         }
     }
 
     /** 记忆课表视图形态（周 / 日），下次进入课表页时沿用 */
     suspend fun setTimetableViewMode(mode: String) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[KEY_TIMETABLE_VIEW_MODE] = mode
         }
     }
 
     /** 记忆课表节次粒度（大节 / 小节），下次进入课表页时沿用 */
     suspend fun setTimetableSectionMode(mode: String) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[KEY_TIMETABLE_SECTION_MODE] = mode
         }
     }
 
-    suspend fun setCurrentWeek(week: Int) {
-        context.dataStore.edit { prefs ->
+    suspend fun setCurrentWeek(week: Int, expected: AppPreferences? = null) {
+        store.edit { prefs ->
+            if (expected != null && (prefs[KEY_USERNAME] != expected.username ||
+                (prefs[KEY_LAST_LOGIN_AT] ?: 0L) != expected.lastLoginAt)) return@edit
             prefs[KEY_CURRENT_WEEK] = week
+            prefs[KEY_WEEK_REFERENCE_DATE] = java.time.LocalDate.now().toString()
         }
     }
 
     suspend fun setDarkTheme(mode: String) { // "system", "dark", "light"
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[KEY_DARK_THEME] = mode
         }
     }
 
     suspend fun setOfflineMode(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[KEY_OFFLINE_MODE] = enabled
         }
     }
@@ -220,7 +244,10 @@ class UserPreferencesManager(private val context: Context) {
      * 注意：保留「账号」与「记住的密码」，以便下次登录免重复输入（需求：登录页持久保存用户名与密码）。
      */
     suspend fun clearSession() {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
+            prefs.remove(KEY_WEEK_REFERENCE_DATE)
+            prefs.remove(KEY_CURRENT_WEEK)
+            prefs.remove(KEY_SELECTED_WEEK)
             prefs.remove(KEY_STUDENT_ID)
             prefs.remove(KEY_YEAR)
             prefs.remove(KEY_TERM)

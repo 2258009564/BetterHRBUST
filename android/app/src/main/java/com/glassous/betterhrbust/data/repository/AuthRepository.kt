@@ -29,6 +29,7 @@ class AuthRepository(
     }
 
     private var preparedLoginAccount: String? = null
+    private val sessionGeneration = java.util.concurrent.atomic.AtomicLong()
 
     private val scope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
@@ -90,13 +91,14 @@ class AuthRepository(
     }
 
     fun markSessionExpired(expired: Boolean = true) {
+        val generation = sessionGeneration.get()
         if (!expired) {
             _isSessionExpired.value = false
             _shouldPromptReLogin.value = false
             _sessionPromptDismissed.value = false
             pendingManualPrompt = false
             promptDecided = false
-            scope.launch { prefs.setSessionState(expired = false) }
+            scope.launch { if (generation == sessionGeneration.get()) prefs.setSessionState(expired = false) }
             return
         }
 
@@ -110,16 +112,17 @@ class AuthRepository(
         _isSessionExpired.value = true
         scope.launch {
             val snapshot = prefs.preferencesFlow.firstOrNull()
+            if (generation != sessionGeneration.get()) return@launch
             val now = System.currentTimeMillis()
             val base = maxOf(snapshot?.lastLoginAt ?: 0L, snapshot?.lastPromptAt ?: 0L)
             val shouldPrompt = manual || base <= 0L || (now - base) >= PROMPT_INTERVAL_MS
             _shouldPromptReLogin.value = shouldPrompt
             if (shouldPrompt) {
-                prefs.setLastPromptAt(now)
+                prefs.setLastPromptAt(now, expected = snapshot)
                 // 新的一次提示：重新展示横幅（覆盖上一次的"忽略"）
                 _sessionPromptDismissed.value = false
             }
-            prefs.setSessionState(expired = true)
+            prefs.setSessionState(expired = true, expected = snapshot)
         }
     }
 
@@ -132,6 +135,7 @@ class AuthRepository(
     }
 
     fun login(username: String, password: String, captcha: String): Flow<Resource<StudentContext>> = flow {
+        sessionGeneration.incrementAndGet()
         emit(Resource.Loading)
         try {
             val previous = prefs.preferencesFlow.firstOrNull()
@@ -202,6 +206,7 @@ class AuthRepository(
     }
 
     fun logout(): Flow<Resource<Unit>> = flow {
+        sessionGeneration.incrementAndGet()
         preparedLoginAccount = null
         emit(Resource.Loading)
         _isSessionExpired.value = false

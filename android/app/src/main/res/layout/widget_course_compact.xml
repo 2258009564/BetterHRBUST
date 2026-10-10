@@ -1,0 +1,7 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_course_row" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingBottom="0dp">
+    <FrameLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/widget_time_pill" android:clipToOutline="true">
+    <TextView android:id="@+id/widget_course_detail" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="1dp" android:paddingBottom="1dp"  android:background="@drawable/widget_time_pill" android:textSize="10sp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_accent" android:maxLines="1" android:ellipsize="end"/>
+    </FrameLayout>
+    <TextView android:id="@+id/widget_course_name" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="11sp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_text" android:maxLines="1" android:ellipsize="end"/>
+    <TextView android:id="@+id/widget_course_location" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="1dp" android:textSize="10sp" android:textColor="@color/widget_secondary" android:maxLines="1" android:ellipsize="end"/>
+</LinearLayout>

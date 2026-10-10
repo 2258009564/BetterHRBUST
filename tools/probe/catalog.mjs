@@ -107,7 +107,7 @@ export const CATALOG = [
     key: 'auth.logout',
     name: '退出登录',
     module: 'auth',
-    path: 'j_acegi_logout',
+    path: 'logout_security_check',
     method: 'GET',
     confidence: 'likely',
     mutating: true,

@@ -115,7 +115,7 @@ private fun WeekGrid(data: TimetableWidgetData, strings: WidgetStrings, size: Dp
             maxLines = 1
         )
         Text(
-            text = strings.dayTitle(DayNames[data.todayDay - 1]),
+            text = data.todayDate.format(java.time.format.DateTimeFormatter.ofPattern("MM/dd")) + " " + DayNames[data.todayDay - 1],
             modifier = GlanceModifier.width(WeekTitleTailWidth),
             style = widgetText(WidgetPalette.OnSurfaceVariant, 9, align = TextAlign.End),
             maxLines = 1
@@ -137,13 +137,13 @@ private fun WeekGrid(data: TimetableWidgetData, strings: WidgetStrings, size: Dp
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = DayShortNames[day - 1],
+                    text = DayShortNames[day - 1] + "\n" + data.todayDate.minusDays((data.todayDay - 1).toLong()).plusDays((day - 1).toLong()).format(java.time.format.DateTimeFormatter.ofPattern("MM/dd")),
                     style = widgetText(
                         color = if (isToday) WidgetPalette.Highlight else WidgetPalette.OnSurfaceVariant,
                         sizeSp = 9,
                         weight = if (isToday) FontWeight.Bold else FontWeight.Normal
                     ),
-                    maxLines = 1
+                    maxLines = 2
                 )
             }
         }

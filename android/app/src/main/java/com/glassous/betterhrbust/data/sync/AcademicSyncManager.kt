@@ -4,6 +4,7 @@ import com.glassous.betterhrbust.core.datastore.UserPreferencesManager
 import com.glassous.betterhrbust.data.repository.AcademicRepository
 import com.glassous.betterhrbust.data.repository.AuthRepository
 import com.glassous.betterhrbust.data.repository.Resource
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -65,6 +66,8 @@ class AcademicSyncManager(
      * @return 是否真正执行了同步
      */
     suspend fun ensureDailySync(): Boolean {
+        // 切号时先等待旧轮次退出，再重查新账号是否需要同步，避免 tryLock 忙碌后漏同步。
+        syncMutex.withLock { }
         if (!needsDailySync()) return false
         syncAll(manual = false)
         return true
@@ -123,7 +126,7 @@ class AcademicSyncManager(
                 }
 
                 val current = prefs.preferencesFlow.firstOrNull()
-                if (current?.studentId != studentId || current?.username != snapshot.username) {
+                if (current?.studentId != studentId || current?.username != snapshot.username || current?.lastLoginAt != snapshot.lastLoginAt) {
                     return SyncOutcome(success = false, expired = false, message = "账号已切换，旧同步结果已丢弃")
                 }
                 if (authRepo.isSessionExpired.value) {
@@ -132,7 +135,7 @@ class AcademicSyncManager(
                     val failed = results.filterIsInstance<Resource.Error>()
                     val cached = results.filterIsInstance<Resource.Success<*>>().count { it.isOfflineCache }
                     val complete = wasFullyRefreshed(results)
-                    if (complete) prefs.setLastFullSyncDate(todayKey())
+                    if (complete) prefs.setLastFullSyncDate(todayKey(), expected = snapshot)
                     val message = when {
                         complete -> "数据已全部同步"
                         failed.isNotEmpty() -> "部分数据同步失败（${failed.size} 项）：${failed.first().message}"

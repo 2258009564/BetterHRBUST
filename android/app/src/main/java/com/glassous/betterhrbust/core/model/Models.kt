@@ -183,7 +183,9 @@ data class RecommendStats(
     val retakeCount: Int = 0,
     val retakeLimit: Int = 2,
     val qualified: Boolean = false
-)
+) {
+    val retakeWithinLimit: Boolean get() = retakeCount <= retakeLimit
+}
 
 /** 特色算法 ③ 学业风险预警（累计挂科学分） */
 @Serializable

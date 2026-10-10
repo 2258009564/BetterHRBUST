@@ -1,5 +1,6 @@
 package com.glassous.betterhrbust
 
+import androidx.lifecycle.lifecycleScope
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -68,6 +69,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            com.glassous.betterhrbust.widget.TimetableWidgetProvider.refreshAll(this@MainActivity)
+        }
+    }
 
     /** 桌面小部件点击请求打开的一级 Tab 索引（null = 无待处理请求） */
     private val pendingTab = MutableStateFlow<Int?>(null)
@@ -140,12 +147,14 @@ class MainActivity : ComponentActivity() {
     /** 消费一次性跳转请求：同时移除意图 extra，避免配置变更重建后再次跳转 */
     private fun consumePendingTab() {
         intent?.removeExtra(EXTRA_OPEN_TAB)
+        intent?.removeExtra(com.glassous.betterhrbust.widget.TimetableWidgetProvider.OPEN_TIMETABLE)
         pendingTab.value = null
     }
 
     /** 解析小部件携带的目标 Tab；extra 缺失或越界一律忽略 */
     private fun Intent.requestedTab(): Int? = getIntExtra(EXTRA_OPEN_TAB, -1)
         .takeIf { hasExtra(EXTRA_OPEN_TAB) && it in TopLevelDestination.entries.indices }
+        ?: if (getBooleanExtra(com.glassous.betterhrbust.widget.TimetableWidgetProvider.OPEN_TIMETABLE, false)) TAB_TIMETABLE else null
 
     companion object {
         /** 小部件点击时携带的一级 Tab 索引（见 [pendingTab]） */

@@ -38,6 +38,7 @@ class AcademicHttpClient(
                 .header("Referer", original.header("Referer") ?: baseUrl)
                 .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
                 .header("Accept-Language", "zh-CN,zh;q=0.9")
+                .header("Cache-Control", "no-store")
             chain.proceed(requestBuilder.build())
         })
         .build()
@@ -223,10 +224,14 @@ class AcademicHttpClient(
     }
 
     suspend fun logout() = withContext(Dispatchers.IO) {
+        // 切号前取消旧业务请求，避免迟到的响应重写会话 Cookie。
+        client.dispatcher.cancelAll()
         try {
-            get("j_acegi_logout")
-        } catch (_: Exception) {
-            // ignore network failure on logout
+            get("logout_security_check")
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (_: IOException) {
+            // 网络失败时仍丢弃旧 Cookie；下一次验证码请求会建立独立会话。
         } finally {
             cookieJar.clear()
         }

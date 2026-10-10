@@ -129,6 +129,7 @@
               ]"
             >
               {{ dayName }}
+              <div class="mt-1 text-xs font-normal opacity-70">{{ dateForDay(dIdx + 1) }}</div>
               <span v-if="isTodayColumn(dIdx + 1)" class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 ml-1"></span>
             </div>
           </div>
@@ -302,6 +303,7 @@ import { useAcademicData } from '@/composables/useAcademicData.js';
 import { useToast } from '@/composables/useToast.js';
 import { BASE_SLOT_TIMES, COMBINE_SLOT_TIMES } from '@/utils/periodTimes.js';
 import { getCourseColor, COURSE_MUTED } from '@/utils/courseColors.js';
+import { timetableDayDate } from '@/utils/timetableDates.js';
 import { isCourseActiveInWeek } from '@/utils/courseWeeks.js';
 
 const { isLoggedIn, isSessionExpired, currentWeek } = useSession();
@@ -330,6 +332,10 @@ const selectedCourse = ref(null);
 const showWeekPicker = ref(false);
 
 const daysOfWeek = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+function dateForDay(day) {
+  return timetableDayDate(currentWeek.value, selectedWeek.value, day);
+}
+
 
 const activeSlots = computed(() => {
   return viewMode.value === 'combine' ? COMBINE_SLOT_TIMES : BASE_SLOT_TIMES;

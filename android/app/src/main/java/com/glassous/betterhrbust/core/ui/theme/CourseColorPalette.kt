@@ -32,7 +32,7 @@ object CourseColorPalette {
     /** 主键缺失时的兜底色相（Web 同为 220 的中性蓝）。 */
     private const val FALLBACK_HUE = 220
 
-    /** 课程主键 → 色相槽位序号（一旦分配即稳定不变）。仅主线程访问。 */
+    /** 课程主键 → 色相槽位序号（一旦分配即稳定不变）。主界面与组件共享，访问串行化。 */
     private val slotRegistry = LinkedHashMap<String, Int>()
 
     /** 提取课程主键：优先课程名，依次回退课序号 / 课程 ID / 排课 ID，并去除所有空白。 */
@@ -57,6 +57,7 @@ object CourseColorPalette {
      * @return 本次涉及的规范化主键（升序）。注册需在组合期完成（`remember(timetableResult)`），
      *   而 `remember` 的 lambda 不允许返回 Unit，故由本方法产出该值供调用方承载。
      */
+    @Synchronized
     fun register(keys: Collection<String>): List<String> {
         val newKeys = keys.asSequence()
             .map(::normalize)
@@ -71,6 +72,7 @@ object CourseColorPalette {
     }
 
     /** 取课程色相（0..359）。主键为空返回兜底色相，未注册的主键按首次遭遇顺序补分配。 */
+    @Synchronized
     fun hueOf(key: String): Int {
         val normalized = normalize(key)
         if (normalized.isEmpty()) return FALLBACK_HUE
@@ -84,6 +86,7 @@ object CourseColorPalette {
      *
      * @param muted 非当前教学周课程传 true，返回中性灰样式（Web 的 COURSE_MUTED 等价物）
      */
+    @Synchronized
     fun cardColors(key: String, dark: Boolean, muted: Boolean = false): CourseCardColors {
         if (muted) return mutedColors(dark)
         val hue = hueOf(key).toFloat()

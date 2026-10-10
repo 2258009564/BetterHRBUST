@@ -124,7 +124,7 @@ fun DashboardScreen(
     }
     val today = clock.toLocalDate()
     val todayDayOfWeek = remember(today) { today.dayOfWeek.value } // 1=Monday .. 7=Sunday
-    val currentWeek = prefs?.currentWeek ?: 1
+    val currentWeek = prefs?.currentTeachingWeek ?: 1
 
     val todayCourses = remember(timetable, todayDayOfWeek, currentWeek, clock) {
         timetable?.cells?.filter { cell ->

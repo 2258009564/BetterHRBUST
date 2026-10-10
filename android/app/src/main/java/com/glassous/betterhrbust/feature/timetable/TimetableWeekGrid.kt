@@ -1,7 +1,6 @@
 package com.glassous.betterhrbust.feature.timetable
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -39,7 +38,7 @@ private val BlockGap = 5.dp
 /** 课程块左右内边距（列宽较窄，留白需克制）。 */
 private val BlockHorizontalPadding = 4.dp
 
-private val HeaderHeight = 34.dp
+private val HeaderHeight = 48.dp
 
 /** 大节模式：有课行 / 空行高度。 */
 private val CombineRowHeight = 96.dp
@@ -129,13 +128,13 @@ internal fun TimetableGrid(
     days: List<Int>,
     cells: List<TimetableCell>,
     selectedWeek: Int,
+    weekStart: LocalDate?,
     page: Int,
     highlightToday: Boolean,
     sectionMode: SectionMode,
     isDark: Boolean,
     dense: Boolean,
     selectedDetail: TimetableCell?,
-    sharedTransitionScope: SharedTransitionScope,
     onCourseClick: (TimetableCell) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -172,7 +171,7 @@ internal fun TimetableGrid(
                             .background(if (isToday) todayTint else Color.Transparent),
                         contentAlignment = Alignment.Center
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = DayNames[day - 1],
                                 fontSize = 13.sp,
@@ -183,15 +182,13 @@ internal fun TimetableGrid(
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 }
                             )
-                            if (isToday) {
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .size(5.dp)
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(todayAccent)
-                                )
-                            }
+                            Text(
+                                text = weekStart?.plusDays((day - 1).toLong())?.format(java.time.format.DateTimeFormatter.ofPattern("MM/dd")) ?: "待同步",
+                                fontSize = 10.sp,
+                                lineHeight = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
                         }
                     }
                 }
@@ -315,7 +312,6 @@ internal fun TimetableGrid(
                                                     dense = dense,
                                                     // 被展开详情的课表块退场，交给详情卡片（共享元素过渡）
                                                     isSharedHidden = selectedDetail != null && selectedDetail.id == cell.id,
-                                                    sharedTransitionScope = sharedTransitionScope,
                                                     // 同格并排多门课时高度减半，课程名减少行数并省略教师
                                                     nameMaxLines = when {
                                                         stacked -> 2
@@ -355,7 +351,6 @@ private fun CourseBlock(
     isDark: Boolean,
     dense: Boolean,
     isSharedHidden: Boolean,
-    sharedTransitionScope: SharedTransitionScope,
     nameMaxLines: Int,
     showTeacher: Boolean,
     onClick: () -> Unit,
@@ -380,88 +375,76 @@ private fun CourseBlock(
     // 非本周的块要多带一行「非本周」标记，课程名相应少一行，避免整块内容溢出被裁切
     val nameLines = if (active) nameMaxLines else (nameMaxLines - 1).coerceAtLeast(1)
 
-    with(sharedTransitionScope) {
-        AnimatedVisibility(
-            visible = !isSharedHidden,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = modifier
+
+    AnimatedVisibility(
+        visible = !isSharedHidden,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+
+                .clip(shape)
+                .background(colors.container)
+                .border(1.dp, colors.border, shape)
+                .clickable(onClick = onClick)
+                .padding(
+                    horizontal = if (dense) BlockHorizontalPadding else 10.dp,
+                    vertical = if (dense) 4.dp else 6.dp
+                ),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
-            Column(
+            Text(
+                text = cell.courseName,
+                fontSize = if (dense) 10.sp else 13.sp,
+                lineHeight = if (dense) 13.sp else 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.content,
+                maxLines = nameLines,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .sharedBounds(
-                        sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "bg")),
-                        animatedVisibilityScope = this@AnimatedVisibility
-                    )
-                    .clip(shape)
-                    .background(colors.container)
-                    .border(1.dp, colors.border, shape)
-                    .clickable(onClick = onClick)
-                    .padding(
-                        horizontal = if (dense) BlockHorizontalPadding else 10.dp,
-                        vertical = if (dense) 4.dp else 6.dp
-                    ),
-                verticalArrangement = Arrangement.spacedBy(1.dp)
-            ) {
+            )
+            Text(
+                text = cell.location.ifEmpty { "待定" },
+                fontSize = if (dense) 9.sp else 11.sp,
+                lineHeight = if (dense) 11.sp else 14.sp,
+                color = colors.content.copy(alpha = 0.85f),
+                maxLines = if (dense) 2 else 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+            )
+            if (showTeacher) {
                 Text(
-                    text = cell.courseName,
-                    fontSize = if (dense) 10.sp else 13.sp,
-                    lineHeight = if (dense) 13.sp else 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.content,
-                    maxLines = nameLines,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "name")),
-                        animatedVisibilityScope = this@AnimatedVisibility
-                    )
-                )
-                Text(
-                    text = cell.location.ifEmpty { "待定" },
+                    text = cell.teacher.ifEmpty { "—" },
                     fontSize = if (dense) 9.sp else 11.sp,
                     lineHeight = if (dense) 11.sp else 14.sp,
                     color = colors.content.copy(alpha = 0.85f),
-                    maxLines = if (dense) 2 else 1,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "location")),
-                        animatedVisibilityScope = this@AnimatedVisibility
-                    )
+                    modifier = Modifier
                 )
-                if (showTeacher) {
-                    Text(
-                        text = cell.teacher.ifEmpty { "—" },
-                        fontSize = if (dense) 9.sp else 11.sp,
-                        lineHeight = if (dense) 11.sp else 14.sp,
-                        color = colors.content.copy(alpha = 0.85f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState(key = sharedKey(page, cell, "teacher")),
-                            animatedVisibilityScope = this@AnimatedVisibility
-                        )
-                    )
-                }
-                if (!dense && cell.weeks.isNotEmpty()) {
-                    Text(
-                        text = cell.weeks,
-                        fontSize = 10.sp,
-                        lineHeight = 12.sp,
-                        color = colors.content.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                if (!active) {
-                    Text(
-                        text = "非本周",
-                        fontSize = 9.sp,
-                        lineHeight = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.accent
-                    )
-                }
+            }
+            if (!dense && cell.weeks.isNotEmpty()) {
+                Text(
+                    text = cell.weeks,
+                    fontSize = 10.sp,
+                    lineHeight = 12.sp,
+                    color = colors.content.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (!active) {
+                Text(
+                    text = "非本周",
+                    fontSize = 9.sp,
+                    lineHeight = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.accent
+                )
             }
         }
     }
+
 }
