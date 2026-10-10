@@ -73,6 +73,9 @@ class WidgetLayoutTest {
                 scenario.onActivity {
                     assertEquals(if(width>=260) View.VISIBLE else View.GONE,root!!.findViewById<View>(R.id.widget_tomorrow_panel).visibility)
                     assertEquals(count,root!!.findViewById<android.widget.ListView>(R.id.widget_courses).count)
+                    assertTrue(root!!.findViewById<android.widget.TextView>(R.id.widget_date).text.toString().contains("10/10"))
+                    assertEquals("今天 10/10",root!!.findViewById<android.widget.TextView>(R.id.widget_today_label).text.toString())
+                    assertEquals("明天 10/11",root!!.findViewById<android.widget.TextView>(R.id.widget_tomorrow_label).text.toString())
                     assertEquals(if(height<140) View.GONE else View.VISIBLE,root!!.findViewById<View>(R.id.widget_done).visibility)
                     val bitmap=Bitmap.createBitmap(root!!.width,root!!.height,Bitmap.Config.ARGB_8888)
                     root!!.draw(Canvas(bitmap))

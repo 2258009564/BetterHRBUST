@@ -62,3 +62,9 @@ for (let count=0;count<=3;count++) {
  assert.equal(result.retakeWithinLimit,count<=2);
  assert.equal(result.qualified,false);
 }
+
+const { timetableDayDate } = await import('../src/utils/timetableDates.js');
+assert.equal(timetableDayDate(6,6,1,new Date(2026,0,1)), '12/29');
+assert.equal(timetableDayDate(6,7,1,new Date(2026,0,1)), '01/05');
+assert.equal(timetableDayDate(6,6,4,new Date(2024,1,29)), '02/29');
+assert.equal(timetableDayDate(6,6,7,new Date(2026,9,10)), '10/11');

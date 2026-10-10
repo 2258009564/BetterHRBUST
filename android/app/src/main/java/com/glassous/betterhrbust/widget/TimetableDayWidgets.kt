@@ -240,7 +240,7 @@ private fun DayHeader(
     detailed: Boolean,
     headerHeight: Dp
 ) {
-    val title = strings.dayTitle(DayNames[data.todayDay - 1])
+    val title = data.todayDate.format(java.time.format.DateTimeFormatter.ofPattern("MM/dd")) + " " + DayNames[data.todayDay - 1]
     val week = strings.weekTitle(data.currentWeek)
     if (detailed) {
         Row(

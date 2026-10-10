@@ -8,6 +8,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TimetableWidgetTest {
+    @Test fun selectedWeekDatesCrossYearAndLeapDayWithoutGuessingMissingAnchors() {
+        val dates=com.glassous.betterhrbust.core.util.TeachingWeek
+        assertEquals(LocalDate.parse("2025-12-29"),dates.mondayForWeek(6,"2026-01-01",6))
+        assertEquals(LocalDate.parse("2026-01-05"),dates.mondayForWeek(6,"2026-01-01",7))
+        assertEquals(LocalDate.parse("2024-02-26"),dates.mondayForWeek(6,"2024-02-29",6))
+        assertNull(dates.mondayForWeek(6,"",7))
+    }
+
     @Test fun completedLessonsDisappearExactlyAtEndAndKeepTheDailyDenominator() {
         val courses=listOf(com.glassous.betterhrbust.widget.WidgetCourse("A","D510","08:10–09:50",false),com.glassous.betterhrbust.widget.WidgetCourse("B","D501","10:10–11:50",false))
         val boundary=TimetableWidgetModel.progress(courses,LocalTime.parse("09:50"))

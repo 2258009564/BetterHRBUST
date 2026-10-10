@@ -38,7 +38,7 @@ private val BlockGap = 5.dp
 /** 课程块左右内边距（列宽较窄，留白需克制）。 */
 private val BlockHorizontalPadding = 4.dp
 
-private val HeaderHeight = 34.dp
+private val HeaderHeight = 48.dp
 
 /** 大节模式：有课行 / 空行高度。 */
 private val CombineRowHeight = 96.dp
@@ -128,6 +128,7 @@ internal fun TimetableGrid(
     days: List<Int>,
     cells: List<TimetableCell>,
     selectedWeek: Int,
+    weekStart: LocalDate?,
     page: Int,
     highlightToday: Boolean,
     sectionMode: SectionMode,
@@ -170,7 +171,7 @@ internal fun TimetableGrid(
                             .background(if (isToday) todayTint else Color.Transparent),
                         contentAlignment = Alignment.Center
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = DayNames[day - 1],
                                 fontSize = 13.sp,
@@ -181,15 +182,13 @@ internal fun TimetableGrid(
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 }
                             )
-                            if (isToday) {
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .size(5.dp)
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(todayAccent)
-                                )
-                            }
+                            Text(
+                                text = weekStart?.plusDays((day - 1).toLong())?.format(java.time.format.DateTimeFormatter.ofPattern("MM/dd")) ?: "待同步",
+                                fontSize = 10.sp,
+                                lineHeight = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
                         }
                     }
                 }

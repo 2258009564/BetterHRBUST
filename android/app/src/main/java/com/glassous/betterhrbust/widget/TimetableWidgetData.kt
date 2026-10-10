@@ -85,7 +85,8 @@ internal data class TimetableWidgetData(
     /** 周视图行（按大节升序，6 个大节全部保行，无课行由渲染层收窄） */
     val weekRows: List<WidgetWeekRow>,
     /** 日视图行（按大节升序，6 个大节全部保行，无课行由渲染层收窄） */
-    val todayRows: List<WidgetDaySlot>
+    val todayRows: List<WidgetDaySlot>,
+    val todayDate: LocalDate = LocalDate.now()
 ) {
     /** 本周是否有任何课程 */
     val hasWeekCourses: Boolean get() = weekRows.any { it.occupied }
@@ -141,6 +142,7 @@ internal object TimetableWidgetLoader {
             currentWeek = week,
             todayDay = todayDay,
             weekRows = buildWeekRows(timetable.cells, styles),
+            todayDate = snapshot.date,
             todayRows = buildTodayRows(timetable.cells, styles, todayDay)
         )
     }

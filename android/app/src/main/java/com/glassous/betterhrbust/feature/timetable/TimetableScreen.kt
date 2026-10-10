@@ -288,6 +288,8 @@ fun TimetableScreen(
                     )
                     else -> TimetableContent(
                         result = result,
+                        referenceWeek = prefs?.currentWeek ?: 1,
+                        referenceDate = prefs?.currentWeekReferenceDate.orEmpty(),
                         viewMode = viewMode,
                         pagerState = pagerState,
                         sectionMode = sectionMode,
@@ -604,6 +606,8 @@ private fun <T> SegmentedToggle(
 @Composable
 private fun TimetableContent(
     result: TimetableResult,
+    referenceWeek: Int,
+    referenceDate: String,
     viewMode: TimetableViewMode,
     pagerState: PagerState,
     sectionMode: SectionMode,
@@ -640,6 +644,7 @@ private fun TimetableContent(
                 cells = result.cells,
                 days = if (isDayView) listOf(dayOfPage(page)) else WeekDays,
                 selectedWeek = pageWeek,
+                weekStart = com.glassous.betterhrbust.core.util.TeachingWeek.mondayForWeek(referenceWeek, referenceDate, pageWeek),
                 page = page,
                 highlightToday = !isDayView && pageWeek == currentWeek,
                 sectionMode = sectionMode,
