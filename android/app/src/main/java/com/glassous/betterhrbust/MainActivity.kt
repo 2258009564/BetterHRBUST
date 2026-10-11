@@ -178,6 +178,8 @@ fun MainAppScaffold(
     /** 消费小部件跳转请求（跳转后调用，避免重复触发） */
     onPendingTabHandled: () -> Unit = {}
 ) {
+    // NavHost 会保留路由内容；用 State 转发新意图，避免闭包只保留第一次的跳转值。
+    val latestRequestedTab by rememberUpdatedState(pendingTab)
     val authRepo = remember { BetterHrbustApp.instance.authRepository }
     val syncManager = remember { BetterHrbustApp.instance.syncManager }
     val updateRepo = remember { BetterHrbustApp.instance.updateRepository }
@@ -308,7 +310,7 @@ fun MainAppScaffold(
                         MainPagerScreen(
                             navController = navController,
                             dockCollapsed = dockCollapsed,
-                            pendingTab = pendingTab,
+                            pendingTab = latestRequestedTab,
                             onPendingTabHandled = onPendingTabHandled,
                             onLogout = {
                                 navController.navigate(AuthRoute) {
@@ -328,7 +330,7 @@ fun MainAppScaffold(
                         MainPagerScreen(
                             navController = navController,
                             dockCollapsed = dockCollapsed,
-                            pendingTab = pendingTab,
+                            pendingTab = latestRequestedTab,
                             onPendingTabHandled = onPendingTabHandled,
                             onLogout = {
                                 navController.navigate(AuthRoute) {
@@ -461,6 +463,7 @@ fun MainPagerScreen(
     val initialPage = (pendingTab ?: 0).coerceIn(0, TopLevelDestination.entries.lastIndex)
     val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { 5 })
     var tabIndex by rememberSaveable { mutableStateOf(initialPage) }
+    var timetableOpenRequest by remember { mutableStateOf(0) }
     val currentTab = tabIndex
 
     // 平板端：导航坞竖排在左侧，页面内容让位其宽度 + 左侧安全距离（见 pagerModifier）
@@ -477,6 +480,7 @@ fun MainPagerScreen(
     LaunchedEffect(pendingTab) {
         val target = pendingTab ?: return@LaunchedEffect
         val index = target.coerceIn(0, TopLevelDestination.entries.lastIndex)
+        if (index == MainActivity.TAB_TIMETABLE) timetableOpenRequest++
         tabIndex = index
         pagerState.scrollToPage(index)
         onPendingTabHandled()
@@ -594,7 +598,7 @@ fun MainPagerScreen(
         ) { page ->
             when (page) {
                 0 -> DashboardScreen(onNavigate = onDashboardNavigate)
-                1 -> TimetableScreen()
+                1 -> TimetableScreen(openRequest = timetableOpenRequest)
                 2 -> ScoresScreen()
                 3 -> ExamsScreen()
                 4 -> NoticesSettingsScreen(

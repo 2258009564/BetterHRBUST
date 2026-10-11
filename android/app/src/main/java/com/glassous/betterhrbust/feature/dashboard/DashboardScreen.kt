@@ -128,7 +128,7 @@ fun DashboardScreen(
 
     val todayCourses = remember(timetable, todayDayOfWeek, currentWeek, clock) {
         timetable?.cells?.filter { cell ->
-            cell.day == todayDayOfWeek && AcademicParsers.isCourseActiveInWeek(cell.weeks, currentWeek) && !com.glassous.betterhrbust.core.util.CourseSchedule.hasEnded(cell.sectionIndex, clock.toLocalTime())
+            prefs?.teachingWeekOn(today) != null && cell.day == todayDayOfWeek && AcademicParsers.isCourseActiveInWeek(cell.weeks, currentWeek) && !com.glassous.betterhrbust.core.util.CourseSchedule.hasEnded(cell.sectionIndex, clock.toLocalTime())
         }?.sortedBy { it.sectionIndex } ?: emptyList()
     }
 

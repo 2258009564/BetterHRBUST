@@ -1,7 +1,7 @@
 ﻿<template>
   <span
     :class="[
-      'inline-flex items-center font-medium rounded-full select-none tracking-tight',
+      'inline-flex items-center whitespace-nowrap shrink-0 font-medium rounded-full select-none tracking-tight',
       sizeClasses,
       variantClasses,
       customClass

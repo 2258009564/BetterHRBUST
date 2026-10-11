@@ -1,3 +1,4 @@
+import { semesterOn, teachingWeekOn } from '../src/utils/schoolCalendar.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -24,7 +25,7 @@ const env={ref,reactive,computed,academicApi:api,Date,console,
  registerDataCacheCleaner:fn=>cleaners.push(fn),clearRegisteredDataCaches:()=>cleaners.forEach(fn=>fn()),registerCourseColors:()=>{}};
 function load(file, additions={}) {
  const source=readFileSync(new URL('../src/composables/'+file,import.meta.url),'utf8').replace(/^import[\s\S]*?;\r?\n/gm,'').replace(/^export /gm,'');
- const context=vm.createContext({...env,...additions});vm.runInContext(source,context);return context;
+ const context=vm.createContext({ semesterOn, teachingWeekOn,...env,...additions});vm.runInContext(source,context);return context;
 }
 const session=load('useSession.js').useSession();
 const data=load('useAcademicData.js',{useSession:()=>session}).useAcademicData();

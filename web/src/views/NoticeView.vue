@@ -53,7 +53,7 @@
       <!-- School Calendar Timeline -->
       <div class="space-y-4">
         <UiCard title="校历关键周次节点 (全校日历)">
-          <div class="space-y-4 text-xs">
+          <div class="space-y-4 text-xs"><a :href="calendarSource" target="_blank" rel="noopener" class="underline">查看教务处官方校历 ↗</a>
             <div
               v-for="m in milestones"
               :key="m.title"
@@ -93,6 +93,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { semesterOn, calendarSource } from '@/utils/schoolCalendar.js';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiBadge from '@/components/ui/UiBadge.vue';
 import UiModal from '@/components/ui/UiModal.vue';
@@ -101,7 +102,7 @@ import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
 import { useAcademicData } from '@/composables/useAcademicData.js';
 
-const { currentWeek } = useSession();
+const { currentWeek, semesterTeachingWeeks } = useSession();
 // 当前周公告来自登录时的全量缓存；只有用户主动切换周次时才按需拉取并缓存该周
 const { notices: cachedNotices, loadNoticesForWeek } = useAcademicData();
 
@@ -118,7 +119,7 @@ const notices = computed(() =>
 // 周次筛选项：当前周 + 第 1-26 周
 const weekItems = computed(() => [
   { label: `当前周 (第 ${currentWeek.value} 周)`, value: 0 },
-  ...Array.from({ length: 26 }, (_, i) => ({ label: `第 ${i + 1} 周`, value: i + 1 }))
+  ...Array.from({ length: semesterTeachingWeeks.value }, (_, i) => ({ label: `第 ${i + 1} 周`, value: i + 1 }))
 ]);
 
 async function fetchNotices() {
@@ -139,11 +140,13 @@ function readNotice(n) {
   showModal.value = true;
 }
 
-const milestones = [
-  { title: '新学期老生报到注册', time: '第 1 周 (8.31)', desc: '完成教务在线注册与学费缴费确认', isPassed: true },
-  { title: '国庆节放假调休', time: '第 5 周 (10.1-10.7)', desc: '按国家法定节假日排休，部分周次补课', isPassed: true },
-  { title: '期中教学检查与测试', time: '第 9-10 周', desc: '期中考试与平时成绩过程性录入', isPassed: false },
-  { title: '期末统考周', time: '第 18-19 周', desc: '集中进行专业必修与公共课闭卷统考', isPassed: false },
-  { title: '寒假开始', time: '第 20 周 (2026.1.18)', desc: '学期结束，成绩公布及录入截止', isPassed: false }
-];
+const milestones = computed(() => {
+  const semester=semesterOn();
+  if (!semester) return [];
+  const today=new Date().toLocaleDateString('en-CA');
+  return [
+    { title:'学期开始上课',time:semester.startDate,desc:`${semester.label} · 教务处公布的学期起点`,isPassed:today>=semester.startDate },
+    { title:'教学结束（含考试）',time:semester.teachingEndDate,desc:`共 ${semester.teachingWeeks} 个教学周，个人考试时间以排考为准`,isPassed:today>semester.teachingEndDate }
+  ];
+});
 </script>

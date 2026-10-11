@@ -116,8 +116,9 @@ class TimetableWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_today_label,"今天 ${today.format(DateTimeFormatter.ofPattern("MM/dd"))}")
             views.setTextViewText(R.id.widget_tomorrow_label,"明天 ${today.plusDays(1).format(DateTimeFormatter.ofPattern("MM/dd"))}")
             val shownDate=if(nextOnly && remaining.isEmpty() && tomorrowCourses.isNotEmpty() && !tomorrowUnknown) today.plusDays(1) else today
-            views.setTextViewText(R.id.widget_date, "${shownDate.format(DateTimeFormatter.ofPattern("MM/dd"))} ${weekdays[shownDate.dayOfWeek.value-1]}" + if(fontScale<1.5f) (week?.let { " · ${it}周" } ?: "") else "")
-            if(fontScale>=1.5f) views.setTextViewText(R.id.widget_heading,week?.let { "第${it}周" } ?: "课表")
+            val shownWeek = com.glassous.betterhrbust.core.util.SchoolCalendar.weekOn(shownDate) ?: week
+            views.setTextViewText(R.id.widget_date, "${shownDate.format(DateTimeFormatter.ofPattern("MM/dd"))} ${weekdays[shownDate.dayOfWeek.value-1]}" + if(fontScale<1.5f) (shownWeek?.let { " · ${it}周" } ?: "") else "")
+            if(fontScale>=1.5f) views.setTextViewText(R.id.widget_heading,shownWeek?.let { "第${it}周" } ?: "课表")
             val open=Intent(context,MainActivity::class.java).putExtra(OPEN_TIMETABLE,true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             fun column(viewId: Int, emptyId: Int, titleId: Int, detailId: Int, items: List<WidgetCourse>, day: Int, unknown: Boolean) {
                 val rows=if(message.isEmpty() && !unknown) items.map { courseRow(context,it,nextOnly) } else emptyList()

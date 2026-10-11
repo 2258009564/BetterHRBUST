@@ -1,3 +1,4 @@
+import { semesterOn, teachingWeekOn } from '../../utils/schoolCalendar.js';
 /**
  * 教务在线 HTML 响应解析器
  * 基于 DOMParser 与精确字段抽取，实现现代化前端结构化数据输出
@@ -458,7 +459,7 @@ export function parseCalendarInfo(html) {
 
   // 1. 当前周次
   let currentWeek = 1;
-  const curTd = doc.querySelector('.week td.cur span') || doc.querySelector('.curweek strong');
+  const curTd = doc.querySelector('.curweek strong') || doc.querySelector('.week td.cur span');
   if (curTd) {
     const num = parseInt(curTd.textContent.trim(), 10);
     if (!isNaN(num)) currentWeek = num;
@@ -470,6 +471,11 @@ export function parseCalendarInfo(html) {
   if (curWeekDiv) {
     semesterName = curWeekDiv.textContent.replace(/\s+/g, ' ').replace(/第.*周/, '').trim();
   }
+
+  // 通用1..26导航不是学期长度，只接受明确写出的学期总周数。
+  const semesterText = doc.querySelector('#semesterWeeks, .semester-weeks, .semesterweeks, .semester-calendar')?.textContent || doc.querySelector('#textwrapper')?.textContent || '';
+  const count = semesterText.match(/(?:共|总计|总周数[:：]?)\s*(\d{1,2})\s*(?:个)?(?:教学)?周/);
+  const teachingWeeks = count && Number(count[1]) >= 1 && Number(count[1]) <= 26 ? Number(count[1]) : null;
 
   // 3. 公告内容
   const notices = [];
@@ -489,8 +495,9 @@ export function parseCalendarInfo(html) {
   }
 
   return {
-    currentWeek,
-    semesterName,
+    currentWeek: semesterOn() ? (teachingWeekOn() ?? 0) : currentWeek,
+    semesterName: semesterOn()?.label || semesterName,
+    teachingWeeks: semesterOn()?.teachingWeeks ?? teachingWeeks,
     notices
   };
 }
@@ -508,7 +515,7 @@ export function parseCurriculumPlan(html) {
     select.querySelectorAll('option').forEach(opt => {
       const text = opt.textContent.trim();
       // 匹配形如："学科基础课程（2023） 选课属性：必修 学分要求=26.5 门数要求=8"
-      const m = text.match(/^(.*?)\s+选课属性：(.*?)?\s*学分要求=([\d.]+)\s*门数要求=(\d+)/);
+      const m = text.match(/^(.*?)\s+选课属性\s*[：:]\s*(.*?)?\s*学分要求\s*[=：:]\s*([\d.]+)\s*门数要求\s*[=：:]\s*(\d+)/);
       if (m) {
         groups.push({
           id: opt.value,

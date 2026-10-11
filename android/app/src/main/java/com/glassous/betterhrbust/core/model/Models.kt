@@ -309,6 +309,7 @@ data class CourseSearchItem(
 
 @Serializable
 data class CalendarInfo(
+    val teachingWeeks: Int? = null,
     val currentWeek: Int = 1,
     val semesterName: String = "",
     val notices: List<NoticeItem> = emptyList()

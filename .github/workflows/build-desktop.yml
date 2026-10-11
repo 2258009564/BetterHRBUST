@@ -9,6 +9,13 @@ on:
     paths:
       - 'desktop-tauri/**'
       - 'web/**'
+      - 'shared/**'
+      - '.github/workflows/build-desktop.yml'
+  pull_request:
+    paths:
+      - 'desktop-tauri/**'
+      - 'web/**'
+      - 'shared/**'
       - '.github/workflows/build-desktop.yml'
   workflow_dispatch:
 

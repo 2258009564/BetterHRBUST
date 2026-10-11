@@ -8,6 +8,29 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TimetableWidgetTest {
+    @Test fun publishedCalendarRepairsStaleWeek26AndExcludesWinterHoliday() {
+        val calendar=com.glassous.betterhrbust.core.util.SchoolCalendar
+        assertEquals(6,calendar.weekOn(LocalDate.parse("2026-10-10")))
+        assertEquals(19,calendar.weekOn(LocalDate.parse("2027-01-10")))
+        assertNull(calendar.weekOn(LocalDate.parse("2027-01-11")))
+        assertEquals(1,calendar.weekOn(LocalDate.parse("2027-03-01")))
+        assertEquals(19,calendar.weekOn(LocalDate.parse("2027-07-11")))
+        assertNull(calendar.weekOn(LocalDate.parse("2027-07-12")))
+        val stale=com.glassous.betterhrbust.core.datastore.AppPreferences(currentWeek=26,currentWeekReferenceDate="2026-10-10")
+        assertEquals(6,stale.teachingWeekOn(LocalDate.parse("2026-10-10")))
+    }
+
+    @Test fun calendarWeekWinsOverGenericNavigationAndSemesterLimitStopsAtTwenty() {
+        val html="<div>第26周</div><div id='date'>当前第6周</div><div class='curweek'>2026 秋 第<strong>6</strong>周</div><div class='semester-calendar'>本学期共20教学周</div>"
+        assertEquals(6,com.glassous.betterhrbust.core.parser.AcademicParsers.parseTeachingWeek(html))
+        val calendar=com.glassous.betterhrbust.core.parser.AcademicParsers.parseCalendarInfo(html)
+        assertEquals(6,calendar.currentWeek)
+        assertEquals(20,calendar.teachingWeeks)
+        assertNull(com.glassous.betterhrbust.core.util.TeachingWeek.resolve(6,"2026-10-10",LocalDate.parse("2027-01-25")))
+        assertEquals(20,com.glassous.betterhrbust.core.util.TeachingWeek.resolve(6,"2026-10-10",LocalDate.parse("2027-01-16")))
+        assertNull(com.glassous.betterhrbust.core.parser.AcademicParsers.parseCalendarInfo("<div class='week'><a>26</a></div>").teachingWeeks)
+    }
+
     @Test fun selectedWeekDatesCrossYearAndLeapDayWithoutGuessingMissingAnchors() {
         val dates=com.glassous.betterhrbust.core.util.TeachingWeek
         assertEquals(LocalDate.parse("2025-12-29"),dates.mondayForWeek(6,"2026-01-01",6))

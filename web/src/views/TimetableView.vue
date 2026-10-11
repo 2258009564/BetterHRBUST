@@ -68,7 +68,7 @@
               class="px-2.5 py-1 text-xs rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 flex items-center gap-1 select-none"
             >
               <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              当前周
+              {{ isSchoolHoliday ? '当前处于假期' : '当前周' }}
             </span>
             <button
               v-else
@@ -223,11 +223,11 @@
       <!-- Week Picker Modal -->
       <UiModal v-model="showWeekPicker" title="选择教学周次">
         <div class="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-          共 26 个教学周，绿色标记为当前教学周
+          {{ calendarWeekCountKnown ? `校历共 ${semesterTeachingWeeks} 周` : `校历待确认，暂列 ${semesterTeachingWeeks} 周` }}，绿色标记为当前教学周
         </div>
         <div class="grid grid-cols-5 sm:grid-cols-7 gap-2">
           <button
-            v-for="w in 26"
+            v-for="w in semesterTeachingWeeks"
             :key="w"
             type="button"
             :class="[
@@ -306,7 +306,7 @@ import { getCourseColor, COURSE_MUTED } from '@/utils/courseColors.js';
 import { timetableDayDate } from '@/utils/timetableDates.js';
 import { isCourseActiveInWeek } from '@/utils/courseWeeks.js';
 
-const { isLoggedIn, isSessionExpired, currentWeek } = useSession();
+const { isLoggedIn, isSessionExpired, currentWeek, semesterTeachingWeeks, calendarWeekCountKnown, isSchoolHoliday } = useSession();
 // 课表数据来自登录时的全量缓存，切换周次/视图不再触网
 const { timetableCombine, timetableBase, syncing, lastSyncText } = useAcademicData();
 const { showToast } = useToast();
@@ -346,7 +346,7 @@ function prevWeek() {
 }
 
 function nextWeek() {
-  if (selectedWeek.value < 26) selectedWeek.value += 1;
+  if (selectedWeek.value < semesterTeachingWeeks.value) selectedWeek.value += 1;
 }
 
 function isCourseActiveThisWeek(course) {
@@ -369,7 +369,7 @@ function backToCurrentWeek() {
  * 查看其他周次时不显示今天标记，避免误导。
  */
 function isTodayColumn(dayNum) {
-  return selectedWeek.value === currentWeek.value && dayNum === currentDayIndex.value;
+  return !isSchoolHoliday.value && selectedWeek.value === currentWeek.value && dayNum === currentDayIndex.value;
 }
 
 /** 课程卡片动态配色（非当前教学周返回 null，走中性灰 COURSE_MUTED 样式） */

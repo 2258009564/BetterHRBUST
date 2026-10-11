@@ -480,7 +480,7 @@ class AcademicRepository(
 
             if (parsedUsable) {
                 requireCurrentSession(session)
-                prefs.setCurrentWeek(calendarInfo.currentWeek, expected = session)
+                prefs.setCurrentWeek(calendarInfo.currentWeek, expected = session, teachingWeeks = calendarInfo.teachingWeeks)
             }
 
             emit(Resource.Success(calendarInfo.notices, isOfflineCache = false))
@@ -502,22 +502,20 @@ class AcademicRepository(
             val html = client.get("listLeft.do", preferredCharset = CharsetDecoderHelper.UTF_8)
             var week = AcademicParsers.parseTeachingWeek(html)
 
-            // 若 listLeft.do 未能识别出有效周数（或为 1），尝试从 calendarinfo/viewCalendarInfo.do 双重校验
-            if (week <= 1) {
-                try {
-                    val calHtml = client.get("calendarinfo/viewCalendarInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
-                    val calWeek = AcademicParsers.parseCalendarInfo(calHtml).currentWeek
-                    if (calWeek > 1) {
-                        week = calWeek
-                    }
-                } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {}
-            }
+            // 每次同时取得校历，读取明确的学期长度；旧导航中的26不作为当前教学周。
+            var calendarWeeks: Int? = null
+            try {
+                val calHtml = client.get("calendarinfo/viewCalendarInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
+                val calendar = AcademicParsers.parseCalendarInfo(calHtml)
+                calendarWeeks = calendar.teachingWeeks
+                val limit = calendarWeeks ?: session?.semesterTeachingWeeks ?: 20
+                if (week !in 1..limit && calendar.currentWeek in 1..limit) week = calendar.currentWeek
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) {}
 
-            if (week in 1..26) {
+            if (week in 1..(calendarWeeks ?: session?.semesterTeachingWeeks ?: 20)) {
                 requireCurrentSession(session)
-                prefs.setCurrentWeek(week, expected = session)
+                prefs.setCurrentWeek(week, expected = session, teachingWeeks = calendarWeeks)
                 emit(week)
             } else {
                 emit(1)

@@ -14,6 +14,8 @@ data class AppPreferences(
     val studentId: String = "",
     val year: String = "",
     val term: String = "2",
+    val semesterTeachingWeeks: Int = 20,
+    val calendarWeekCountKnown: Boolean = false,
     val currentWeek: Int = 1,
     val currentWeekReferenceDate: String = "",
     val selectedWeek: Int = 1,
@@ -44,12 +46,19 @@ data class AppPreferences(
     /** 导航坞折叠态（用户手动在坞内展开 / 折叠后持久化，冷启动沿用） */
     val navigationDockCollapsed: Boolean = false,
 ) {
-    fun teachingWeekOn(date: java.time.LocalDate): Int? =
-        com.glassous.betterhrbust.core.util.TeachingWeek.resolve(currentWeek, currentWeekReferenceDate, date)
+    fun teachingWeekOn(date: java.time.LocalDate): Int? {
+        if (com.glassous.betterhrbust.core.util.SchoolCalendar.semesterOn(date) != null)
+            return com.glassous.betterhrbust.core.util.SchoolCalendar.weekOn(date)
+        return com.glassous.betterhrbust.core.util.TeachingWeek.resolve(currentWeek, currentWeekReferenceDate, date, semesterTeachingWeeks)
+    }
 
-    /** 老缓存没有参考日期时保留原周次；有效同步结果离线按日期推进。 */
     val currentTeachingWeek: Int
-        get() = teachingWeekOn(java.time.LocalDate.now()) ?: currentWeek
+        get() {
+            val date=java.time.LocalDate.now()
+            val semester=com.glassous.betterhrbust.core.util.SchoolCalendar.semesterOn(date)
+            return teachingWeekOn(date) ?: semester?.weeks ?: currentWeek.takeIf { it in 1..semesterTeachingWeeks } ?: 1
+        }
+
 }
 
 class UserPreferencesManager(context: Context, private val store: DataStore<Preferences> = context.dataStore) {
@@ -59,6 +68,7 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
         private val KEY_YEAR = stringPreferencesKey("year")
         private val KEY_TERM = stringPreferencesKey("term")
         private val KEY_WEEK_REFERENCE_DATE = stringPreferencesKey("week_reference_date")
+        private val KEY_SEMESTER_WEEKS = intPreferencesKey("semester_teaching_weeks")
         private val KEY_CURRENT_WEEK = intPreferencesKey("current_week")
         private val KEY_SELECTED_WEEK = intPreferencesKey("selected_week")
         private val KEY_TIMETABLE_VIEW_MODE = stringPreferencesKey("timetable_view_mode")
@@ -87,6 +97,8 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
             studentId = prefs[KEY_STUDENT_ID] ?: "",
             year = prefs[KEY_YEAR] ?: "",
             term = prefs[KEY_TERM] ?: "2",
+            semesterTeachingWeeks = com.glassous.betterhrbust.core.util.SchoolCalendar.semesterOn(java.time.LocalDate.now())?.weeks ?: prefs[KEY_SEMESTER_WEEKS] ?: 20,
+            calendarWeekCountKnown = com.glassous.betterhrbust.core.util.SchoolCalendar.semesterOn(java.time.LocalDate.now()) != null || prefs.contains(KEY_SEMESTER_WEEKS),
             currentWeek = prefs[KEY_CURRENT_WEEK] ?: 1,
             currentWeekReferenceDate = prefs[KEY_WEEK_REFERENCE_DATE] ?: "",
             selectedWeek = prefs[KEY_SELECTED_WEEK] ?: 1,
@@ -144,6 +156,12 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
                 prefs.remove(KEY_WEEK_REFERENCE_DATE)
                 prefs.remove(KEY_CURRENT_WEEK)
                 prefs.remove(KEY_SELECTED_WEEK)
+            }
+            if (prefs[KEY_USERNAME] != username || prefs[KEY_YEAR] != year || prefs[KEY_TERM] != term) {
+                prefs.remove(KEY_WEEK_REFERENCE_DATE)
+                prefs.remove(KEY_CURRENT_WEEK)
+                prefs.remove(KEY_SELECTED_WEEK)
+                prefs.remove(KEY_SEMESTER_WEEKS)
             }
             prefs.remove(KEY_LAST_FULL_SYNC_DATE)
             prefs[KEY_REAL_NAME] = realName
@@ -218,10 +236,13 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
         }
     }
 
-    suspend fun setCurrentWeek(week: Int, expected: AppPreferences? = null) {
+    suspend fun setCurrentWeek(week: Int, expected: AppPreferences? = null, teachingWeeks: Int? = null) {
         store.edit { prefs ->
             if (expected != null && (prefs[KEY_USERNAME] != expected.username ||
                 (prefs[KEY_LAST_LOGIN_AT] ?: 0L) != expected.lastLoginAt)) return@edit
+            if (teachingWeeks != null && teachingWeeks in 1..26) prefs[KEY_SEMESTER_WEEKS] = teachingWeeks
+            val limit = prefs[KEY_SEMESTER_WEEKS] ?: 20
+            if (week !in 1..limit) return@edit
             prefs[KEY_CURRENT_WEEK] = week
             prefs[KEY_WEEK_REFERENCE_DATE] = java.time.LocalDate.now().toString()
         }
@@ -245,6 +266,7 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
      */
     suspend fun clearSession() {
         store.edit { prefs ->
+            prefs.remove(KEY_SEMESTER_WEEKS)
             prefs.remove(KEY_WEEK_REFERENCE_DATE)
             prefs.remove(KEY_CURRENT_WEEK)
             prefs.remove(KEY_SELECTED_WEEK)

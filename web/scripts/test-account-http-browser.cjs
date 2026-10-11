@@ -6,7 +6,8 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 const A='2401234567',B='2407654321';
 const host=process.env.ACCOUNT_TEST_HOST || 'jwzx.hrbust.edu.cn';
 const sessions = new Map([['initial-a',{owner:A,captcha:true}]]);
-let sequence=0, posts=0, profileReads=0;
+let sequence=0, posts=0, profileReads=0, planReads=0;
+const calendarQueries=[];
 const loginHtml='<form action="j_acegi_security_check"><input name="j_captcha"></form>';
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jZAAAAABJRU5ErkJggg==','base64');
 const server=createServer(async(req,res)=>{
@@ -36,6 +37,16 @@ const server=createServer(async(req,res)=>{
  if(url.pathname==='/academic/showPersonalInfo.do'){
   if(!session.owner)return redirect('common/security/login.jsp');profileReads++;
   return send(200,`<table class="form"><tr><th>用户名</th><td>${session.owner}</td></tr><tr><th>真实姓名</th><td>Student ${session.owner===A?'A':'B'}</td></tr></table>`,'text/html; charset=utf-8','private, max-age=3600');
+ }
+ if(url.pathname==='/academic/manager/studyschedule/studentSelfSchedule.jsdo')return send(200,`<a href="studentScheduleShowByTerm.do?studentId=${encodeURIComponent(session.owner+'+plan')}">培养方案</a>`);
+ if(url.pathname==='/academic/manager/studyschedule/studentScheduleShowByTerm.do'){
+  assert.equal(url.searchParams.get('studentId'),session.owner+'+plan','方案必须使用入口返回的学生参数，不能直接请求结果页');
+  planReads++;
+  return send(200,'<select id="syt12"><option value="base">学科基础课程（2023） 选课属性：必修 学分要求=26.5 门数要求=8</option></select><p>毕业总学分：160</p>');
+ }
+ if(url.pathname==='/academic/calendarinfo/viewCalendarInfo.do'){
+  calendarQueries.push(url.searchParams.get('week'));
+  return send(200,'<div class="week"><td class="cur"><span>26</span></td></div><div class="curweek">2026 秋 第<strong>6</strong>周</div><div class="semester-calendar">本学期共20教学周</div>');
  }
  return send(404,'unused endpoint');
 });
@@ -77,6 +88,15 @@ const server=createServer(async(req,res)=>{
    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('better_hrbust_cached_profile')).studentNumber),target);
   }
   await switchTo(B,'Student B');await switchTo(A,'Student A');
+  await page.getByTitle(/^手动刷新教务数据/).click();
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('better_hrbust_cache_program_plan')||'null')?.totalRequiredCredits===160);
+  assert.ok(planReads>0,'完整学分要求应成功查询');
+  assert.ok(calendarQueries.every(value=>value===null),'全量同步不能把旧选择周次当当前校历周次');
+  const themeButton=page.getByRole('button',{name:/切换(浅|深)色模式/});
+  const beforeTheme=await page.locator('html').getAttribute('class');
+  await themeButton.click();
+  assert.notEqual(await page.locator('html').getAttribute('class'),beforeTheme,'油猴主题切换应更新实际页面');
+  await themeButton.click();
   assert.equal(posts,2,'每次切换只提交一次登录凭证');assert.deepEqual(https,[],'退出及未登录跳转不得访问HTTPS');assert.ok(profileReads>=3,'新身份读取不能复用缓存的旧档案');
   await page.locator('aside').getByRole('button', {name:'概览',exact:true}).click();
   for (const width of [1536,1280,960,768,390]) {

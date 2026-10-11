@@ -42,7 +42,7 @@ val BaseSlots = listOf(
 )
 
 /** 一学期最大教学周数（与 Web 周选择保持一致）。 */
-const val MaxTeachingWeek = 26
+const val MaxTeachingWeek = 20
 
 val DayNames = listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 

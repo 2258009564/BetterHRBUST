@@ -86,7 +86,8 @@ internal data class TimetableWidgetData(
     val weekRows: List<WidgetWeekRow>,
     /** 日视图行（按大节升序，6 个大节全部保行，无课行由渲染层收窄） */
     val todayRows: List<WidgetDaySlot>,
-    val todayDate: LocalDate = LocalDate.now()
+    val todayDate: LocalDate = LocalDate.now(),
+    val calendarMessage: String = ""
 ) {
     /** 本周是否有任何课程 */
     val hasWeekCourses: Boolean get() = weekRows.any { it.occupied }
@@ -121,6 +122,9 @@ internal object TimetableWidgetLoader {
 
         // 与双日组件共享已核验的账号快照；错误身份缓存不进入原有组件。
         val snapshot = WidgetDataSource.load(app) ?: return TimetableWidgetData.empty(todayDay)
+        if (snapshot.message == "当前处于假期") return TimetableWidgetData.empty(todayDay).copy(
+            hasSession=true, hasTimetable=true, todayDate=snapshot.date,
+            currentWeek=snapshot.prefs.semesterTeachingWeeks, calendarMessage=snapshot.message)
         if (snapshot.message.isNotEmpty()) return TimetableWidgetData.empty(todayDay)
         val prefs = snapshot.prefs
 
@@ -129,7 +133,7 @@ internal object TimetableWidgetLoader {
                 ?.let { json.decodeFromString<TimetableResult>(it) }
         }.getOrNull() ?: TimetableResult()
 
-        val week = (snapshot.week ?: return TimetableWidgetData.empty(todayDay)).coerceIn(1, MaxTeachingWeek)
+        val week = (snapshot.week ?: return TimetableWidgetData.empty(todayDay)).coerceIn(1, prefs.semesterTeachingWeeks)
         // CourseColorPalette 约定仅主线程访问（与 App 内取色共用同一张槽位表），故在 Main 上取色
         val styles = withContext(Dispatchers.Main) { resolveStyles(timetable.cells, week) }
 

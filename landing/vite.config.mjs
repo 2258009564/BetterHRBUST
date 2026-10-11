@@ -11,7 +11,7 @@ export default defineConfig({
   resolve: {
     dedupe: ['vue'],
     alias: {
-      '@': path.resolve(process.cwd(), './src')
+      '@': path.resolve(process.cwd(), '../web/src')
     }
   },
   // 与 web/ 端开发端口（5173）错开，便于两个项目同时启动

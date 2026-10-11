@@ -39,12 +39,7 @@ const server = createServer((req, res) => {
       assert.match(await page.getByRole('link', { name: '下载 Android ↗' }).getAttribute('href'), /releases\/download\/v1\.0\.0\/.*\.apk$/);
       await page.getByRole('button', { name: '切换深色主题' }).click();
       assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
-      assert.deepEqual(await page.locator('.client-demo').evaluateAll(elements => elements.map(element => element.dataset.view)), ['dashboard', 'timetable', 'gpa', 'resources']);
-      const sidebar = page.locator('.client-demo[data-view="dashboard"] .demo-sidebar');
-      assert.deepEqual(await sidebar.locator('.demo-nav-label').allTextContents(), ['教务核心', '培养与资源', '信息与系统']);
-      assert.equal(await sidebar.locator('.demo-nav > span').count(), 12);
-      assert.match(await sidebar.innerText(), /智能课程表/);
-      assert.match(await sidebar.innerText(), /成绩与GPA分析/);
+      assert.deepEqual(await page.locator('.client-demo').evaluateAll(elements => elements.map(element => element.dataset.view)), ['dashboard', 'timetable', 'gpa', 'resources', 'evaluation']);
       if (viewport.width > 800) {
         const copyBox = await page.locator('.overview-row .section-heading').boundingBox();
         const demoBox = await page.locator('.workspace-preview').boundingBox();
@@ -56,18 +51,31 @@ const server = createServer((req, res) => {
           const preview = await row.locator('.app-preview, .visual-panel').boundingBox();
           positions.push(preview.x > copy.x ? 'R' : 'L');
         }
-        assert.equal(positions.join(''), 'RLRLR', '五个展示的图片必须左右交替');
+        assert.equal(positions.join(''), 'RLRLRL', '展示的图片必须左右交替');
       }
       assert.equal(await page.locator('.client-demo button, .client-demo input, .client-demo select, .client-demo a').count(), 0, '界面展示必须保持静态');
-      assert.ok(await page.locator('.client-demo[data-view="dashboard"]').getByText('林同学，今天也从容一点。').isVisible());
-      assert.match(await page.locator('.client-demo[data-view="gpa"]').innerText(), /4\.23/);
-      assert.match(await page.locator('.client-demo[data-view="resources"]').innerText(), /97 条公开资料/);
-      const darkCard = await page.locator('.demo-metrics > div').first().evaluate(element => getComputedStyle(element).backgroundColor);
-      await page.reload({ waitUntil: 'networkidle' });
-      assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark', '主题选择在刷新后保留');
+      const dashboard = page.locator('.client-demo[data-view="dashboard"]');
+      await dashboard.scrollIntoViewIfNeeded();
+      const frame = page.frameLocator('.client-demo[data-view="dashboard"] iframe');
+      await frame.getByText('已获得学分 / 方案总学分').waitFor();
+      assert.equal(await frame.getByText('林同学，今天也从容一点。').count(), 0);
+      assert.ok(await frame.getByText('林同学', { exact: true }).isVisible());
+      assert.ok(await page.locator('a[href="https://github.com/Glassous/BetterHRBUST/graphs/contributors?all=1"]').isVisible());
+      assert.ok(await page.locator('a[href="https://opensource.org/license/mit"]').isVisible());
+      assert.equal(await page.locator('.feature-copy .tags').filter({ hasText: '每周课表' }).count(), 0);
+      const gradeDemo = page.locator('.client-demo[data-view="gpa"]');
+      await gradeDemo.scrollIntoViewIfNeeded();
+      const scores = page.frameLocator('.client-demo[data-view="gpa"] iframe');
+      await scores.getByText('总评成绩', { exact:true }).waitFor();
+      const wrapping = await scores.locator('th').evaluateAll(headers => headers.some(header => getComputedStyle(header).whiteSpace !== 'nowrap'));
+      assert.equal(wrapping, false, '真实成绩表头不能拆成单字行');
+      const resourcesDemo = page.locator('.client-demo[data-view="resources"]');
+      await resourcesDemo.scrollIntoViewIfNeeded();
+      await page.frameLocator('.client-demo[data-view="resources"] iframe').getByText(/共 97 条结果/).waitFor();
+      await page.locator('.client-demo[data-view="evaluation"]').scrollIntoViewIfNeeded();
+      await page.frameLocator('.client-demo[data-view="evaluation"] iframe').getByText('林老师').waitFor();
       await page.getByRole('button', { name: '切换浅色主题' }).click();
-      const lightCard = await page.locator('.demo-metrics > div').first().evaluate(element => getComputedStyle(element).backgroundColor);
-      assert.notEqual(lightCard, darkCard, '复用客户端卡片必须跟随页面明暗主题');
+      await frame.locator('html:not(.dark)').waitFor();
       await page.evaluate(() => scrollTo(0, 0));
       if (output) {
         mkdirSync(output, { recursive: true });
@@ -91,6 +99,6 @@ const server = createServer((req, res) => {
     await animated.waitForFunction(() => !document.querySelector('.hero-letter').style.transform && !document.querySelector('.shape').style.transform);
     assert.equal(await animated.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.deepEqual(errors, []);
-    console.log('通过：1440/390 布局、项目子路径、概览/课表/GPA/资料静态组件、真实算法示例、双主题、下载回退、入场与滚动动效、减少动态效果切换，无页面异常。');
+    console.log('通过：1440/390 布局、项目子路径、概览/课表/GPA/资料/评教真实视图、真实渲染截图与算法示例、双主题、下载回退、入场与滚动动效、减少动态效果切换，无页面异常。');
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); server.close(); process.exitCode = 1; });

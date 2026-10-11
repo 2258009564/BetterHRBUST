@@ -109,7 +109,7 @@ private fun WeekGrid(data: TimetableWidgetData, strings: WidgetStrings, size: Dp
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = strings.weekTitle(data.currentWeek),
+            text = data.calendarMessage.ifEmpty { strings.weekTitle(data.currentWeek) },
             modifier = GlanceModifier.defaultWeight(),
             style = widgetText(WidgetPalette.OnSurface, 12, FontWeight.Bold),
             maxLines = 1

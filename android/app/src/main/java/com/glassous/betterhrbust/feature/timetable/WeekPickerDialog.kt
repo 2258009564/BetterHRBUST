@@ -31,6 +31,8 @@ private const val WeeksPerRow = 6
 internal fun WeekPickerSheet(
     selectedWeek: Int,
     currentWeek: Int,
+    maxTeachingWeek: Int,
+    calendarKnown: Boolean,
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -56,7 +58,7 @@ internal fun WeekPickerSheet(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "共 $MaxTeachingWeek 周",
+                    text = if(calendarKnown) "共 $maxTeachingWeek 周" else "校历待确认 · 暂列 $maxTeachingWeek 周",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -67,7 +69,7 @@ internal fun WeekPickerSheet(
             Spacer(modifier = Modifier.height(14.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                (1..MaxTeachingWeek).chunked(WeeksPerRow).forEach { rowWeeks ->
+                (1..maxTeachingWeek).chunked(WeeksPerRow).forEach { rowWeeks ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
