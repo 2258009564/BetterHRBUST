@@ -182,7 +182,7 @@ const filteredExams = computed(() => {
   return exams.value;
 });
 
-function exportExamIcs(ex) {
+async function exportExamIcs(ex) {
   const parsed = parseExamDateTime(ex.time);
   if (!parsed) {
     showToast({ title: '无法导出', message: '该考试的时间无法解析，请核对教务原文', type: 'warning' });
@@ -204,7 +204,13 @@ function exportExamIcs(ex) {
     ],
     { prodId: '-//BetterHRBUST//Exam//CN' }
   );
-  downloadIcs(`考试_${ex.courseName}.ics`, ics);
-  showToast({ title: '已生成日历文件', message: `${ex.courseName} (${ex.location})`, type: 'success' });
+  const result = await downloadIcs(`考试_${ex.courseName}.ics`, ics);
+  if (result === 'saved') {
+    showToast({ title: '日历已导出', message: `${ex.courseName} (${ex.location})`, type: 'success' });
+  } else if (result === 'fallback') {
+    // 回退路径：结果不可知，如实告知去向，不谎报"已保存"
+    showToast({ title: '日历已开始下载', message: `${ex.courseName} (${ex.location})，存入浏览器默认下载目录`, type: 'success' });
+  }
+  // cancelled：用户主动取消保存，不打扰
 }
 </script>

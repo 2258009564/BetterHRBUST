@@ -102,6 +102,20 @@ assert.equal(teachingWeekOn(new Date(2027,6,12)),null);
 assert.equal(timetableDayDate(26,6,6,new Date(2026,9,10)),'10/10');
 assert.equal(timetableDayDate(6,20,1,new Date(2026,9,10)),'');
 
+const { buildIcsCalendar, escapeIcsText } = await import('../src/utils/ics.js');
+// ICS 转义（RFC 5545 3.3.11）：分号/逗号/换行必须转义，否则会被日历软件当分隔符
+assert.equal(escapeIcsText('a;b,c' + String.fromCharCode(13, 10) + 'd\\'), 'a\\;b\\,c\\nd\\\\');
+const longIcs = buildIcsCalendar([{ summary: '超'.repeat(60) + '长;课程,名', start: new Date(2026, 9, 5, 8, 0), end: new Date(2026, 9, 5, 9, 40) }]);
+assert.ok(longIcs.startsWith('BEGIN:VCALENDAR\r\n'), 'ICS 行尾必须 CRLF');
+assert.ok(longIcs.endsWith('END:VCALENDAR\r\n'), 'ICS 行尾必须 CRLF');
+assert.ok(longIcs.includes('\\;'), 'SUMMARY 中的分号必须转义');
+let folded = false;
+for (const line of longIcs.split('\r\n')) {
+  assert.ok(new TextEncoder().encode(line).length <= 75, 'ICS 内容行超过 75 字节未折叠: ' + line.slice(0, 24));
+  if (line.startsWith(' ')) folded = true;
+}
+assert.equal(folded, true, '超长中文 SUMMARY 必须产生以空格开头的折叠续行');
+
 const { execFileSync } = await import('node:child_process');
 const { fileURLToPath } = await import('node:url');
 execFileSync(process.execPath,[fileURLToPath(new URL('../../tools/generate-school-calendar.mjs',import.meta.url)),'--check']);

@@ -429,7 +429,7 @@ function parseSlotRange(range) {
   return m ? [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])] : null;
 }
 
-function exportIcs() {
+async function exportIcs() {
   const weekCourses = courses.value.filter(c => isCourseActiveInWeek(c, selectedWeek.value));
   if (weekCourses.length === 0) {
     showToast({ title: '本周无可导出的课程', type: 'warning' });
@@ -454,7 +454,13 @@ function exportIcs() {
     return;
   }
   const ics = buildIcsCalendar(events, { prodId: '-//BetterHRBUST//Timetable//CN' });
-  downloadIcs(`HRBUST_课表_第${selectedWeek.value}周.ics`, ics);
-  showToast({ title: '日历已成功导出', message: `已生成第 ${selectedWeek.value} 周 ${events.length} 个课次`, type: 'success' });
+  const result = await downloadIcs(`HRBUST_课表_第${selectedWeek.value}周.ics`, ics);
+  if (result === 'saved') {
+    showToast({ title: '日历已导出', message: `已保存第 ${selectedWeek.value} 周 ${events.length} 个课次`, type: 'success' });
+  } else if (result === 'fallback') {
+    // 回退路径：结果不可知，如实告知去向，不谎报"已保存"
+    showToast({ title: '日历已开始下载', message: `第 ${selectedWeek.value} 周 ${events.length} 个课次，存入浏览器默认下载目录`, type: 'success' });
+  }
+  // cancelled：用户主动取消保存，不打扰
 }
 </script>

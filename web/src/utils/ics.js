@@ -94,8 +94,33 @@ export function buildIcsCalendar(events, { prodId = '-//BetterHRBUST//CN' } = {}
   return lines.flatMap(foldLine).join('\r\n') + '\r\n';
 }
 
-/** 触发浏览器下载 .ics 文件 */
-export function downloadIcs(filename, ics) {
+/**
+ * 导出 .ics 文件。
+ *
+ * 优先走 window.showSaveFilePicker（Chromium / WebView2 的 File System Access API）：
+ * 弹原生"另存为"对话框、用户自选保存位置，写入结果真实可知。
+ * 不支持或调用受限（无痕等环境抛错）时回退到锚点下载：
+ * 文件静默落入浏览器默认下载目录，JS 无法获知最终结果，调用方须如实提示。
+ *
+ * @returns {Promise<'saved'|'cancelled'|'fallback'>}
+ *   saved=用户自选位置写入成功；cancelled=用户在对话框点了取消；fallback=已触发默认下载
+ */
+export async function downloadIcs(filename, ics) {
+  if (typeof window !== 'undefined' && typeof window.showSaveFilePicker === 'function') {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: 'iCalendar 日历文件', accept: { 'text/calendar': ['.ics'] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
+      await writable.close();
+      return 'saved';
+    } catch (err) {
+      if (err && err.name === 'AbortError') return 'cancelled';
+      // 其余异常（无痕等受限环境）：回退到锚点下载，不让导出死在 picker 上
+    }
+  }
   const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -103,4 +128,5 @@ export function downloadIcs(filename, ics) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+  return 'fallback';
 }
