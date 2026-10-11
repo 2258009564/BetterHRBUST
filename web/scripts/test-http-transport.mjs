@@ -74,3 +74,20 @@ assert.equal(describeLoginFailure(loginLabels + '<script>const msg="验证码错
 const { isLoginPage: probeIsLoginPage } = await import('../../tools/probe/lib/auth.mjs');
 assert.equal(probeIsLoginPage('<script>const url="getCaptcha.do";</script><p>已登录</p>'),false);
 assert.equal(probeIsLoginPage('<form action="j_acegi_security_check"><input name="j_captcha"></form>'),true);
+
+const utf8Body = new TextEncoder().encode('毕业总学分：160');
+assert.equal(await context.decodeResponse(utf8Body.buffer, 'text/html; charset=utf-8', 'gbk'), '毕业总学分：160');
+// 某些旧服务错误声明UTF-8；严格解码失败后仍保留GBK回退。
+const gbkBody = Uint8Array.of(0xd6,0xd0,0xce,0xc4);
+assert.equal(await context.decodeResponse(gbkBody.buffer, 'text/html; charset=utf-8', 'gbk'), '中文');
+
+let clickHandler;
+const destinations=[];
+const linkBridge=readFileSync(new URL('../src/services/externalLinks.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace(/^export /gm,'');
+const bridge=vm.createContext({ isDesktopApp:true,URL,location:new URL('http://127.0.0.1:1950/'),window:{location:{assign:url=>destinations.push(url)}},document:{addEventListener:(name,handler)=>{assert.equal(name,'click');clickHandler=handler;}} });
+vm.runInContext(linkBridge,bridge);bridge.installDesktopExternalLinks();
+let prevented=false;
+clickHandler({button:0,defaultPrevented:false,target:{closest:()=>({href:'https://github.com/Glassous/BetterHRBUST',target:'_blank'})},preventDefault:()=>{prevented=true;}});
+assert.equal(prevented,true);assert.deepEqual(destinations,['https://github.com/Glassous/BetterHRBUST']);
+clickHandler({button:0,defaultPrevented:false,target:{closest:()=>({href:'javascript:alert(1)'})},preventDefault:()=>{throw new Error('不应接管非HTTP外链');}});
+assert.equal(destinations.length,1);

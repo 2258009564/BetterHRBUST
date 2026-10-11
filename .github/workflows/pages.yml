@@ -3,9 +3,9 @@ name: 发布 GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['landing/**', '.github/workflows/pages.yml']
+    paths: ['landing/**', 'web/src/**', 'shared/**', '.github/workflows/pages.yml']
   pull_request:
-    paths: ['landing/**', '.github/workflows/pages.yml']
+    paths: ['landing/**', 'web/src/**', 'shared/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:

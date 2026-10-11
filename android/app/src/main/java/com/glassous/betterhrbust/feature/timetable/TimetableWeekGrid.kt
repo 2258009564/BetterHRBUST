@@ -1,8 +1,10 @@
 package com.glassous.betterhrbust.feature.timetable
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -310,8 +312,6 @@ internal fun TimetableGrid(
                                                     selectedWeek = selectedWeek,
                                                     isDark = isDark,
                                                     dense = dense,
-                                                    // 被展开详情的课表块退场，交给详情卡片（共享元素过渡）
-                                                    isSharedHidden = selectedDetail != null && selectedDetail.id == cell.id,
                                                     // 同格并排多门课时高度减半，课程名减少行数并省略教师
                                                     nameMaxLines = when {
                                                         stacked -> 2
@@ -350,7 +350,6 @@ private fun CourseBlock(
     selectedWeek: Int,
     isDark: Boolean,
     dense: Boolean,
-    isSharedHidden: Boolean,
     nameMaxLines: Int,
     showTeacher: Boolean,
     onClick: () -> Unit,
@@ -376,19 +375,17 @@ private fun CourseBlock(
     val nameLines = if (active) nameMaxLines else (nameMaxLines - 1).coerceAtLeast(1)
 
 
-    AnimatedVisibility(
-        visible = !isSharedHidden,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = modifier
-    ) {
+    val interactions = remember { MutableInteractionSource() }
+    val pressed by interactions.collectIsPressedAsState()
+    val scale by animateFloatAsState(if(pressed) 0.97f else 1f, label = "coursePress")
+    Box(modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }) {
         Column(
             modifier = Modifier
 
                 .clip(shape)
                 .background(colors.container)
                 .border(1.dp, colors.border, shape)
-                .clickable(onClick = onClick)
+                .clickable(interactionSource = interactions, indication = null, onClick = onClick)
                 .padding(
                     horizontal = if (dense) BlockHorizontalPadding else 10.dp,
                     vertical = if (dense) 4.dp else 6.dp

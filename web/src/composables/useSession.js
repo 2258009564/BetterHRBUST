@@ -1,3 +1,4 @@
+import { semesterOn, teachingWeekOn } from '@/utils/schoolCalendar.js';
 import { ref, reactive, computed } from 'vue';
 import { academicApi } from '@/services/academic/api.js';
 import { clearRegisteredDataCaches } from '@/composables/dataCacheBridge.js';
@@ -72,7 +73,20 @@ function navigateTo(tab) {
   }
 }
 
-const currentWeek = ref(6);
+const officialSemester = semesterOn();
+const currentWeek = ref(teachingWeekOn() ?? officialSemester?.teachingWeeks ?? 1);
+const semesterTeachingWeeks = ref(officialSemester?.teachingWeeks ?? 20);
+const calendarWeekCountKnown = ref(!!officialSemester);
+const isSchoolHoliday = ref(!!officialSemester && teachingWeekOn() === null);
+function refreshSchoolCalendar() {
+  const semester=semesterOn();
+  if (!semester) return;
+  const week=teachingWeekOn();
+  currentWeek.value=week ?? semester.teachingWeeks;
+  semesterTeachingWeeks.value=semester.teachingWeeks;
+  calendarWeekCountKnown.value=true;
+  isSchoolHoliday.value=week === null;
+}
 // yearId / termId 初始留空：只有从教务上下文拿到真实值后才允许请求课表，
 // 避免上下文获取失败时用硬编码学期覆盖本地正确缓存
 const currentSemester = reactive({
@@ -232,7 +246,11 @@ async function checkAuth(options = {}) {
         try {
           const cal = await academicApi.getCalendarInfo();
           if (generation !== authGeneration) return false;
-          if (cal.currentWeek) currentWeek.value = cal.currentWeek;
+          if (cal.teachingWeeks) {
+            semesterTeachingWeeks.value = cal.teachingWeeks;
+            calendarWeekCountKnown.value = true;
+          }
+          if (cal.currentWeek >= 1 && cal.currentWeek <= semesterTeachingWeeks.value) currentWeek.value = cal.currentWeek;
           if (cal.semesterName) currentSemester.name = cal.semesterName;
         } catch {
           // 忽略
@@ -364,7 +382,7 @@ async function logout() {
 }
 
 function setWeek(w) {
-  currentWeek.value = Math.max(1, Math.min(26, w));
+  currentWeek.value = Math.max(1, Math.min(semesterTeachingWeeks.value, w));
 }
 
 function openLoginModal() {
@@ -398,6 +416,10 @@ export function useSession() {
     studentId,
     studentNumber,
     currentWeek,
+    semesterTeachingWeeks,
+    calendarWeekCountKnown,
+    isSchoolHoliday,
+    refreshSchoolCalendar,
     currentSemester,
     userProfile,
     lastLoginAt,

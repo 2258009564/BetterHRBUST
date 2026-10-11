@@ -39,8 +39,9 @@
       </button>
     </div>
 
-    <!-- 右侧操作：会话失效提示（主题切换已移至设置页） -->
+    <!-- 右侧操作：跨客户端主题切换与会话提示 -->
     <div class="pointer-events-auto flex items-center gap-2.5">
+    <button type="button" class="w-10 h-10 rounded-full border border-zinc-200 dark:border-zinc-800 bg-[#f6f7f9] dark:bg-[#14161a] flex items-center justify-center cursor-pointer shadow-md active:scale-95" :title="isDark ? '切换浅色模式' : '切换深色模式'" :aria-label="isDark ? '切换浅色模式' : '切换深色模式'" @click="toggleTheme"><Icon :name="isDark ? 'sun' : 'moon'" customClass="w-5 h-5" /></button>
     <div v-if="shouldShowSessionBanner" class="pointer-events-auto">
       <div
         class="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs shadow-sm backdrop-blur-md"
@@ -68,6 +69,8 @@
 </template>
 
 <script setup>
+import { useTheme } from '@/composables/useTheme.js';
+const { isDark, toggleTheme } = useTheme();
 import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
 import { useAcademicData } from '@/composables/useAcademicData.js';

@@ -9,6 +9,8 @@ on:
     branches: [main]
     paths:
       - 'landing/**'
+      - 'web/src/**'
+      - 'shared/**'
       - '.github/workflows/deploy-landing.yml'
   workflow_dispatch:
 

@@ -38,3 +38,7 @@ Vue 3 + Vite 静态发布页。提供功能介绍、Android/Windows/油猴下载
 ## 说明
 
 动效复用已有 GSAP 依赖：首屏文字依次入场，低对比度背景文字轮换，几何图形轻微漂浮；功能区与下载卡片随滚动进入，精细指针设备支持轻微背景视差。遵循 prefers-reduced-motion，减少动态效果时所有内容直接呈现。浏览器回归同时检查正常动效和减少动态效果模式。
+
+发布页的 `ClientDemo.vue` 只负责缩放独立预览框，预览框中直接使用 `web/` 的 AppLayout、DashboardView、TimetableView、ScoreView、ResourcesView、EvaluationView 与实际 CSS。示例数据与时间仅在预览路由内注入，教务请求被限定为本地展示响应，不会提交真实教学评价。
+
+多端区域的 `public/screenshots/desktop-*.png` 由 `scripts/capture-clients.cjs` 从实际客户端视图截图；`android-*.png` 来自 Android 独立调试包的 `NativePreviewTest`，为模拟器实际画面。更新界面后需重新截图两套主题，不用手绘占位界面。贡献者链接进入 GitHub 完整贡献列表，MIT 链接进入 Open Source Initiative 的 MIT 许可证介绍页。

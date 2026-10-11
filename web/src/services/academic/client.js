@@ -175,14 +175,9 @@ async function decodeResponse(buffer, contentType, preferredEncoding) {
 
   let charset = preferredEncoding || 'utf-8';
 
-  if (!preferredEncoding) {
-    if (type.includes('charset=')) {
-      const match = type.match(/charset=([a-z0-9_-]+)/i);
-      if (match && match[1]) {
-        charset = match[1].toLowerCase();
-      }
-    }
-  }
+  // encoding 是端点的兜底编码；响应明确声明编码时优先遵从响应。
+  const declared = type.match(/charset=["']?([a-z0-9_-]+)/i)?.[1];
+  if (declared) charset = declared.toLowerCase();
 
   // 标准化编码名称
   if (charset.includes('gbk') || charset.includes('gb2312') || charset.includes('gb18030')) {
@@ -192,11 +187,11 @@ async function decodeResponse(buffer, contentType, preferredEncoding) {
   }
 
   try {
-    const decoder = new TextDecoder(charset);
+    const decoder = new TextDecoder(charset, { fatal: true });
     return decoder.decode(buffer);
   } catch {
     // 降级使用 UTF-8
-    const fallback = new TextDecoder('utf-8');
+    const fallback = new TextDecoder(charset === 'utf-8' ? 'gbk' : 'utf-8');
     return fallback.decode(buffer);
   }
 }

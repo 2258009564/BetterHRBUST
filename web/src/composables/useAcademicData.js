@@ -136,7 +136,7 @@ function isSessionExpiredError(err) {
  * @returns {Promise<{ success: boolean, expired: boolean, message?: string }>}
  */
 async function syncAll({ markManual = false } = {}) {
-  const { studentId, studentNumber, currentSemester, currentWeek, isLoggedIn, userProfile, markSessionExpired } =
+  const { studentId, studentNumber, currentSemester, currentWeek, semesterTeachingWeeks, calendarWeekCountKnown, isLoggedIn, userProfile, markSessionExpired } =
     useSession();
 
   if (!isLoggedIn.value) {
@@ -220,7 +220,7 @@ async function syncAll({ markManual = false } = {}) {
     ),
     run(
       '培养方案',
-      () => academicApi.getCurriculumPlan(),
+      () => academicApi.getCurriculumPlan({ studentId: sid }),
       res => {
         plan.value = res || { groups: [] };
         writeJson(CACHE_KEYS.plan, plan.value);
@@ -247,9 +247,13 @@ async function syncAll({ markManual = false } = {}) {
     ),
     run(
       '公告',
-      () => academicApi.getCalendarInfo(currentWeek.value),
+      () => academicApi.getCalendarInfo(),
       res => {
-        if (res.currentWeek) currentWeek.value = res.currentWeek;
+        if (res.teachingWeeks) {
+          semesterTeachingWeeks.value = res.teachingWeeks;
+          calendarWeekCountKnown.value = true;
+        }
+        if (res.currentWeek >= 1 && res.currentWeek <= semesterTeachingWeeks.value) currentWeek.value = res.currentWeek;
         if (res.semesterName) currentSemester.name = res.semesterName;
         notices.value = res.notices || [];
         writeJson(CACHE_KEYS.notices, notices.value);

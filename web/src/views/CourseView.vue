@@ -73,7 +73,7 @@
 
             <div class="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs">
               <span class="text-zinc-500">
-                教师：<span class="font-medium text-zinc-900 dark:text-zinc-100">{{ c.teacher || '任课教师' }}</span>
+                教师：<span class="font-medium text-zinc-900 dark:text-zinc-100">{{ c.teacher || '未提供教师信息' }}</span>
               </span>
               <span v-if="c.isCurrent" class="text-emerald-600 font-semibold text-[11px]">本学期</span>
             </div>
@@ -133,7 +133,7 @@ const courses = computed(() => {
         group: s.courseGroup || '',
         credits: s.credit || 0,
         hours: s.hours || 0,
-        teacher: '',
+        teacher: s.teacher || '',
         isCurrent: false
       });
     }

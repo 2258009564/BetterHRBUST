@@ -667,10 +667,10 @@ object AcademicParsers {
     fun parseCalendarInfo(html: String): CalendarInfo {
         val doc: Document = Jsoup.parse(html)
         var currentWeek = 1
-        val curTd = doc.selectFirst(".week td.cur span")
-            ?: doc.selectFirst(".week td.cur")
-            ?: doc.selectFirst(".curweek strong")
+        val curTd = doc.selectFirst(".curweek strong")
             ?: doc.selectFirst(".curweek")
+            ?: doc.selectFirst(".week td.cur span")
+            ?: doc.selectFirst(".week td.cur")
         if (curTd != null) {
             val num = curTd.text().trim().toIntOrNull()
                 ?: Regex("""第\s*(\d+)\s*周""").find(curTd.text())?.groupValues?.get(1)?.toIntOrNull()
@@ -711,7 +711,12 @@ object AcademicParsers {
             }
         }
 
+        // 只接受校历明确写出的学期总周数，不把通用的 1..26 导航当作学期长度。
+        val semesterText = doc.select("#semesterWeeks, .semester-weeks, .semesterweeks, .semester-calendar").text()
+        val count = Regex("(?:共|总计|总周数[:：]?)\\s*(\\d{1,2})\\s*(?:个)?(?:教学)?周").find(semesterText.ifEmpty { doc.select("#textwrapper").text() })
+            ?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it in 1..26 }
         return CalendarInfo(
+            teachingWeeks = count,
             currentWeek = currentWeek,
             semesterName = semesterName,
             notices = notices
@@ -727,6 +732,13 @@ object AcademicParsers {
     fun parseTeachingWeek(html: String): Int {
         val doc = Jsoup.parse(html)
         val bodyText = doc.text()
+        for (el in doc.select("#date, .curweek strong, .curweek")) {
+            val text=el.text().trim()
+            val number=Regex("第\\s*(\\d+)\\s*周").find(text)?.groupValues?.get(1)?.toIntOrNull()
+                ?: text.toIntOrNull()
+            if(number != null && number in 1..26) return number
+        }
+
 
         // 1. 全文文本正则匹配 "第 N 周"（doc.text() 会剥离 <strong> 等所有 html 标签并合并空白）
         val textMatch = Regex("""第\s*(\d+)\s*周""").find(bodyText)

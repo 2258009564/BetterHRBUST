@@ -68,3 +68,17 @@ assert.equal(timetableDayDate(6,6,1,new Date(2026,0,1)), '12/29');
 assert.equal(timetableDayDate(6,7,1,new Date(2026,0,1)), '01/05');
 assert.equal(timetableDayDate(6,6,4,new Date(2024,1,29)), '02/29');
 assert.equal(timetableDayDate(6,6,7,new Date(2026,9,10)), '10/11');
+
+const { teachingWeekOn } = await import('../src/utils/schoolCalendar.js');
+assert.equal(teachingWeekOn(new Date(2026,9,10)),6);
+assert.equal(teachingWeekOn(new Date(2027,0,10)),19);
+assert.equal(teachingWeekOn(new Date(2027,0,11)),null);
+assert.equal(teachingWeekOn(new Date(2027,2,1)),1);
+assert.equal(teachingWeekOn(new Date(2027,6,11)),19);
+assert.equal(teachingWeekOn(new Date(2027,6,12)),null);
+assert.equal(timetableDayDate(26,6,6,new Date(2026,9,10)),'10/10');
+assert.equal(timetableDayDate(6,20,1,new Date(2026,9,10)),'');
+
+const { execFileSync } = await import('node:child_process');
+const { fileURLToPath } = await import('node:url');
+execFileSync(process.execPath,[fileURLToPath(new URL('../../tools/generate-school-calendar.mjs',import.meta.url)),'--check']);
