@@ -142,7 +142,7 @@ function isSessionExpiredError(err) {
  * @returns {Promise<{ success: boolean, expired: boolean, message?: string }>}
  */
 async function syncAll({ markManual = false } = {}) {
-  const { studentId, studentNumber, currentSemester, currentWeek, isLoggedIn, userProfile, markSessionExpired, resetProfile } =
+  const { studentId, studentNumber, currentSemester, currentWeek, semesterTeachingWeeks, calendarWeekCountKnown, isLoggedIn, userProfile, markSessionExpired, resetProfile } =
     useSession();
 
   if (!isLoggedIn.value) {
@@ -230,7 +230,7 @@ async function syncAll({ markManual = false } = {}) {
       ),
       run(
         '培养方案',
-        () => academicApi.getCurriculumPlan(),
+        () => academicApi.getCurriculumPlan({ studentId: sid }),
         res => {
           plan.value = res || { groups: [] };
           writeJson(CACHE_KEYS.plan, plan.value);
@@ -259,7 +259,12 @@ async function syncAll({ markManual = false } = {}) {
         '公告',
         () => academicApi.getCalendarInfo(currentWeek.value),
         res => {
-          if (res.currentWeek) currentWeek.value = res.currentWeek;
+          // 学期总周数来自校历（shared 校历数据）；旧导航的 26 不作为当前教学周上限
+          if (res.teachingWeeks) {
+            semesterTeachingWeeks.value = res.teachingWeeks;
+            calendarWeekCountKnown.value = true;
+          }
+          if (res.currentWeek >= 1 && res.currentWeek <= semesterTeachingWeeks.value) currentWeek.value = res.currentWeek;
           if (res.semesterName) currentSemester.name = res.semesterName;
           notices.value = res.notices || [];
           writeJson(CACHE_KEYS.notices, notices.value);

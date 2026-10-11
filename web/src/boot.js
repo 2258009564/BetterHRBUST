@@ -1,3 +1,5 @@
+import { installDesktopExternalLinks } from './services/externalLinks.js';
+installDesktopExternalLinks();
 import { createApp } from 'vue'
 import App from './App.vue'
 import './assets/main.css'

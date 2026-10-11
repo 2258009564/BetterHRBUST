@@ -241,7 +241,7 @@ private fun DayHeader(
     headerHeight: Dp
 ) {
     val title = data.todayDate.format(java.time.format.DateTimeFormatter.ofPattern("MM/dd")) + " " + DayNames[data.todayDay - 1]
-    val week = strings.weekTitle(data.currentWeek)
+    val week = data.calendarMessage.ifEmpty { strings.weekTitle(data.currentWeek) }
     if (detailed) {
         Row(
             modifier = GlanceModifier.fillMaxWidth().height(headerHeight),

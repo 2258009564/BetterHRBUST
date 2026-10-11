@@ -7,19 +7,19 @@ import java.time.temporal.TemporalAdjusters
 
 /** 周一推进教学周；仅依据有日期的学校同步结果，不猜测学期起点。 */
 object TeachingWeek {
-    fun mondayForWeek(referenceWeek: Int, referenceDate: String, selectedWeek: Int): LocalDate? {
-        if (referenceWeek !in 1..26 || selectedWeek !in 1..26) return null
+    fun mondayForWeek(referenceWeek: Int, referenceDate: String, selectedWeek: Int, maxWeeks: Int = 20): LocalDate? {
+        if (referenceWeek !in 1..maxWeeks || selectedWeek !in 1..maxWeeks) return null
         val reference = runCatching { LocalDate.parse(referenceDate) }.getOrNull() ?: return null
         return reference.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
             .plusWeeks((selectedWeek - referenceWeek).toLong())
     }
 
-    fun resolve(referenceWeek: Int, referenceDate: String, date: LocalDate): Int? {
-        if (referenceWeek !in 1..26) return null
+    fun resolve(referenceWeek: Int, referenceDate: String, date: LocalDate, maxWeeks: Int = 20): Int? {
+        if (referenceWeek !in 1..maxWeeks) return null
         val reference = runCatching { LocalDate.parse(referenceDate) }.getOrNull() ?: return null
         if (date.isBefore(reference)) return null
         val monday = TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)
         val elapsed = ChronoUnit.WEEKS.between(reference.with(monday), date.with(monday)).toInt()
-        return (referenceWeek + elapsed).takeIf { it in 1..26 }
+        return (referenceWeek + elapsed).takeIf { it in 1..maxWeeks }
     }
 }

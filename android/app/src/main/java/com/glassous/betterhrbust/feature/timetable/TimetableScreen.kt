@@ -49,6 +49,7 @@ import com.glassous.betterhrbust.core.ui.components.LoadingView
 import com.glassous.betterhrbust.core.ui.theme.CourseCardColors
 import com.glassous.betterhrbust.core.ui.theme.CourseColorPalette
 import com.glassous.betterhrbust.core.ui.theme.LocalDarkTheme
+import com.glassous.betterhrbust.core.util.SchoolCalendar
 import com.glassous.betterhrbust.data.repository.AccountSwitchedException
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
@@ -75,6 +76,7 @@ private val WeekDays = (1..7).toList()
 
 @Composable
 fun TimetableScreen(
+    openRequest: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val app = remember { BetterHrbustApp.instance }
@@ -92,7 +94,8 @@ fun TimetableScreen(
     var timetableResult by remember { mutableStateOf<TimetableResult?>(null) }
     var cacheError by remember { mutableStateOf("") }
 
-    val currentWeek = prefs?.currentTeachingWeek ?: 1
+    val maxTeachingWeek = prefs?.semesterTeachingWeeks ?: 20
+    val currentWeek = (prefs?.currentTeachingWeek ?: 1).coerceIn(1, maxTeachingWeek)
     var selectedWeek by remember { mutableStateOf(currentWeek) }
     var viewMode by remember { mutableStateOf(TimetableViewMode.WEEK) }
     var sectionMode by remember { mutableStateOf(SectionMode.COMBINE) }
@@ -125,8 +128,8 @@ fun TimetableScreen(
     // 分页器：横向翻页的唯一手势载体。视图切换时按当前选中项重建，两种页码映射互不干扰。
     val pagerState = key(viewMode) {
         rememberPagerState(
-            initialPage = pageOf(viewMode, selectedWeek, selectedDay),
-            pageCount = { pageCountOf(viewMode) }
+            initialPage = pageOf(viewMode, selectedWeek, selectedDay, maxTeachingWeek),
+            pageCount = { pageCountOf(viewMode, maxTeachingWeek) }
         )
     }
 
@@ -140,7 +143,7 @@ fun TimetableScreen(
     fun navigateTo(week: Int, day: Int) {
         selectedWeek = week
         selectedDay = day
-        val target = pageOf(viewMode, week, day)
+        val target = pageOf(viewMode, week.coerceIn(1, maxTeachingWeek), day, maxTeachingWeek)
         coroutineScope.launch {
             // 远距离直接跳转避免长距离翻页闪烁，近邻页平滑滚动
             if (abs(target - pagerState.currentPage) > 4) {
@@ -196,6 +199,25 @@ fun TimetableScreen(
     LaunchedEffect(prefs?.currentTeachingWeek) {
         val week = prefs?.currentTeachingWeek ?: return@LaunchedEffect
         if (week != selectedWeek) navigateTo(week, selectedDay)
+    }
+
+    LaunchedEffect(openRequest, prefs?.username) {
+        if (openRequest == 0 || prefs == null) return@LaunchedEffect
+        // 点击组件只定位到今天；绝不沿用上一次浏览留下的分页位置。
+        selectedWeek = currentWeek
+        selectedDay = todayDay
+        pagerState.scrollToPage(pageOf(viewMode, currentWeek, todayDay, maxTeachingWeek))
+        // 只有校历完全无法确定当前学期时才联网同步周次；
+        // 已知学期的寒暑假（weekOn 返回 null 但 semesterOn 命中）保留初始定位，
+        // 绝不用网络兜底把视图从假期末周拉回第 1 周。
+        // getTeachingWeek 返回 Resource<Int>（L-12）：仅成功时定位，失败保持原位
+        if (prefs?.teachingWeekOn(today) == null && SchoolCalendar.semesterOn(today) == null) academicRepo.getTeachingWeek().collect { res ->
+            val week = (res as? Resource.Success)?.data ?: return@collect
+            if (week in 1..maxTeachingWeek) {
+                selectedWeek = week
+                pagerState.scrollToPage(pageOf(viewMode, week, todayDay, maxTeachingWeek))
+            }
+        }
     }
 
     /** 读取本地缓存（离线只读，不联网） */
@@ -266,7 +288,7 @@ fun TimetableScreen(
                 selectedWeek = selectedWeek,
                 currentWeek = currentWeek,
                 onWeekStep = { step ->
-                    navigateTo((selectedWeek + step).coerceIn(1, MaxTeachingWeek), selectedDay)
+                    navigateTo((selectedWeek + step).coerceIn(1, maxTeachingWeek), selectedDay)
                 },
                 onPickWeek = { showWeekPicker = true },
                 onBackToNow = {
@@ -296,6 +318,7 @@ fun TimetableScreen(
                     )
                     else -> TimetableContent(
                         result = result,
+                        semesterWeeks = maxTeachingWeek,
                         referenceWeek = prefs?.currentWeek ?: 1,
                         referenceDate = prefs?.currentWeekReferenceDate.orEmpty(),
                         viewMode = viewMode,
@@ -346,6 +369,8 @@ fun TimetableScreen(
         WeekPickerSheet(
             selectedWeek = selectedWeek,
             currentWeek = currentWeek,
+            maxTeachingWeek = maxTeachingWeek,
+            calendarKnown = prefs?.calendarWeekCountKnown == true,
             onSelect = { week ->
                 showWeekPicker = false
                 navigateTo(week, selectedDay)
@@ -614,6 +639,7 @@ private fun <T> SegmentedToggle(
 @Composable
 private fun TimetableContent(
     result: TimetableResult,
+    semesterWeeks: Int,
     referenceWeek: Int,
     referenceDate: String,
     viewMode: TimetableViewMode,
@@ -652,7 +678,7 @@ private fun TimetableContent(
                 cells = result.cells,
                 days = if (isDayView) listOf(dayOfPage(page)) else WeekDays,
                 selectedWeek = pageWeek,
-                weekStart = com.glassous.betterhrbust.core.util.TeachingWeek.mondayForWeek(referenceWeek, referenceDate, pageWeek),
+                weekStart = com.glassous.betterhrbust.core.util.SchoolCalendar.semesterOn(LocalDate.now())?.start?.plusWeeks((pageWeek-1).toLong()) ?: com.glassous.betterhrbust.core.util.TeachingWeek.mondayForWeek(referenceWeek, referenceDate, pageWeek, maxWeeks = semesterWeeks),
                 page = page,
                 highlightToday = !isDayView && pageWeek == currentWeek,
                 sectionMode = sectionMode,
@@ -673,12 +699,12 @@ private fun TimetableContent(
 }
 
 /** 周视图页数 = 教学周数；日视图一页一天，跨周连续。 */
-private fun pageCountOf(mode: TimetableViewMode): Int =
-    if (mode == TimetableViewMode.DAY) MaxTeachingWeek * 7 else MaxTeachingWeek
+private fun pageCountOf(mode: TimetableViewMode, maxWeeks: Int): Int =
+    if (mode == TimetableViewMode.DAY) maxWeeks * 7 else maxWeeks
 
 /** 周次 + 星期 → 页码（0-based）。周视图按周分页，日视图按天连续分页。 */
-private fun pageOf(mode: TimetableViewMode, week: Int, day: Int): Int {
-    val weekIndex = (week - 1).coerceIn(0, MaxTeachingWeek - 1)
+private fun pageOf(mode: TimetableViewMode, week: Int, day: Int, maxWeeks: Int): Int {
+    val weekIndex = (week - 1).coerceIn(0, maxWeeks - 1)
     return if (mode == TimetableViewMode.DAY) weekIndex * 7 + (day - 1).coerceIn(0, 6) else weekIndex
 }
 

@@ -48,6 +48,9 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
+import { useSession } from '@/composables/useSession.js';
+const { refreshSchoolCalendar } = useSession();
+let calendarTimer;
 import AppSidebar from './AppSidebar.vue';
 import AppHeader from './AppHeader.vue';
 import DesktopTitleBar from './DesktopTitleBar.vue';
@@ -86,9 +89,12 @@ function handleResize() {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize);
+  refreshSchoolCalendar();
+  calendarTimer = window.setInterval(refreshSchoolCalendar, 60000);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
+  window.clearInterval(calendarTimer);
 });
 </script>

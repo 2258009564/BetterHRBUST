@@ -13,10 +13,10 @@ on:
     branches: [main]
     paths:
       - 'landing/**'
-      # 落地页直接导入 web 组件与共享资源（ClientDemo.vue / release.css），
+      # 落地页直接导入 web 组件与共享校历资源（ClientDemo.vue / release.css），
       # 这些树外依赖变化时同样需要重新构建部署
       - 'web/src/**'
-      - 'shared/resources.json'
+      - 'shared/**'
       - '.github/workflows/deploy-landing.yml'
   workflow_dispatch:
 

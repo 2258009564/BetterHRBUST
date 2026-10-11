@@ -3,18 +3,10 @@ name: 发布 GitHub Pages
 on:
   push:
     branches: [main]
-    paths:
-      - 'landing/**'
-      # 落地页依赖 web 组件与共享资源，树外依赖变化同样触发重建
-      - 'web/src/**'
-      - 'shared/resources.json'
-      - '.github/workflows/pages.yml'
+    # 落地页依赖 web 组件与共享校历资源（shared/**），树外依赖变化同样触发重建
+    paths: ['landing/**', 'web/src/**', 'shared/**', '.github/workflows/pages.yml']
   pull_request:
-    paths:
-      - 'landing/**'
-      - 'web/src/**'
-      - 'shared/resources.json'
-      - '.github/workflows/pages.yml'
+    paths: ['landing/**', 'web/src/**', 'shared/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:

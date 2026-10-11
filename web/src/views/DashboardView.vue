@@ -69,7 +69,7 @@
                 {{ todayCourses.length }} <span class="text-xs font-normal text-zinc-400">门待上</span>
               </div>
               <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                当前教学周第 {{ currentWeek }} 周
+                {{ isSchoolHoliday ? '当前处于假期' : `当前教学周第 ${currentWeek} 周` }}
               </div>
             </div>
             <div class="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0">
@@ -299,7 +299,7 @@ import { parseExamDateTime } from '@/utils/examTime.js';
 
 defineEmits(['navigate']);
 
-const { isLoggedIn, authChecked, currentWeek } = useSession();
+const { isLoggedIn, authChecked, currentWeek, isSchoolHoliday } = useSession();
 // 登录后数据全部走本地缓存，仅顶栏刷新按钮与每日首次打开会触网
 const { scores, plan, timetableCombine, exams, notices, hasCachedData } = useAcademicData();
 
@@ -316,6 +316,7 @@ const currentDayIndex = computed(() => now.value.getDay() || 7);
 const currentDayName = computed(() => dayMap[now.value.getDay()]);
 
 const todayCourses = computed(() => {
+  if (isSchoolHoliday.value) return [];
   const cells = timetableCombine.value?.cells || [];
   return cells.filter(
     c => c.day === currentDayIndex.value && isCourseActiveInWeek(c, currentWeek.value) && !hasCombineSlotEnded(c.sectionIndex, now.value)

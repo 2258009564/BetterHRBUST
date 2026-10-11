@@ -243,18 +243,18 @@
           <Icon name="refresh" customClass="w-5 h-5 animate-spin mx-auto mb-2" />
           正在拉取教务成绩单...
         </div>
-        <table v-else class="w-full text-left border-collapse text-xs">
+        <table v-else class="w-full min-w-[1120px] text-left border-collapse text-xs">
           <thead>
             <tr class="border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/40 text-zinc-500 dark:text-zinc-400 font-medium">
-              <th class="p-3.5 pl-5">学年 / 学期</th>
-              <th class="p-3.5">课程代码</th>
-              <th class="p-3.5">课程名称</th>
-              <th class="p-3.5">课组</th>
-              <th class="p-3.5 text-center">学分</th>
-              <th class="p-3.5 text-center">绩点</th>
-              <th class="p-3.5">属性</th>
-              <th class="p-3.5">考试性质</th>
-              <th class="p-3.5 pr-5 text-right font-semibold text-zinc-700 dark:text-zinc-300">总评成绩</th>
+              <th class="whitespace-nowrap p-3.5 pl-5">学年 / 学期</th>
+              <th class="whitespace-nowrap p-3.5">课程代码</th>
+              <th class="whitespace-nowrap p-3.5">课程名称</th>
+              <th class="whitespace-nowrap p-3.5">课组</th>
+              <th class="whitespace-nowrap p-3.5 text-center">学分</th>
+              <th class="whitespace-nowrap p-3.5 text-center">绩点</th>
+              <th class="whitespace-nowrap p-3.5">属性</th>
+              <th class="whitespace-nowrap p-3.5">考试性质</th>
+              <th class="whitespace-nowrap p-3.5 pr-5 text-right font-semibold text-zinc-700 dark:text-zinc-300">总评成绩</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
@@ -280,7 +280,7 @@
               <td class="p-3.5">
                 <UiBadge size="sm" :variant="isRequired(row.property) ? 'default' : 'outline'">{{ row.property }}</UiBadge>
               </td>
-              <td class="p-3.5 text-zinc-500">{{ row.examType }}</td>
+              <td class="p-3.5 text-zinc-500 whitespace-nowrap">{{ row.examType }}</td>
               <td class="p-3.5 pr-5 text-right whitespace-nowrap">
                 <span
                   :class="[

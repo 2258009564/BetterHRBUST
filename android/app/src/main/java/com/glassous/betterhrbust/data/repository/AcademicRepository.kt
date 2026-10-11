@@ -518,7 +518,7 @@ class AcademicRepository(
 
             if (parsedUsable) {
                 requireCurrentSession(session)
-                prefs.setCurrentWeek(calendarInfo.currentWeek, expected = session)
+                prefs.setCurrentWeek(calendarInfo.currentWeek, expected = session, teachingWeeks = calendarInfo.teachingWeeks)
             }
 
             emit(Resource.Success(calendarInfo.notices, isOfflineCache = false))
@@ -547,24 +547,24 @@ class AcademicRepository(
             val html = client.get("listLeft.do", preferredCharset = CharsetDecoderHelper.UTF_8)
             var week = AcademicParsers.parseTeachingWeek(html)
 
-            // 若 listLeft.do 未能识别出有效周数（或为 1），尝试从 calendarinfo/viewCalendarInfo.do 双重校验
-            if (week <= 1) {
-                try {
-                    val calHtml = client.get("calendarinfo/viewCalendarInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
-                    val calWeek = AcademicParsers.parseCalendarInfo(calHtml).currentWeek
-                    if (calWeek > 1) {
-                        week = calWeek
-                    }
-                } catch (switched: AccountSwitchedException) {
-                    throw switched
-                } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {}
-            }
+            // 每次同时取得校历，读取明确的学期长度；旧导航中的26不作为当前教学周。
+            // 校历请求失败不阻断主流程，但账号切换的业务信号必须穿透（M-7）
+            var calendarWeeks: Int? = null
+            try {
+                val calHtml = client.get("calendarinfo/viewCalendarInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
+                val calendar = AcademicParsers.parseCalendarInfo(calHtml)
+                calendarWeeks = calendar.teachingWeeks
+                val limit = calendarWeeks ?: session?.semesterTeachingWeeks ?: 20
+                if (week !in 1..limit && calendar.currentWeek in 1..limit) week = calendar.currentWeek
+            } catch (switched: AccountSwitchedException) {
+                throw switched
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {}
 
-            if (week in 1..26) {
+            if (week in 1..(calendarWeeks ?: session?.semesterTeachingWeeks ?: 20)) {
                 requireCurrentSession(session)
-                prefs.setCurrentWeek(week, expected = session)
+                prefs.setCurrentWeek(week, expected = session, teachingWeeks = calendarWeeks)
                 emit(Resource.Success(week))
             } else {
                 emit(Resource.Error("未能识别教学周"))

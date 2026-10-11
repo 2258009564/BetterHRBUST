@@ -2,9 +2,9 @@ name: Android 验证与构建
 
 on:
   pull_request:
-    paths: ['android/**', '.github/workflows/android.yml']
+    paths: ['android/**', 'shared/school-calendar.json', 'tools/generate-school-calendar.mjs', '.github/workflows/android.yml']
   push:
-    paths: ['android/**', '.github/workflows/android.yml']
+    paths: ['android/**', 'shared/school-calendar.json', 'tools/generate-school-calendar.mjs', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:
@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # 校历共享数据（shared/）被 Android 与 web 两端生成/消费，改动需校验一致性
+      - name: 检查校历共享数据
+        run: node tools/generate-school-calendar.mjs --check
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin

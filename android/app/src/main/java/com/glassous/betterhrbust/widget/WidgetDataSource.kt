@@ -36,6 +36,7 @@ object WidgetDataSource {
             prefs.studentId.isBlank()->"打开应用登录"
             !verified->"打开应用核验账号"
             table==null->"打开课表同步数据"
+            week==null && com.glassous.betterhrbust.core.util.SchoolCalendar.semesterOn(date)!=null->"当前处于假期"
             week==null->"打开应用同步教学周"
             else->""
         }

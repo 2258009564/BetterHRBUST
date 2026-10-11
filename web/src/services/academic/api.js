@@ -110,11 +110,16 @@ export const academicApi = {
   /**
    * 获取培养方案及学分要求
    */
-  async getCurriculumPlan() {
-    const res = await request('manager/studyschedule/studentScheduleShowByTerm.do', {
-      encoding: 'gbk'
-    });
-    return parseCurriculumPlan(res.html);
+  async getCurriculumPlan({ studentId = '' } = {}) {
+    const entry = await request('manager/studyschedule/studentSelfSchedule.jsdo', { encoding: 'gbk' });
+    const match = entry.html.match(/studentId=([^&"'<>\s]+)/);
+    let id = match?.[1] || studentId;
+    if (!id) throw new Error('培养方案未返回学生查询参数，请重新同步');
+    try { id = decodeURIComponent(id); } catch { /* 保留原站未编码参数 */ }
+    const res = await request(`manager/studyschedule/studentScheduleShowByTerm.do?z=z&studentId=${encodeURIComponent(id)}`, { encoding: 'gbk' });
+    const plan = parseCurriculumPlan(res.html);
+    if (!plan.groups.length && !plan.totalRequiredCredits) throw new Error('学校未返回培养方案学分要求，未覆盖已有缓存');
+    return plan;
   },
 
   /**
