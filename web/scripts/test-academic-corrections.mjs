@@ -27,6 +27,16 @@ assert.equal(computeCreditsProgress([], [direction]).categories[0].required,10);
 const ungraded = buildAcademicStats([course('VALID',90,3),{...course('PENDING',0,10),score:'缓考'}]);
 assert.equal(ungraded.degree.gpa,4);assert.equal(ungraded.degree.qualified,true);
 
+// L-1：未出分/缓考不再默认视为已通过（保守口径：未确认通过 ≠ 已通过）
+const pendingStats = buildAcademicStats([
+  course('OK', 70, 3),
+  { ...course('DEFER', 0, 5), score: '缓考', passed: false, pending: true },
+  { ...course('UNGRADED', 0, 2), score: '', passed: false, pending: true }
+]);
+assert.equal(pendingStats.earnedCredits, 3, 'pending 行不计入已获学分');
+assert.equal(pendingStats.failedCount, 0, 'pending 行不计入挂科门数');
+assert.equal(pendingStats.failedCredits, 0, 'pending 行不计入挂科学分');
+
 assert.deepEqual(degreeCourses([{...course('MATH',85,3),courseName:'高等数学(A)'},course('MAJOR',90,2.5,'专业选修','任选')]).map(s=>s.courseId),['MATH','MAJOR']);
 
 // GPA 走势学期顺序：教务「学年」列是学期所在公历年份（2023 秋 → 2024 春 → 2024 秋 连续），同一年内先春后秋

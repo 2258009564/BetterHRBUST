@@ -54,6 +54,12 @@ function writeJson(key, value) {
   }
 }
 
+/** 历史版本曾用当天日期伪造公告日期（源页面并无该信息）：读取缓存时统一清除 */
+function sanitizeNotices(list) {
+  if (!Array.isArray(list) || !list.some(n => n && n.date)) return list;
+  return list.map(n => (n && n.date ? { ...n, date: '' } : n));
+}
+
 // ---------------- 单例状态 ----------------
 
 const scores = ref([]);
@@ -81,7 +87,7 @@ function loadCache() {
   timetableCombine.value = readJson(CACHE_KEYS.timetableCombine, { cells: [], unarranged: [] });
   timetableBase.value = readJson(CACHE_KEYS.timetableBase, { cells: [], unarranged: [] });
   exams.value = readJson(CACHE_KEYS.exams, []);
-  notices.value = readJson(CACHE_KEYS.notices, []);
+  notices.value = sanitizeNotices(readJson(CACHE_KEYS.notices, []));
   currentCourses.value = readJson(CACHE_KEYS.currentCourses, []);
 
   const meta = readJson(CACHE_KEYS.meta, null);
@@ -345,7 +351,7 @@ async function loadNoticesForWeek(week) {
   const weekKey = String(week);
   // 已查询过的周次直接返回（含"该周确实无公告"的空结果，避免反复联网）
   if (Object.prototype.hasOwnProperty.call(weekMap, weekKey)) {
-    return weekMap[weekKey];
+    return sanitizeNotices(weekMap[weekKey]);
   }
   try {
     const res = await academicApi.getCalendarInfo(week);

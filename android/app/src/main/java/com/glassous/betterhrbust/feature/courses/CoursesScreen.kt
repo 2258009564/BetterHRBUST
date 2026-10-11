@@ -23,6 +23,8 @@ import com.glassous.betterhrbust.core.ui.components.LoadingView
 import com.glassous.betterhrbust.core.ui.components.PageHeaderTitle
 import com.glassous.betterhrbust.core.ui.registerInputField
 import com.glassous.betterhrbust.data.repository.Resource
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,14 +41,26 @@ fun CoursesScreen(
     var searchResults by remember { mutableStateOf<List<CourseSearchItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
 
+    // 在途检索任务：新输入先取消旧任务，慢旧响应不会覆盖新结果
+    var searchJob by remember { mutableStateOf<Job?>(null) }
+
     fun doSearch(keyword: String) {
-        if (keyword.isBlank()) return
-        coroutineScope.launch {
+        val trimmed = keyword.trim()
+        if (trimmed.length < 2) return
+        searchJob?.cancel()
+        searchJob = coroutineScope.launch {
+            // 防抖：连续键入时只在停顿 300ms 后真正发请求，
+            // 避免每键入一字打一次教务接口
+            delay(300)
             isLoading = true
-            academicRepo.searchCourses(keyword.trim()).collect { res ->
-                if (res is Resource.Success) {
-                    searchResults = res.data
+            try {
+                academicRepo.searchCourses(trimmed).collect { res ->
+                    if (res is Resource.Success) {
+                        searchResults = res.data
+                    }
+                    isLoading = false
                 }
+            } finally {
                 isLoading = false
             }
         }
@@ -72,7 +86,7 @@ fun CoursesScreen(
                 value = searchQuery,
                 onValueChange = {
                     searchQuery = it
-                    if (it.length >= 2) doSearch(it)
+                    doSearch(it)
                 },
                 placeholder = { Text("输入课程名、课号或教师检索...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },

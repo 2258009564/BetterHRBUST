@@ -228,11 +228,14 @@ fun NoticesSettingsScreen(
                                         maxLines = 2
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = notice.date,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.outline
-                                    )
+                                    // 教务源页面不含发布日期（date 为空时隐藏，不伪造）
+                                    if (notice.date.isNotBlank()) {
+                                        Text(
+                                            text = notice.date,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                    }
                                 }
                                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
                             }
@@ -491,8 +494,10 @@ fun NoticesSettingsScreen(
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     Text(text = n.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "发布日期: ${n.date}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                    if (n.date.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = "发布日期: ${n.date}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(16.dp))

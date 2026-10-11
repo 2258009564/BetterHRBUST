@@ -15,8 +15,11 @@
 //! hyper 会直接断开 TCP 连接 → 前端 fetch reject → 复用 client.js
 //! 既有的「网络连接失败……请确认是否处于校园网或VPN环境」提示路径。
 
+use std::pin::Pin;
+use std::task::{Context, Poll};
 use std::time::Duration;
 
+use futures_core::Stream;
 use http::{header, HeaderValue, Method, Request, Response};
 use http_body_util::BodyExt;
 use hyper::body::Incoming;
@@ -40,7 +43,8 @@ const HOP_BY_HOP: &[&str] = &[
 /// Content-Length 由 hyper 按实际 body 重新分帧）
 const REBUILD: &[&str] = &["host", "referer", "content-length"];
 
-/// 上游总超时
+/// 上游超时：响应头阶段为总超时（forward 里的 timeout），响应体阶段为逐帧空闲超时
+/// （body_with_read_timeout）。教务系统中途挂起时连接不会无限占用。
 const UPSTREAM_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// 反代转发的统一错误：任何上游故障都表现为 Err（连接被 hyper 掐断）
@@ -145,7 +149,50 @@ fn rewrite_response(mut res: Response<Incoming>) -> Response<AppBody> {
     }
 
     let (parts, body) = res.into_parts();
-    Response::from_parts(parts, body.map_err(GatewayError::Body).boxed())
+    Response::from_parts(parts, body_with_read_timeout(body))
+}
+
+/// mpsc 接收端包装为 Stream（供 StreamBody 使用）
+struct BodyChannel {
+    rx: tokio::sync::mpsc::Receiver<Result<http_body::Frame<hyper::body::Bytes>, GatewayError>>,
+}
+
+impl Stream for BodyChannel {
+    type Item = Result<http_body::Frame<hyper::body::Bytes>, GatewayError>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.rx.poll_recv(cx)
+    }
+}
+
+/// 上游响应体逐帧读超时：总超时只覆盖到响应头（client.request 返回即完成），
+/// body 是流式透传，若无超时，教务系统中途停摆会让连接与前端 fetch 无限挂起。
+/// 这里用独立任务逐帧读取上游，每帧受 UPSTREAM_TIMEOUT 约束（空闲超时语义：
+/// 持续有数据的慢传输不会中断，停摆则触发）。
+fn body_with_read_timeout(body: Incoming) -> AppBody {
+    let (tx, rx) = tokio::sync::mpsc::channel(4);
+    tokio::spawn(async move {
+        let mut body = Box::pin(body);
+        loop {
+            match tokio::time::timeout(UPSTREAM_TIMEOUT, body.as_mut().frame()).await {
+                Ok(Some(Ok(frame))) => {
+                    if tx.send(Ok(frame)).await.is_err() {
+                        break; // 下游已断开，停止读取
+                    }
+                }
+                Ok(Some(Err(err))) => {
+                    let _ = tx.send(Err(GatewayError::Body(err))).await;
+                    break;
+                }
+                Ok(None) => break,
+                Err(_) => {
+                    let _ = tx.send(Err(GatewayError::Timeout)).await;
+                    break;
+                }
+            }
+        }
+    });
+    http_body_util::StreamBody::new(BodyChannel { rx }).boxed()
 }
 
 /// 无过期属性的会话 Cookie 注入的持久化时限（7 天）。

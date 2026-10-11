@@ -46,6 +46,7 @@ jobs:
         run: |
           npm ci
           npm run build
+          npm run test:build
 
       # 私钥仅通过 env 注入并落盘到 ~/.ssh,避免出现在命令行回显与日志中。
       # 主机公钥来自 SERVER_KNOWN_HOSTS Secret(ssh-keyscan -p 端口 -H 主机 的输出),

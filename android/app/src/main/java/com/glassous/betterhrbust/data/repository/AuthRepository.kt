@@ -87,29 +87,37 @@ class AuthRepository(
         }
     }
 
+    /** 节流标志的同步锁：markSessionExpired 由网络线程并发触发，「本轮只判定一次」不能被并发打破 */
+    private val promptLock = Any()
+
     /** 标记用户发起了手动刷新（刷新时若会话失效，必须重新登录） */
     fun notifyManualRefreshIntent() {
-        pendingManualPrompt = true
+        synchronized(promptLock) { pendingManualPrompt = true }
     }
 
     fun markSessionExpired(expired: Boolean = true) {
         val generation = sessionGeneration.get()
         if (!expired) {
-            _isSessionExpired.value = false
-            _shouldPromptReLogin.value = false
-            _sessionPromptDismissed.value = false
-            pendingManualPrompt = false
-            promptDecided = false
+            synchronized(promptLock) {
+                _isSessionExpired.value = false
+                _shouldPromptReLogin.value = false
+                _sessionPromptDismissed.value = false
+                pendingManualPrompt = false
+                promptDecided = false
+            }
             scope.launch { if (generation == sessionGeneration.get()) prefs.setSessionState(expired = false) }
             return
         }
 
-        val manual = pendingManualPrompt
-        pendingManualPrompt = false
+        val manual = synchronized(promptLock) {
+            val manual = pendingManualPrompt
+            pendingManualPrompt = false
 
-        // 本次进程内本轮失效只判定一次，避免后续重复请求把提示时间不断后推
-        if (promptDecided && !manual) return
-        promptDecided = true
+            // 本次进程内本轮失效只判定一次，避免后续重复请求把提示时间不断后推
+            if (promptDecided && !manual) return
+            promptDecided = true
+            manual
+        }
 
         _isSessionExpired.value = true
         scope.launch {

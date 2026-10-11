@@ -59,8 +59,13 @@ interface NoticeDao {
     @Query("SELECT * FROM notice_cache ORDER BY date DESC")
     fun getNotices(): Flow<List<NoticeEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // IGNORE：id 为内容哈希，重复公告跳过插入，已读状态不被同步重置
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(entities: List<NoticeEntity>)
+
+    /** 清理不在本次同步结果中的旧行（防止内容哈希更换后旧行无限累积） */
+    @Query("DELETE FROM notice_cache WHERE id NOT IN (:ids)")
+    suspend fun retainIds(ids: List<String>)
 
     @Query("UPDATE notice_cache SET isRead = 1 WHERE id = :id")
     suspend fun markAsRead(id: String)

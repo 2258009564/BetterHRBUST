@@ -401,12 +401,16 @@ object AcademicParsers {
                     val examType = getTd(colExamType)
                     val passMark = getTd(colPassMark)
 
+                    // 保守方向：未确认通过 ≠ 已通过——未出分（无成绩无标志）与
+                    // 缓考/缺考等无明确结论的行标记 pending，不计入已获学分也不计入挂科
                     val numScore = rawScore.toDoubleOrNull()
-                    val passed = when {
-                        numScore != null -> numScore >= 60.0
-                        passMark.isNotEmpty() -> !passMark.contains("不") && passMark != "不及格"
-                        rawScore.isNotEmpty() -> rawScore != "不及格" && rawScore != "不合格"
-                        else -> true
+                    var passed = false
+                    var pending = false
+                    when {
+                        numScore != null -> passed = numScore >= 60.0
+                        passMark.isNotEmpty() -> passed = !passMark.contains("不") && passMark != "不及格"
+                        rawScore == "不及格" || rawScore == "不合格" -> passed = false
+                        else -> pending = true
                     }
 
                     scores.add(
@@ -424,7 +428,8 @@ object AcademicParsers {
                             remark = remark,
                             examType = examType,
                             passMark = passMark,
-                            passed = passed
+                            passed = passed,
+                            pending = pending
                         )
                     )
                 }
@@ -692,19 +697,22 @@ object AcademicParsers {
             semesterName = curWeekDiv.text().replace(Regex("""\s+"""), " ").replace(Regex("第.*周"), "").trim()
         }
 
+        // 教务源页面不含发布日期；留空而非用当天日期伪造（错误日期永不纠正），
+        // UI 对空日期隐藏日期字段。id 用内容哈希：按序号会在每次同步后变化，
+        // 配合 IGNORE 插入会把已读状态整表重置
         val notices = mutableListOf<NoticeItem>()
         val textWrapper = doc.selectFirst("#textwrapper")
         if (textWrapper != null) {
             val items = textWrapper.select("p, div, li")
-            for ((idx, el) in items.withIndex()) {
+            for (el in items) {
                 val text = el.text().trim()
                 if (text.isNotEmpty()) {
                     notices.add(
                         NoticeItem(
-                            id = "notice_$idx",
+                            id = "notice_" + kotlin.math.abs(text.hashCode()),
                             title = if (text.length > 50) text.substring(0, 50) else text,
                             content = text,
-                            date = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                            date = ""
                         )
                     )
                 }

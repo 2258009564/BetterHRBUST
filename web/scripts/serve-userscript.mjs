@@ -15,8 +15,17 @@ const filePath = path.join(webRoot, 'dist-userscript', 'better-hrbust.user.js');
 
 const server = createServer((req, res) => {
   if (req.url.split('?')[0].endsWith('.user.js')) {
+    // 新克隆未构建时 dist-userscript 不存在：返回提示而非抛异常崩溃整个进程
+    let body;
+    try {
+      body = readFileSync(filePath);
+    } catch {
+      res.writeHead(503, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('构建产物缺失，请先在 web/ 目录执行 npm run build:userscript 后重试');
+      return;
+    }
     res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' });
-    res.end(readFileSync(filePath));
+    res.end(body);
     return;
   }
   res.writeHead(302, { location: '/better-hrbust.user.js' });

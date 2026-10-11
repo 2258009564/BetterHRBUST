@@ -140,7 +140,8 @@ fun DashboardScreen(
         }?.sortedBy { it.sectionIndex } ?: emptyList()
     }
 
-    val upcomingExam = remember(exams) {
+    // 记忆键含 today：驻留跨天后倒计时按新日期重算，而非沿用进入页面当天的旧值
+    val upcomingExam = remember(exams, today) {
         exams.firstOrNull { it.isUpcoming && (it.countdownDays ?: 0) >= 0 }
     }
 

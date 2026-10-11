@@ -6,6 +6,7 @@
   "description": "BetterHRBUST 介绍页 - 现代化哈理工教务在线 · 四端同源",
   "scripts": {
     "test:browser": "node scripts/test-browser.cjs",
+    "test:build": "node scripts/test-build.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

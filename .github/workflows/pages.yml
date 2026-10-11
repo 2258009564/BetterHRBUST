@@ -36,7 +36,8 @@ jobs:
           cache-dependency-path: landing/package-lock.json
       - name: 构建发布页
         working-directory: landing
-        run: npm ci && npm run build
+        run: |
+          npm ci && npm run build && npm run test:build
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: landing/dist

@@ -41,10 +41,10 @@
               @click="readNotice(n)"
             >
               <div>
-                <div class="flex items-center gap-2 mb-1">
-                  <UiBadge size="sm" variant="default">教务运行</UiBadge>
-                  <span class="text-[11px] text-zinc-400 font-mono">{{ n.date }}</span>
-                </div>
+              <div class="flex items-center gap-2 mb-1">
+                <UiBadge size="sm" variant="default">教务运行</UiBadge>
+                <span v-if="n.date" class="text-[11px] text-zinc-400 font-mono">{{ n.date }}</span>
+              </div>
                 <h4 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-relaxed">
                   {{ n.title }}
                 </h4>
@@ -86,7 +86,7 @@
       <div v-if="activeNotice" class="space-y-4 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
         <div class="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800 flex justify-between">
           <span>来源：教务在线教学运行发布</span>
-          <span>日期：{{ activeNotice.date }}</span>
+          <span v-if="activeNotice.date">日期：{{ activeNotice.date }}</span>
         </div>
         <div class="whitespace-pre-wrap leading-relaxed">
           {{ activeNotice.content || activeNotice.title }}

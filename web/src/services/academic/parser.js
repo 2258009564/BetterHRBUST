@@ -261,15 +261,20 @@ export function parseScores(html) {
         const examType = tds[colExamType]?.textContent.trim() || '';
         const passMark = tds[colPassMark]?.textContent.trim() || '';
 
-        // 判断是否及格
+        // 判断是否及格。保守方向：未确认通过 ≠ 已通过——
+        // 未出分（无成绩无标志）与缓考/缺考等无明确结论的行标记 pending，
+        // 既不计入已获学分，也不计入挂科统计
         const numScore = parseFloat(rawScore);
-        let passed = true;
+        let passed = false;
+        let pending = false;
         if (!isNaN(numScore)) {
           passed = numScore >= 60;
         } else if (passMark) {
           passed = !passMark.includes('不') && passMark !== '不及格';
-        } else if (rawScore) {
-          passed = rawScore !== '不及格' && rawScore !== '不合格';
+        } else if (rawScore === '不及格' || rawScore === '不合格') {
+          passed = false;
+        } else {
+          pending = true;
         }
 
         scores.push({
@@ -286,7 +291,8 @@ export function parseScores(html) {
           remark,
           examType,
           passMark,
-          passed
+          passed,
+          pending
         });
       }
     }
@@ -472,6 +478,8 @@ export function parseCalendarInfo(html) {
   }
 
   // 3. 公告内容
+  // 教务源页面不含发布日期；留空而非用当天日期伪造（错误日期永不纠正），
+  // UI 对空日期隐藏日期字段
   const notices = [];
   const textWrapper = doc.querySelector('#textwrapper');
   if (textWrapper) {
@@ -482,7 +490,7 @@ export function parseCalendarInfo(html) {
         notices.push({
           title: text.slice(0, 50),
           content: text,
-          date: new Date().toLocaleDateString('zh-CN')
+          date: ''
         });
       }
     });

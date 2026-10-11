@@ -194,11 +194,18 @@ pub async fn start(config: ServerConfig) -> io::Result<SocketAddr> {
     };
 
     tokio::spawn(async move {
+        // 连续 accept 失败（如 fd 耗尽）时指数退避，避免忙轮询打满 CPU
+        let mut backoff = std::time::Duration::from_millis(50);
         loop {
             let (stream, _peer) = match listener.accept().await {
                 Ok(accepted) => accepted,
-                Err(_) => continue,
+                Err(_) => {
+                    tokio::time::sleep(backoff).await;
+                    backoff = (backoff * 2).min(std::time::Duration::from_millis(2000));
+                    continue;
+                }
             };
+            backoff = std::time::Duration::from_millis(50);
             let state = state.clone();
             tokio::spawn(async move {
                 let service = service_fn(move |req| handle(state.clone(), req));
@@ -333,6 +340,16 @@ fn asset_response(name: &str, asset: &rust_embed::EmbeddedFile, head_only: bool)
         .header(header::CONTENT_TYPE, mime.as_ref())
         .header(header::CONTENT_LENGTH, asset.data.len())
         .header("x-content-type-options", "nosniff");
+    if mime.type_() == mime_guess::mime::TEXT && mime.subtype() == mime_guess::mime::HTML {
+        // 文档响应补 CSP（纵深防御：静态资源全部同源、无内联脚本，
+        // 恶意注入的跨源脚本 / 内联脚本将被拒绝执行）
+        builder = builder.header(
+            header::CONTENT_SECURITY_POLICY,
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
+             img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; \
+             object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+        );
+    }
     if name == "index.html" {
         // 入口不缓存，保证发版即生效
         builder = builder.header(header::CACHE_CONTROL, "no-cache");

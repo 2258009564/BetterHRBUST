@@ -513,6 +513,8 @@ class AcademicRepository(
             }
             requireCurrentSession(session)
             database.noticeDao().insertAll(entities)
+            // 清理不在本次结果中的旧行；内容未变的公告因 id 哈希一致得以保留（含已读状态）
+            database.noticeDao().retainIds(entities.map { it.id })
 
             if (parsedUsable) {
                 requireCurrentSession(session)
@@ -534,7 +536,12 @@ class AcademicRepository(
         }
     }
 
-    fun getTeachingWeek(): Flow<Int> = flow {
+    /**
+     * 拉取教学周。返回 Resource：解析失败为 Error，不再裸发回退值 1——
+     * syncAll 的「已全部同步」判定把裸 Int 一律当新数据，失败的教学周会
+     * 错误地满足完成条件。
+     */
+    fun getTeachingWeek(): Flow<Resource<Int>> = flow {
         val session = prefs.preferencesFlow.firstOrNull()
         try {
             val html = client.get("listLeft.do", preferredCharset = CharsetDecoderHelper.UTF_8)
@@ -558,9 +565,9 @@ class AcademicRepository(
             if (week in 1..26) {
                 requireCurrentSession(session)
                 prefs.setCurrentWeek(week, expected = session)
-                emit(week)
+                emit(Resource.Success(week))
             } else {
-                emit(1)
+                emit(Resource.Error("未能识别教学周"))
             }
         } catch (switched: AccountSwitchedException) {
             throw switched
@@ -575,7 +582,7 @@ class AcademicRepository(
                 if (calWeek > 1) {
                     requireCurrentSession(session)
                     prefs.setCurrentWeek(calWeek, expected = session)
-                    emit(calWeek)
+                    emit(Resource.Success(calWeek))
                     return@flow
                 }
             } catch (switched: AccountSwitchedException) {
@@ -583,7 +590,7 @@ class AcademicRepository(
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (_: Exception) {}
-            emit(1)
+            emit(Resource.Error("未能识别教学周"))
         }
     }
 }

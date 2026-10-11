@@ -24,7 +24,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
-import { getGbkLabel, toRelativePath, decodeBuffer } from './lib/http.mjs';
+import { getGbkLabel, toRelativePath } from './lib/http.mjs';
 import {
   fetchCaptcha,
   checkCaptcha,
@@ -529,9 +529,9 @@ function handleSample(res, url) {
     return res.end(body);
   }
 
-  // 原始样本保持服务器字节原貌，这里按同样规则判定编码后再输出为 UTF-8 文本
-  const { text } = decodeBuffer(body, '');
-  return sendText(res, 200, text, 'text/plain; charset=utf-8');
+  // 落盘样本（samples/ 与 decoded/）均为 UTF-8 文本（脱敏与转码都会重编码），
+  // 直接按 UTF-8 输出即可；再走 meta 嗅探会把 GBK 来源的样本二次转成乱码
+  return sendText(res, 200, body.toString('utf8'), 'text/plain; charset=utf-8');
 }
 
 /**

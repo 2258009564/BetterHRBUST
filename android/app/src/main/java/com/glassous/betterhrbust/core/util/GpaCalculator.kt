@@ -289,9 +289,11 @@ object GpaCalculator {
         val requiredCourses = requiredRecords.map { it.item }
 
         val totalCredits = round1(requiredCourses.sumOf { it.credit })
-        val earnedCredits = round1(requiredCourses.filter { it.passed }.sumOf { it.credit })
+        // pending（未出分/缓考等无结论行）不计入已获学分（保守口径：未确认通过 ≠ 已通过）
+        val earnedCredits = round1(requiredCourses.filter { it.passed && !it.pending }.sumOf { it.credit })
 
-        val failedCourses = requiredCourses.filter { !it.passed }
+        // 挂科同样只统计有明确结论的行：pending 不算挂科
+        val failedCourses = requiredCourses.filter { !it.passed && !it.pending }
         val failedCredits = round1(failedCourses.sumOf { it.credit })
 
         // 必修课加权：GPA / 加权平均分 / 优秀率
@@ -350,7 +352,7 @@ object GpaCalculator {
                 gpa = degreeWeight.gpa,
                 courseCount = selectedDegreeCourses.size,
                 requiredCredits = round1(selectedDegreeCourses.sumOf { it.credit }),
-                earnedCredits = round1(selectedDegreeCourses.filter { it.passed }.sumOf { it.credit }),
+                earnedCredits = round1(selectedDegreeCourses.filter { it.passed && !it.pending }.sumOf { it.credit }),
                 allPassed = degreeAllPassed,
                 threshold = DEGREE_GPA_THRESHOLD,
                 qualified = degreeQualified
