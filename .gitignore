@@ -14,6 +14,9 @@ tools/probe/output/*
 tools/probe/.smoke/
 tools/probe/.tmp/
 
+# config.json 由 config.example.json 复制而来，含教务密码，绝不能入库
+tools/probe/config.json
+
 # ---------- 依赖与构建产物 ----------
 node_modules/
 dist/

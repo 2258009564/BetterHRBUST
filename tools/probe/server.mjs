@@ -10,7 +10,8 @@
  *
  * 安全说明：
  *   · 只监听 127.0.0.1，不对局域网暴露；
- *   · 账号密码仅用于本次登录请求，不写入任何文件（会话文件只存 Cookie）；
+ *   · 校验 Host 头指向本服务自身，阻断 DNS rebinding 跨源读取；
+ *   · 账号密码仅用于本次登录请求，不写入任何文件（会话文件只存 Cookie 与学号）；
  *   · 探测样本可能含隐私数据，请勿公开分享。
  *
  * 用法：
@@ -33,7 +34,7 @@ import {
   loadSession,
   logout
 } from './lib/auth.mjs';
-import { SampleStore, cleanOutput } from './lib/dumper.mjs';
+import { SampleStore, cleanOutput, ensureOutDir } from './lib/dumper.mjs';
 import { createRedactor } from './lib/redact.mjs';
 import { CATALOG, MODULES, summarizeCatalog } from './catalog.mjs';
 import {
@@ -163,6 +164,12 @@ function ensureStore() {
       term: ''
     };
     state.landingPath = restored.landingPath || '';
+    // 恢复上次登录学号并登记进脱敏器：复用会话（--skip-login 场景）时
+    // 样本中的裸学号才能被正确屏蔽
+    if (restored.username) {
+      state.username = restored.username;
+      ensureRedactor().addKnown('username', restored.username);
+    }
   }
 })();
 
@@ -248,6 +255,14 @@ function sseSend(res, payload) {
  * ------------------------------------------------------------------ */
 
 const server = http.createServer(async (req, res) => {
+  // Host 校验：重绑定攻击中浏览器按攻击者域名发请求，Host 不指向本服务一律 403，
+  // 防止恶意页面把本服务变成「同源」可读资源（会话 Cookie / 探测产物均在服务端）。
+  // 不带 Host 头的客户端（curl 等）无法构造重绑定攻击，放行。
+  if (!hostAllowed(req.headers.host)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('forbidden host');
+  }
+
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const route = url.pathname;
 
@@ -261,6 +276,15 @@ const server = http.createServer(async (req, res) => {
     else res.end();
   }
 });
+
+/** Host 头必须指向本服务（127.0.0.1 监听时同时接受 localhost 别名） */
+function hostAllowed(hostHeader) {
+  if (!hostHeader) return true;
+  const host = String(hostHeader).trim().toLowerCase();
+  if (host === `${OPTIONS.host}:${OPTIONS.port}`) return true;
+  if (OPTIONS.host === '127.0.0.1' && host === `localhost:${OPTIONS.port}`) return true;
+  return false;
+}
 
 /** 静态文件 */
 function serveStatic(res, name) {
@@ -435,7 +459,9 @@ async function handleLogin(req, res) {
 
   saveSession(state.client, sessionFile, {
     studentId: state.identity.studentId,
-    landingPath: state.landingPath
+    landingPath: state.landingPath,
+    // 学号随会话一并保存：复用会话时脱敏器据此屏蔽样本中的裸学号
+    username
   });
 
   log(
@@ -479,7 +505,14 @@ function handleReport(res) {
 
 function handleSample(res, url) {
   const file = safeResolve(url.searchParams.get('file'));
-  if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+  // 白名单：只允许读取产物子目录（samples/ decoded/ portal/）。
+  // 输出目录根下的 session.json（会话 Cookie 凭证）等文件一律不可经此端点读出。
+  const underProductDir =
+    file &&
+    ['samples', 'decoded', 'portal'].some((dir) =>
+      file.startsWith(path.join(OPTIONS.outDir, dir) + path.sep)
+    );
+  if (!underProductDir || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     return sendJson(res, 404, { success: false, message: '样本文件不存在' });
   }
 
@@ -890,7 +923,8 @@ async function handleProbeStream(req, res, url) {
  * 启动
  * ------------------------------------------------------------------ */
 
-fs.mkdirSync(OPTIONS.outDir, { recursive: true });
+// 输出目录就绪（含防误提交的 .gitignore，见 ensureOutDir）
+ensureOutDir(OPTIONS.outDir);
 
 server.listen(OPTIONS.port, OPTIONS.host, () => {
   const url = `http://${OPTIONS.host}:${OPTIONS.port}/`;

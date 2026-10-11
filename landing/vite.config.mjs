@@ -14,15 +14,16 @@ export default defineConfig({
       '@': path.resolve(process.cwd(), './src')
     }
   },
-  // 与 web/ 端开发端口（5173）错开，便于两个项目同时启动
+  // 与 web/ 端开发端口（5173）错开，便于两个项目同时启动。
+  // 不设 allowedHosts:true：Vite 5.4.12+ 内置 DNS rebinding 的 Host 校验，
+  // 显式关闭会让恶意页面可经重绑定访问本地 dev/preview 服务；
+  // 局域网调试用 IP 访问（默认放行），自定义域名按需临时加白。
   server: {
     port: 5174,
-    host: '0.0.0.0',
-    allowedHosts: true
+    host: '0.0.0.0'
   },
   preview: {
     port: 5174,
-    host: '0.0.0.0',
-    allowedHosts: true
+    host: '0.0.0.0'
   }
 })

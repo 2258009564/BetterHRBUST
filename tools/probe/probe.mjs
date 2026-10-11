@@ -31,7 +31,7 @@ import {
   openWithSystemViewer,
   isLoginPage
 } from './lib/auth.mjs';
-import { SampleStore, cleanOutput } from './lib/dumper.mjs';
+import { SampleStore, cleanOutput, ensureOutDir } from './lib/dumper.mjs';
 import { createRedactor } from './lib/redact.mjs';
 import { CATALOG, MODULES, summarizeCatalog } from './catalog.mjs';
 import {
@@ -170,6 +170,9 @@ async function main() {
   const outDir = path.isAbsolute(options.outDir)
     ? options.outDir
     : path.resolve(HERE, options.outDir || DEFAULT_OPTIONS.outDir);
+  // 输出目录就绪：目录内放置自忽略的 .gitignore，
+  // 防止 --out 指向仓库内其他目录时 session.json / 产物被误提交
+  ensureOutDir(outDir);
 
   banner('哈理工教务在线 · 接口探测');
   info(`基址        ${options.baseUrl}`);
@@ -267,6 +270,12 @@ async function main() {
       return;
     }
   }
+
+  // 登录学号登记进脱敏器：交互式登录（options.username 为空）与
+  // 复用会话（--skip-login）两条路径下，样本中的裸学号才能被屏蔽。
+  // 全量探测时 showPersonalInfo 页的 harvest 也可能发现学号，这里先登记兜底。
+  const accountUsername = options.username || identity.username || session?.username || '';
+  if (accountUsername) redactor.addKnown('username', accountUsername);
 
   const context = {
     studentId: identity.studentId,
@@ -572,10 +581,15 @@ async function interactiveLogin(client, options, outDir, sessionFile) {
 
   ok(`登录成功（学号 ${identity.studentId || username}）`);
   if (landingPath) info(`登录落点  ${landingPath}`);
-  saveSession(client, sessionFile, { studentId: identity.studentId, landingPath });
+  saveSession(client, sessionFile, {
+    studentId: identity.studentId,
+    landingPath,
+    // 学号随会话保存：--skip-login 复用时据此登记脱敏器
+    username
+  });
   info(`会话已保存到 ${sessionFile}，下次可用 --skip-login 复用`);
 
-  return { ...identity, landingPath };
+  return { ...identity, landingPath, username };
 }
 
 /* ------------------------------------------------------------------ *

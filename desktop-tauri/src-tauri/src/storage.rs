@@ -30,7 +30,6 @@ use crate::server::{full_body, plain_response, AppBody};
 /// 16MB 纯防御性兜底（回环可达的任意本机进程都可访问该端点，
 /// 来源校验见 server.rs 的 Host / Origin 白名单）
 pub const MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
-
 /// 键名长度上限（应用侧键均为 `better_hrbust_*` / `saved_student_number` 短标识符）
 const MAX_KEY_LEN: usize = 256;
 
@@ -134,13 +133,16 @@ pub async fn handle(storage: &Option<Arc<Storage>>, req: Request<Incoming>) -> R
                 .expect("存储 GET 响应构造不会失败")
         }
         Method::PUT => {
-            let bytes = match req.into_body().collect().await {
+            // Limited 逐帧计数，超限即断流（不经 CORS 预检的恶意超大 PUT
+            // 无法再把完整 body 缓冲进内存后才被拒绝）
+            let limited = http_body_util::Limited::new(req.into_body(), MAX_BODY_BYTES);
+            let bytes = match limited.collect().await {
                 Ok(collected) => collected.to_bytes(),
+                Err(err) if err.downcast_ref::<http_body_util::LengthLimitError>().is_some() => {
+                    return plain_response(StatusCode::PAYLOAD_TOO_LARGE, "payload too large");
+                }
                 Err(_) => return plain_response(StatusCode::BAD_REQUEST, "bad body"),
             };
-            if bytes.len() > MAX_BODY_BYTES {
-                return plain_response(StatusCode::PAYLOAD_TOO_LARGE, "payload too large");
-            }
             let payload: serde_json::Value = match serde_json::from_slice(&bytes) {
                 Ok(value) => value,
                 Err(_) => return plain_response(StatusCode::BAD_REQUEST, "invalid json"),

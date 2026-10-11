@@ -419,6 +419,25 @@ async fn storage_rejects_invalid_requests() {
     assert_eq!(res.status(), StatusCode::METHOD_NOT_ALLOWED);
 }
 
+#[tokio::test]
+async fn storage_oversized_put_rejected_with_413() {
+    // 超过 16MB 上限的 PUT 必须 413（Limited 在读到上限时即断流，不整包缓冲）
+    let dir = tempfile::tempdir().unwrap();
+    let origin = spawn_server_with_storage(dir.path().to_path_buf()).await;
+    let oversized = vec![b'x'; 16 * 1024 * 1024 + 1];
+    let request = Request::builder()
+        .method(http::Method::PUT)
+        .uri(format!("{origin}/__app/storage"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Full::new(Bytes::from(oversized)))
+        .unwrap();
+    let res = tokio::time::timeout(Duration::from_secs(30), client().request(request))
+        .await
+        .expect("请求超时")
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::PAYLOAD_TOO_LARGE);
+}
+
 /// 直接以原始文本作为 PUT 体（校验 4xx 路径）
 async fn put_raw(
     url: &str,

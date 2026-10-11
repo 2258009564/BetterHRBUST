@@ -57,6 +57,27 @@ function isSameOrUnder(child, parent) {
   return c === p || c.startsWith(p + path.sep);
 }
 
+/**
+ * 创建输出目录并放置自忽略的 .gitignore
+ *
+ * 根 .gitignore 只枚举了默认目录（tools/probe/output/*）；
+ * `--out` 指向仓库内其他目录时，session.json（会话 Cookie）与探测产物
+ * 会落在未被忽略的路径上。这里在每个输出目录内放一份 `*\n!.gitignore`
+ * （与 output/ 目录同法），使自定义目录同样天然防误提交。
+ *
+ * @param {string} outDir 输出目录
+ * @returns {string} 解析后的绝对路径
+ */
+export function ensureOutDir(outDir) {
+  const resolved = assertSafeOutDir(outDir);
+  fs.mkdirSync(resolved, { recursive: true });
+  const gitignore = path.join(resolved, '.gitignore');
+  if (!fs.existsSync(gitignore)) {
+    fs.writeFileSync(gitignore, '*\n!.gitignore\n', 'utf8');
+  }
+  return resolved;
+}
+
 /** 登录页特征（用于识别会话失效） */
 const LOGIN_MARKERS = ['j_acegi_security_check', 'getCaptcha.do'];
 
