@@ -107,8 +107,8 @@
                 <td class="p-3 font-medium">{{ e.location }}</td>
                 <td class="p-3"><UiBadge size="sm" variant="default">{{ e.property }}</UiBadge></td>
                 <td class="p-3 pr-4 text-right">
-                  <UiBadge size="sm" :variant="e.isUpcoming ? 'warning' : 'outline'">
-                    {{ e.isUpcoming ? '待开考' : '已结束' }}
+                  <UiBadge size="sm" :variant="e.timeUnknown ? 'default' : e.isUpcoming ? 'warning' : 'outline'">
+                    {{ e.timeUnknown ? '时间未知' : e.isUpcoming ? '待开考' : '已结束' }}
                   </UiBadge>
                 </td>
               </tr>
