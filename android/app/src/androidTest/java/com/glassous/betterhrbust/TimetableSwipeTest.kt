@@ -82,7 +82,7 @@ class TimetableSwipeTest {
             org.junit.Assert.assertTrue("必须采集到真实窗口帧",values.isNotEmpty())
         } finally {
             scenario?.close()
-            app.preferencesManager.saveAuth(old.username,"",old.year,old.term,old.realName,old.savedPassword)
+            app.preferencesManager.saveAuth(old.username,"",old.year,old.term,old.realName)
             app.preferencesManager.clearSession()
             app.database.profileDao().clearAll()
             app.database.timetableDao().clear(sid)

@@ -78,6 +78,8 @@ class AuthRepository(
         // 不恢复"是否弹提示"：用户已看过一次提示后，下次启动不再重复弹出，
         // 而是继续按一周节流（lastPromptAt）计算下一次提示时机。
         scope.launch {
+            // 迁移清理：历史版本曾明文持久化教务密码，启动时删除残留键
+            prefs.purgeLegacySavedPassword()
             val snapshot = prefs.preferencesFlow.firstOrNull() ?: return@launch
             _isSessionExpired.value = snapshot.sessionExpired
             _shouldPromptReLogin.value = false
@@ -187,14 +189,14 @@ class AuthRepository(
             _sessionPromptDismissed.value = false
             pendingManualPrompt = false
             promptDecided = false
-            // 身份、姓名、密码和登录时间一次性写入，账号重建界面时不会读取旧账号字段。
+            // 身份、姓名和登录时间一次性写入，账号重建界面时不会读取旧账号字段。
+            // 密码不持久化（安全对齐 Web 端，仅保留学号免输入）
             prefs.saveAuth(
                 username = username,
                 studentId = studentContext.studentId,
                 year = studentContext.year,
                 term = studentContext.term,
-                realName = profile.realName,
-                savedPassword = password
+                realName = profile.realName
             )
             preparedLoginAccount = null
             emit(Resource.Success(studentContext))

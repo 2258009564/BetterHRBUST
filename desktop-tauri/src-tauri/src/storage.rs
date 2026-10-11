@@ -27,7 +27,8 @@ use hyper::body::{Bytes, Incoming};
 use crate::server::{full_body, plain_response, AppBody};
 
 /// PUT 请求体大小上限：全量数据（成绩/考试/公告等解析结果）通常 < 1MB，
-/// 16MB 纯防御性兜底（仅 127.0.0.1 可达，无外部攻击面）
+/// 16MB 纯防御性兜底（回环可达的任意本机进程都可访问该端点，
+/// 来源校验见 server.rs 的 Host / Origin 白名单）
 pub const MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
 
 /// 键名长度上限（应用侧键均为 `better_hrbust_*` / `saved_student_number` 短标识符）

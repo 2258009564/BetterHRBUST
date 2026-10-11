@@ -164,9 +164,8 @@ fun ReLoginOverlay(
 
     val initialUsername = prefs?.username ?: ""
     var username by remember(initialUsername) { mutableStateOf(initialUsername) }
-    // 回填本地保存的密码，免重复输入（与登录页一致）
-    val initialPassword = prefs?.savedPassword ?: ""
-    var password by remember(initialPassword) { mutableStateOf(initialPassword) }
+    // 密码不落盘（安全策略，与 Web 端对齐），重新登录时需重新输入
+    var password by remember { mutableStateOf("") }
     var captcha by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
@@ -232,8 +231,6 @@ fun ReLoginOverlay(
                     }
                     is Resource.Success -> {
                         isLoading = false
-                        // 记住密码，供下次免重复输入
-                        prefsManager.setSavedPassword(password)
                         authRepo.markSessionExpired(false)
                         onDismiss()
                     }

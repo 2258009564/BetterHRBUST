@@ -153,11 +153,16 @@ fn rewrite_response(mut res: Response<Incoming>) -> Response<AppBody> {
 const SESSION_COOKIE_MAX_AGE: &str = "604800";
 
 /// 改写单个 Set-Cookie：剥离 Domain=... 属性（大小写不敏感），
-/// 无 Expires/Max-Age 时追加 Max-Age 使其可跨冷启动持久化。
+/// 无 Expires/Max-Age 时追加 Max-Age 使其可跨冷启动持久化；
+/// 缺失时补 SameSite=Strict 与 HttpOnly——Cookie 落在 127.0.0.1 上，
+/// SameSite=Strict 阻止本机其他端口页面借 Cookie 发子资源请求，
+/// HttpOnly 使前端 JS 无法读出会话凭证（前端仅透传，从不读取）。
 /// 例：`JSESSIONID=abc; Domain=hrbust.edu.cn; Path=/academic`
-///   → `JSESSIONID=abc; Path=/academic; Max-Age=604800`
+///   → `JSESSIONID=abc; Path=/academic; Max-Age=604800; SameSite=Strict; HttpOnly`
 fn rewrite_cookie(cookie: &str) -> String {
     let mut has_expiry = false;
+    let mut has_samesite = false;
+    let mut has_httponly = false;
     let mut kept: Vec<&str> = Vec::new();
     for part in cookie.split(';') {
         let lower = part.trim_start().to_ascii_lowercase();
@@ -167,12 +172,24 @@ fn rewrite_cookie(cookie: &str) -> String {
         if lower.starts_with("expires=") || lower.starts_with("max-age=") {
             has_expiry = true; // 教务侧显式删除（Max-Age=0 等）原样保留
         }
+        if lower.starts_with("samesite=") {
+            has_samesite = true;
+        }
+        if lower == "httponly" {
+            has_httponly = true;
+        }
         kept.push(part);
     }
     let mut rewritten = kept.join(";");
     if !has_expiry {
         rewritten.push_str("; Max-Age=");
         rewritten.push_str(SESSION_COOKIE_MAX_AGE);
+    }
+    if !has_samesite {
+        rewritten.push_str("; SameSite=Strict");
+    }
+    if !has_httponly {
+        rewritten.push_str("; HttpOnly");
     }
     rewritten
 }
@@ -208,33 +225,42 @@ mod tests {
 
     #[test]
     fn cookie_domain_stripped_and_session_persisted() {
-        // 教务典型会话 Cookie：剥 Domain + 注入 Max-Age
+        // 教务典型会话 Cookie：剥 Domain + 注入 Max-Age + 补 SameSite/HttpOnly
         assert_eq!(
             rewrite_cookie("JSESSIONID=abc; Domain=hrbust.edu.cn; Path=/academic"),
-            "JSESSIONID=abc; Path=/academic; Max-Age=604800"
+            "JSESSIONID=abc; Path=/academic; Max-Age=604800; SameSite=Strict; HttpOnly"
         );
         assert_eq!(
             rewrite_cookie("JSESSIONID=abc; domain=HRBUST.edu.cn; HttpOnly"),
-            "JSESSIONID=abc; HttpOnly; Max-Age=604800"
+            "JSESSIONID=abc; HttpOnly; Max-Age=604800; SameSite=Strict"
         );
-        assert_eq!(rewrite_cookie("JSESSIONID=abc"), "JSESSIONID=abc; Max-Age=604800");
+        assert_eq!(
+            rewrite_cookie("JSESSIONID=abc"),
+            "JSESSIONID=abc; Max-Age=604800; SameSite=Strict; HttpOnly"
+        );
+        // 已带 SameSite 的不重复追加
+        assert_eq!(
+            rewrite_cookie("JSESSIONID=abc; SameSite=Lax"),
+            "JSESSIONID=abc; SameSite=Lax; Max-Age=604800; HttpOnly"
+        );
     }
 
     #[test]
     fn cookie_with_explicit_expiry_left_alone() {
-        // 已有 Max-Age/Expires 的不改写（教务侧显式删除 Cookie 的路径保持原语义）
+        // 已有 Max-Age/Expires 的不注入持久化时限（教务侧显式删除 Cookie 的路径保持原语义），
+        // 但仍补 SameSite/HttpOnly 加固
         assert_eq!(
             rewrite_cookie("JSESSIONID=abc; Max-Age=0; Path=/"),
-            "JSESSIONID=abc; Max-Age=0; Path=/"
+            "JSESSIONID=abc; Max-Age=0; Path=/; SameSite=Strict; HttpOnly"
         );
         assert_eq!(
             rewrite_cookie("JSESSIONID=abc; expires=Thu, 01 Jan 1970 00:00:00 GMT"),
-            "JSESSIONID=abc; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+            "JSESSIONID=abc; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict; HttpOnly"
         );
         // 大小写不敏感
         assert_eq!(
             rewrite_cookie("JSESSIONID=abc; MAX-AGE=3600"),
-            "JSESSIONID=abc; MAX-AGE=3600"
+            "JSESSIONID=abc; MAX-AGE=3600; SameSite=Strict; HttpOnly"
         );
     }
 

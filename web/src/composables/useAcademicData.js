@@ -11,7 +11,7 @@
 import { ref, reactive, computed } from 'vue';
 import { academicApi } from '@/services/academic/api.js';
 import { useSession } from '@/composables/useSession.js';
-import { registerDataCacheCleaner } from '@/composables/dataCacheBridge.js';
+import { registerDataCacheCleaner, clearRegisteredDataCaches } from '@/composables/dataCacheBridge.js';
 import { registerCourseColors } from '@/utils/courseColors.js';
 import { storageGetItem, storageSetItem, storageRemoveItem } from '@/services/storage.js';
 
@@ -136,7 +136,7 @@ function isSessionExpiredError(err) {
  * @returns {Promise<{ success: boolean, expired: boolean, message?: string }>}
  */
 async function syncAll({ markManual = false } = {}) {
-  const { studentId, studentNumber, currentSemester, currentWeek, isLoggedIn, userProfile, markSessionExpired } =
+  const { studentId, studentNumber, currentSemester, currentWeek, isLoggedIn, userProfile, markSessionExpired, resetProfile } =
     useSession();
 
   if (!isLoggedIn.value) {
@@ -163,7 +163,11 @@ async function syncAll({ markManual = false } = {}) {
     const ctx = await academicApi.getStudentContext();
     if (!isCurrent()) return { success: false, expired: false, message: '账号已切换，旧同步结果已丢弃' };
     if (expectedStudentId && ctx.studentId && ctx.studentId !== expectedStudentId) {
-      clearDataCache();
+      // 与 checkAuth 对同一事件的处理保持一致：完整清理旧账号的数据缓存与档案 PII
+      // （clearRegisteredDataCaches 会连带调用本模块的 clearDataCache，复位 syncing）
+      clearRegisteredDataCaches();
+      resetProfile();
+      studentId.value = '';
       markSessionExpired({ manual: markManual });
       return { success: false, expired: true, message: '教务会话账号已变化，请重新登录' };
     }

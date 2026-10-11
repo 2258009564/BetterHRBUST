@@ -95,15 +95,13 @@ fun AuthScreen(
         refreshCaptcha()
     }
 
-    // 回填本地保存的账号与密码（仅首次生效，不覆盖用户正在输入的内容）
+    // 回填本地保存的账号（仅首次生效，不覆盖用户正在输入的内容）；
+    // 密码不落盘（安全策略，与 Web 端对齐），每次登录需重新输入
     LaunchedEffect(prefs) {
         val snapshot = prefs ?: return@LaunchedEffect
         if (prefilled) return@LaunchedEffect
         if (snapshot.username.isNotEmpty() && username.isBlank()) {
             username = snapshot.username
-        }
-        if (snapshot.savedPassword.isNotEmpty() && password.isBlank()) {
-            password = snapshot.savedPassword
         }
         prefilled = true
     }
@@ -134,8 +132,6 @@ fun AuthScreen(
                     }
                     is Resource.Success -> {
                         isLoading = false
-                        // 记住密码（仅存本地 DataStore，用于下次免重复输入）
-                        prefsManager.setSavedPassword(password)
                         onLoginSuccess()
                     }
                     is Resource.Error -> {
