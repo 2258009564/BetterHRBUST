@@ -1,15 +1,15 @@
 # Dependabot：跟踪 GitHub Actions 的版本更新。
 # workflows 已将全部第三方 action 固定到 commit SHA（供应链防护），
 # 上游发新版时由此处提 PR，人工审阅 SHA 来源后合并。
+# 策略：每月检查一次，所有更新（含 major）归入同一个 PR，降低审阅噪音。
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    open-pull-requests-limit: 1
     groups:
-      actions-minor:
-        update-types:
-          - minor
-          - patch
+      actions:
+        patterns:
+          - '*'
