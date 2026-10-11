@@ -43,7 +43,9 @@ class AcademicSyncManager(
         val success: Boolean,
         /** 会话失效（需要重新登录） */
         val expired: Boolean,
-        val message: String
+        val message: String,
+        /** true = 本轮未执行（已有另一轮同步进行中），ensureDailySync 据此如实返回 */
+        val skipped: Boolean = false
     )
 
     private val _isSyncing = MutableStateFlow(false)
@@ -63,14 +65,14 @@ class AcademicSyncManager(
 
     /**
      * 每天首次打开应用时自动全量同步
-     * @return 是否真正执行了同步
+     * @return 是否真正执行了同步（另一轮同步进行中时返回 false，与注释契约一致）
      */
     suspend fun ensureDailySync(): Boolean {
         // 切号时先等待旧轮次退出，再重查新账号是否需要同步，避免 tryLock 忙碌后漏同步。
         syncMutex.withLock { }
         if (!needsDailySync()) return false
-        syncAll(manual = false)
-        return true
+        val outcome = syncAll(manual = false)
+        return !outcome.skipped
     }
 
     /**
@@ -79,7 +81,7 @@ class AcademicSyncManager(
      */
     suspend fun syncAll(manual: Boolean = false): SyncOutcome {
         if (!syncMutex.tryLock()) {
-            return SyncOutcome(success = false, expired = false, message = "正在同步中，请稍候")
+            return SyncOutcome(success = false, expired = false, message = "正在同步中，请稍候", skipped = true)
         }
 
         try {
@@ -144,6 +146,10 @@ class AcademicSyncManager(
                     _lastSyncMessage.value = message
                     SyncOutcome(success = complete, expired = false, message = message)
                 }
+            } catch (switched: com.glassous.betterhrbust.data.repository.AccountSwitchedException) {
+                // 账号切换不是异常场景：旧同步结果作废，静默返回（不再用
+                // CancellationException 承载该信号——那会取消兄弟任务并穿透本 catch）
+                SyncOutcome(success = false, expired = false, message = "账号已切换，旧同步结果已丢弃")
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {

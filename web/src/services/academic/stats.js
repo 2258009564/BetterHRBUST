@@ -318,11 +318,13 @@ export function buildAcademicStats(scores) {
   const totalCredits = round1(
     requiredCourses.reduce((acc, s) => acc + (Number(s.credit) || 0), 0)
   );
+  // pending（未出分/缓考等无结论行）不计入已获学分（保守口径：未确认通过 ≠ 已通过）
   const earnedCredits = round1(
-    requiredCourses.filter(s => s.passed).reduce((acc, s) => acc + (Number(s.credit) || 0), 0)
+    requiredCourses.filter(s => s.passed && !s.pending).reduce((acc, s) => acc + (Number(s.credit) || 0), 0)
   );
 
-  const failedCourses = requiredCourses.filter(s => !s.passed);
+  // 挂科同样只统计有明确结论的行：pending 不算挂科
+  const failedCourses = requiredCourses.filter(s => !s.passed && !s.pending);
   const failedCount = failedCourses.length;
   const failedCredits = round1(failedCourses.reduce((acc, s) => acc + (Number(s.credit) || 0), 0));
 
@@ -372,7 +374,7 @@ export function buildAcademicStats(scores) {
       gpa: degreeWeight.gpa,
       courseCount: selectedDegreeCourses.length,
       requiredCredits: round1(selectedDegreeCourses.reduce((sum, s) => sum + Number(s.credit), 0)),
-      earnedCredits: round1(selectedDegreeCourses.filter(s => s.passed).reduce((sum, s) => sum + Number(s.credit), 0)),
+      earnedCredits: round1(selectedDegreeCourses.filter(s => s.passed && !s.pending).reduce((sum, s) => sum + Number(s.credit), 0)),
       allPassed: degreeAllPassed,
       threshold: DEGREE_GPA_THRESHOLD,
       qualified: degreeQualified

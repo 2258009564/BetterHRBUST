@@ -161,6 +161,41 @@ class AcademicParsersTest {
     }
 
     @Test
+    fun testParseScoresPendingConservative() {
+        // L-1：未出分 / 缓考行没有明确结论 → passed=false 且 pending=true，
+        // 不再默认视为已通过（保守口径：未确认通过 ≠ 已通过，
+        // 不计入已获学分，也不计入挂科统计）。
+        // 等级制成绩（合格/优秀/免修）是明确的通过结论 → passed=true 且 pending=false，
+        // 不通过是明确的挂科结论 → passed=false 且 pending=false
+        val html = """
+            <table class="datalist">
+              <tr><th>学年</th><th>学期</th><th>课程号</th><th>课程名</th><th>课序号</th><th>课组</th><th>总评</th><th>学分</th><th>学时</th><th>选课属性</th><th>备注</th><th>考试性质</th><th>及格标志</th></tr>
+              <tr><td>2024</td><td>秋</td><td>C01</td><td>已出分课程</td><td>1</td><td>必修</td><td>88</td><td>3.0</td><td>48</td><td>必修</td><td></td><td>正常考试</td><td></td></tr>
+              <tr><td>2024</td><td>秋</td><td>C02</td><td>缓考课程</td><td>2</td><td>必修</td><td>缓考</td><td>2.0</td><td>32</td><td>必修</td><td></td><td>正常考试</td><td></td></tr>
+              <tr><td>2024</td><td>秋</td><td>C03</td><td>未出分课程</td><td>3</td><td>必修</td><td></td><td>1.0</td><td>16</td><td>必修</td><td></td><td>正常考试</td><td></td></tr>
+              <tr><td>2024</td><td>秋</td><td>C04</td><td>等级制合格课程</td><td>4</td><td>必修</td><td>合格</td><td>2.0</td><td>32</td><td>必修</td><td></td><td>正常考试</td><td></td></tr>
+              <tr><td>2024</td><td>秋</td><td>C05</td><td>等级制不通过课程</td><td>5</td><td>必修</td><td>不通过</td><td>1.0</td><td>16</td><td>必修</td><td></td><td>正常考试</td><td></td></tr>
+              <tr><td>2024</td><td>秋</td><td>C06</td><td>免修课程</td><td>6</td><td>必修</td><td>免修</td><td>2.0</td><td>0</td><td>必修</td><td></td><td>正常考试</td><td></td></tr>
+            </table>
+        """.trimIndent()
+        val result = AcademicParsers.parseScores(html)
+        val byId = result.scores.associateBy { it.courseId }
+        assertEquals(6, result.scores.size)
+        assertEquals(true, byId["C01"]?.passed)
+        assertEquals(false, byId["C01"]?.pending)
+        assertEquals(false, byId["C02"]?.passed)
+        assertEquals(true, byId["C02"]?.pending)
+        assertEquals(false, byId["C03"]?.passed)
+        assertEquals(true, byId["C03"]?.pending)
+        assertEquals(true, byId["C04"]?.passed)
+        assertEquals(false, byId["C04"]?.pending)
+        assertEquals(false, byId["C05"]?.passed)
+        assertEquals(false, byId["C05"]?.pending)
+        assertEquals(true, byId["C06"]?.passed)
+        assertEquals(false, byId["C06"]?.pending)
+    }
+
+    @Test
     fun testCalculateGpaStats() {
         val sampleScores = listOf(
             ScoreItem(

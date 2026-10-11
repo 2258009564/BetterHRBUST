@@ -3,6 +3,8 @@ package com.glassous.betterhrbust
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import android.app.Application
 import android.content.pm.PackageManager
 import android.os.Build
@@ -53,15 +55,22 @@ class BetterHrbustApp : Application() {
         academicRepository = AcademicRepository(httpClient, database, preferencesManager)
         syncManager = AcademicSyncManager(academicRepository, preferencesManager, authRepository)
         // 登录、退出、同步和教学周变动都刷新桌面；仅观察本地存储，不额外联网。
+        // 外层只取身份键（studentId + username）且去重：DataStore 任意键写入
+        // （主题/导航坞/更新检查等）不再触发内层重订阅——内层 combine 收集时
+        // 即发射当前值，会造成全部小部件无差别重建。真正的数据变化由内层的
+        // Room 表 flow 自行驱动。
         widgetScope.launch {
-            preferencesManager.preferencesFlow.collectLatest { prefs ->
-                kotlinx.coroutines.flow.combine(
-                    database.timetableDao().getTimetable(prefs.studentId),
-                    database.profileDao().getProfile(prefs.username)
-                ) { timetable, profile -> timetable to profile }.collect {
-                    refreshWidgets()
+            preferencesManager.preferencesFlow
+                .map { it.studentId to it.username }
+                .distinctUntilChanged()
+                .collectLatest { (studentId, username) ->
+                    kotlinx.coroutines.flow.combine(
+                        database.timetableDao().getTimetable(studentId),
+                        database.profileDao().getProfile(username)
+                    ) { timetable, profile -> timetable to profile }.collect {
+                        refreshWidgets()
+                    }
                 }
-            }
         }
         updateRepository = UpdateRepository(
             currentVersion = resolveAppVersion(),

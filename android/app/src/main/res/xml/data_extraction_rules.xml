@@ -1,19 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- API 31+ 的数据提取规则：云备份与设备迁移（D2D）均排除 DataStore
+     （files/datastore/，含会话元数据，历史版本曾明文存有教务密码）；
+     换机后重新登录即可，凭据类数据不随备份/迁移离开设备 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="file" path="datastore" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="file" path="datastore" />
     </device-transfer>
-    -->
 </data-extraction-rules>

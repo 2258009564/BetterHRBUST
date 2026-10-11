@@ -38,6 +38,9 @@ let mirrorQueue = Promise.resolve();
 /** 桌面端：后端是否已就绪（水合成功）。dev 模式（Vite 5173，无 Rust 服务）下保持 false */
 let backendReady = false;
 
+/** 桌面端：镜像写失败计数（诊断用；持续失败意味着重启后这批写入会丢失） */
+let mirrorFailures = 0;
+
 /** 桌面端：内存键值镜像（水合后作为同步读写的唯一来源） */
 const memoryStore = new Map();
 
@@ -89,11 +92,11 @@ async function hydrateFromBackend() {
       // 老版本 localStorage 数据导入后端，完成一次性别迁移
       for (const [key, value] of memoryStore) {
         mirrorQueue = mirrorQueue.then(() =>
-          fetch('/__app/storage', {
+          mirrorFetch('/__app/storage', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ key, value })
-          }).catch(() => {})
+          })
         );
       }
     }
@@ -103,19 +106,40 @@ async function hydrateFromBackend() {
   }
 }
 
+/**
+ * 镜像写到 Rust 后端：失败时先做一次短退避重试，仍失败则计数并 console.warn。
+ * 完全静默吞错会让「本次会话看似写入成功、重启后丢失」的问题无从诊断。
+ */
+async function mirrorFetch(url, options) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) throw new Error(`mirror HTTP ${res.status}`);
+      return;
+    } catch (err) {
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        continue;
+      }
+      mirrorFailures += 1;
+      console.warn('[storage] 桌面端持久化镜像写失败（重启后该写入可能丢失）:', err?.message || err);
+    }
+  }
+}
+
 function mirrorPut(key, value) {
   mirrorQueue = mirrorQueue.then(() =>
-    fetch('/__app/storage', {
+    mirrorFetch('/__app/storage', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, value })
-    }).catch(() => {})
+    })
   );
 }
 
 function mirrorDelete(key) {
   mirrorQueue = mirrorQueue.then(() =>
-    fetch(`/__app/storage?key=${encodeURIComponent(key)}`, { method: 'DELETE' }).catch(() => {})
+    mirrorFetch(`/__app/storage?key=${encodeURIComponent(key)}`, { method: 'DELETE' })
   );
 }
 
@@ -130,9 +154,13 @@ export function initStorage() {
   return hydrateFromBackend();
 }
 
+/** 桌面端镜像写失败次数（诊断 / UI 提示用；非桌面端恒为 0） */
+export function storageMirrorFailures() {
+  return mirrorFailures;
+}
+
 /** 读取字符串值，不存在返回 null（与 localStorage.getItem 一致） */
-export function storageGetItem(key) {
-  if (MODE === 'gm') return gmGet(key);
+export function storageGetItem(key) {  if (MODE === 'gm') return gmGet(key);
   if (MODE === 'desktop' && backendReady) {
     return memoryStore.has(key) ? memoryStore.get(key) : null;
   }

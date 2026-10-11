@@ -57,6 +57,27 @@ function isSameOrUnder(child, parent) {
   return c === p || c.startsWith(p + path.sep);
 }
 
+/**
+ * 创建输出目录并放置自忽略的 .gitignore
+ *
+ * 根 .gitignore 只枚举了默认目录（tools/probe/output/*）；
+ * `--out` 指向仓库内其他目录时，session.json（会话 Cookie）与探测产物
+ * 会落在未被忽略的路径上。这里在每个输出目录内放一份 `*\n!.gitignore`
+ * （与 output/ 目录同法），使自定义目录同样天然防误提交。
+ *
+ * @param {string} outDir 输出目录
+ * @returns {string} 解析后的绝对路径
+ */
+export function ensureOutDir(outDir) {
+  const resolved = assertSafeOutDir(outDir);
+  fs.mkdirSync(resolved, { recursive: true });
+  const gitignore = path.join(resolved, '.gitignore');
+  if (!fs.existsSync(gitignore)) {
+    fs.writeFileSync(gitignore, '*\n!.gitignore\n', 'utf8');
+  }
+  return resolved;
+}
+
 /** 登录页特征（用于识别会话失效） */
 const LOGIN_MARKERS = ['j_acegi_security_check', 'getCaptcha.do'];
 
@@ -357,13 +378,22 @@ export class SampleStore {
       relFileForEntry = relStub;
       relDecodedForEntry = null;
     } else if (text) {
-      // 脱敏需要「解码 → 替换 → 重新编码」，而 Node 没有 GBK 编码器，
-      // 因此脱敏模式下两份产物统一写成 UTF-8；原始编码记录在 manifest.charset。
-      const cleaned = this.clean(text);
-      fs.writeFileSync(absFile, cleaned, 'utf8');
+      if (this.redactor.active) {
+        // 脱敏需要「解码 → 替换 → 重新编码」，而 Node 没有 GBK 编码器，
+        // 因此脱敏模式下两份产物统一写成 UTF-8；原始编码记录在 manifest.charset。
+        const cleaned = this.clean(text);
+        fs.writeFileSync(absFile, cleaned, 'utf8');
 
-      relDecodedForEntry = path.posix.join('decoded', fileName);
-      fs.writeFileSync(path.join(this.outDir, relDecodedForEntry), cleaned, 'utf8');
+        relDecodedForEntry = path.posix.join('decoded', fileName);
+        fs.writeFileSync(path.join(this.outDir, relDecodedForEntry), cleaned, 'utf8');
+      } else {
+        // 未脱敏（--no-redact）：samples/ 恢复服务器原始字节（与 manifest 的
+        // bytes 字段一致），decoded/ 仍写按响应字符集解码后的 UTF-8 副本
+        fs.writeFileSync(absFile, response.buffer);
+
+        relDecodedForEntry = path.posix.join('decoded', fileName);
+        fs.writeFileSync(path.join(this.outDir, relDecodedForEntry), text, 'utf8');
+      }
     } else {
       fs.writeFileSync(absFile, response.buffer);
     }

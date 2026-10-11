@@ -72,8 +72,17 @@ const server = createServer((req, res) => {
   console.log(`[stub] ${req.method} ${req.url}`);
 
   if (url === '/better-hrbust.user.js') {
+    // 新克隆未构建时返回提示而非抛异常崩溃整个进程
+    let body;
+    try {
+      body = readFileSync(path.join(webRoot, 'dist-userscript', 'better-hrbust.user.js'));
+    } catch {
+      res.writeHead(503, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('构建产物缺失，请先在 web/ 目录执行 npm run build:userscript 后重试');
+      return;
+    }
     res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' });
-    res.end(readFileSync(path.join(webRoot, 'dist-userscript', 'better-hrbust.user.js')));
+    res.end(body);
     return;
   }
   if (url === '/test/page.html' || url === '/') {

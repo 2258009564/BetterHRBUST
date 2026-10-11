@@ -16,7 +16,7 @@ const api={
  logout:async()=>{server='';},
  getStudentContext:async()=>({studentId:ids[server],year:'2026',term:'1',courses:[]}),
  getPersonalInfo:async()=>profile(server),
- getScores:()=>{const owner=server;if(hold&&owner===A)return new Promise(resolve=>{hold.resolve=resolve;});return Promise.resolve({scores:[{courseName:owner+'课程'}]});},
+ getScores:()=>{const owner=server;if(hold)return new Promise(resolve=>{hold.resolve=resolve;});return Promise.resolve({scores:[{courseName:owner+'课程'}]});},
  getCurriculumPlan:async()=>({groups:[]}),getExams:async()=>[],
  getCalendarInfo:async()=>({notices:[]}),getTimetable:async()=>({cells:[],unarranged:[]})
 };
@@ -41,10 +41,11 @@ assert.equal((await session.login({username:A,password:'test',captcha:'0000'})).
 await data.syncAll();assert.equal(data.scores.value[0].courseName,A+'课程');
 hold={};const stale=data.syncAll();
 while(!hold.resolve)await new Promise(resolve=>setTimeout(resolve,0));
+const staleResolve=hold.resolve;hold=null;
 await session.prepareLoginAccount(B);
 assert.equal((await session.login({username:B,password:'test',captcha:'0000'})).success,true);
 await data.syncAll();
-hold.resolve({scores:[{courseName:'迟到的甲课程'}]});await stale;
+staleResolve({scores:[{courseName:'迟到的甲课程'}]});await stale;
 assert.equal(data.scores.value[0].courseName,B+'课程','旧请求不能覆盖新账号');
 const originalLogin = api.login;
 api.login = async()=>({success:false,message:'学号或密码错误'});
@@ -69,4 +70,16 @@ const blocked=await session.login({username:B,password:'test',captcha:'0000'});
 assert.equal(blocked.success,false);assert.equal(posted,0,'退出失败不能继续提交新凭证');
 api.logout=originalLogout;await session.prepareLoginAccount(B);
 assert.equal((await session.login({username:B,password:'test',captcha:'0000'})).success,true);
-console.log('通过：A→B→A、缓存隔离、旧同步丢弃、错误身份拒绝及退出失败阻止新凭证提交');
+// syncAll 在途期间并发判定会话失效（复现 M-1：早退不复位 syncing 导致刷新永久卡死）
+hold={};const inflight=data.syncAll();
+while(!hold.resolve)await new Promise(resolve=>setTimeout(resolve,0));
+const inflightResolve=hold.resolve;hold=null;
+session.markSessionExpired();
+inflightResolve({scores:[{courseName:'迟到B课程'}]});
+const inflightResult=await inflight;
+assert.equal(inflightResult.success,false,'会话失效后旧同步结果应被丢弃');
+assert.equal(data.syncing.value,false,'并发会话失效的早退路径必须复位 syncing');
+const refreshBlocked=await data.refreshAll();
+assert.equal(refreshBlocked.expired,true,'失效后刷新应要求重新登录');
+assert.equal(data.syncing.value,false,'刷新入口不残留 syncing 状态');
+console.log('通过：A→B→A、缓存隔离、旧同步丢弃、错误身份拒绝、退出失败阻止新凭证提交及同步在途会话失效复位');

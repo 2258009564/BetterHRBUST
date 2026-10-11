@@ -107,8 +107,8 @@
                 <td class="p-3 font-medium">{{ e.location }}</td>
                 <td class="p-3"><UiBadge size="sm" variant="default">{{ e.property }}</UiBadge></td>
                 <td class="p-3 pr-4 text-right">
-                  <UiBadge size="sm" :variant="e.isUpcoming ? 'warning' : 'outline'">
-                    {{ e.isUpcoming ? '待开考' : '已结束' }}
+                  <UiBadge size="sm" :variant="e.timeUnknown ? 'default' : e.isUpcoming ? 'warning' : 'outline'">
+                    {{ e.timeUnknown ? '时间未知' : e.isUpcoming ? '待开考' : '已结束' }}
                   </UiBadge>
                 </td>
               </tr>
@@ -135,6 +135,8 @@ import Icon from '@/components/icons/Icon.vue';
 import { useSession } from '@/composables/useSession.js';
 import { useAcademicData } from '@/composables/useAcademicData.js';
 import { useToast } from '@/composables/useToast.js';
+import { parseExamDateTime } from '@/utils/examTime.js';
+import { buildIcsCalendar, downloadIcs } from '@/utils/ics.js';
 
 const { isLoggedIn, isSessionExpired } = useSession();
 // 考试数据来自登录时的全量缓存，页面不再自动联网
@@ -151,20 +153,21 @@ const exams = computed(() => {
   return (cachedExams.value || []).map(e => {
     let countdownDays = null;
     let isUpcoming = true;
+    let timeUnknown = true;
 
-    const dateStr = (e.time || '').split(' ')[0];
-    if (dateStr) {
-      const examDate = new Date(dateStr.replace(/-/g, '/'));
-      if (!isNaN(examDate.getTime())) {
-        countdownDays = Math.ceil((examDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
-        isUpcoming = countdownDays >= 0;
-      }
+    // 统一口径解析（支持 2026-01-05 / 2026年1月5日 式日期），解析失败视为时间未知
+    const parsed = parseExamDateTime(e.time);
+    if (parsed) {
+      timeUnknown = false;
+      countdownDays = Math.ceil((parsed.date.getTime() - now.getTime()) / (1000 * 3600 * 24));
+      isUpcoming = countdownDays >= 0;
     }
 
     return {
       ...e,
       countdownDays: countdownDays !== null ? countdownDays : 0,
-      isUpcoming
+      isUpcoming,
+      timeUnknown
     };
   });
 });
@@ -179,15 +182,35 @@ const filteredExams = computed(() => {
   return exams.value;
 });
 
-function exportExamIcs(ex) {
-  const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//BetterHRBUST//Exam//CN\nBEGIN:VEVENT\nSUMMARY:考试: ${ex.courseName}\nLOCATION:${ex.location}\nDESCRIPTION:${ex.property} 时间:${ex.time}\nEND:VEVENT\nEND:VCALENDAR`;
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `考试_${ex.courseName}.ics`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast({ title: '已生成日历文件', message: `${ex.courseName} (${ex.location})`, type: 'success' });
+async function exportExamIcs(ex) {
+  const parsed = parseExamDateTime(ex.time);
+  if (!parsed) {
+    showToast({ title: '无法导出', message: '该考试的时间无法解析，请核对教务原文', type: 'warning' });
+    return;
+  }
+  // 缺具体时段时给一个 2 小时的占位事件（从 08:00 起），保证日历里仍可见
+  const start = parsed.start || new Date(new Date(parsed.date).setHours(8, 0, 0, 0));
+  const end = parsed.end || new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  const ics = buildIcsCalendar(
+    [
+      {
+        summary: `考试: ${ex.courseName}`,
+        location: ex.location || '',
+        description: `${ex.property || ''} 时间:${ex.time || ''}`,
+        start,
+        end,
+        alarmMinutes: 30
+      }
+    ],
+    { prodId: '-//BetterHRBUST//Exam//CN' }
+  );
+  const result = await downloadIcs(`考试_${ex.courseName}.ics`, ics);
+  if (result === 'saved') {
+    showToast({ title: '日历已导出', message: `${ex.courseName} (${ex.location})`, type: 'success' });
+  } else if (result === 'fallback') {
+    // 回退路径：结果不可知，如实告知去向，不谎报"已保存"
+    showToast({ title: '日历已开始下载', message: `${ex.courseName} (${ex.location})，存入浏览器默认下载目录`, type: 'success' });
+  }
+  // cancelled：用户主动取消保存，不打扰
 }
 </script>

@@ -4,11 +4,17 @@ name: Deploy Landing
 # 构建全程在 GitHub 云端运行器完成（不在服务器上 build），产物经 rsync --delete
 # 同步到 /opt/1panel/www/sites/betterhrbust/index/dist（全量清理,避免旧哈希产物堆积）。
 # 依赖 Secrets:SERVER_HOST / SERVER_USER / SERVER_SSH_KEY,可选 SERVER_PORT(默认 22)。
+#
+# ⚠️ 已知风险（审计 M-12，暂保留现状）：known_hosts 由部署时现场 ssh-keyscan 获取
+# （TOFU）。彻底修复需上游仓库配置 SERVER_KNOWN_HOSTS Secret（ssh-keyscan -p 端口
+# -H 主机 的输出）并改用预置内容——本仓库无 Secrets 配置权限，待向上游提 PR 时注明。
 on:
   push:
     branches: [main]
     paths:
       - 'landing/**'
+      # 落地页直接导入 web 组件与共享校历资源（ClientDemo.vue / release.css），
+      # 这些树外依赖变化时同样需要重新构建部署
       - 'web/src/**'
       - 'shared/**'
       - '.github/workflows/deploy-landing.yml'
@@ -28,9 +34,9 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -41,8 +47,11 @@ jobs:
         run: |
           npm ci
           npm run build
+          npm run test:build
 
-      # 私钥仅通过 env 注入并落盘到 ~/.ssh,避免出现在命令行回显与日志中
+      # 私钥仅通过 env 注入并落盘到 ~/.ssh,避免出现在命令行回显与日志中。
+      # 主机密钥仍为部署时现场抓取（TOFU,见文件头注释;彻底修复需上游配置
+      # SERVER_KNOWN_HOSTS Secret 后改为预置内容）。
       - name: Setup SSH
         env:
           SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}

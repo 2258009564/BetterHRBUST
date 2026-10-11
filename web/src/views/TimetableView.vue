@@ -305,6 +305,7 @@ import { BASE_SLOT_TIMES, COMBINE_SLOT_TIMES } from '@/utils/periodTimes.js';
 import { getCourseColor, COURSE_MUTED } from '@/utils/courseColors.js';
 import { timetableDayDate } from '@/utils/timetableDates.js';
 import { isCourseActiveInWeek } from '@/utils/courseWeeks.js';
+import { buildIcsCalendar, downloadIcs } from '@/utils/ics.js';
 
 const { isLoggedIn, isSessionExpired, currentWeek, semesterTeachingWeeks, calendarWeekCountKnown, isSchoolHoliday } = useSession();
 // 课表数据来自登录时的全量缓存，切换周次/视图不再触网
@@ -412,21 +413,54 @@ function openCourseDetail(course) {
   showDrawer.value = true;
 }
 
-function exportIcs() {
-  if (courses.value.length === 0) {
+/** 取某教学周某天某时刻的 Date（以本周一为锚点推算，本地时间） */
+function slotDate(week, day, hour, minute) {
+  const now = new Date();
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const date = new Date(monday);
+  date.setDate(date.getDate() + (week - currentWeek.value) * 7 + (day - 1));
+  date.setHours(hour, minute, 0, 0);
+  return date;
+}
+
+/** 把 'HH:MM - HH:MM' 式时段拆成 [startHours, startMinutes, endHours, endMinutes] */
+function parseSlotRange(range) {
+  const m = String(range || '').match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/);
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])] : null;
+}
+
+async function exportIcs() {
+  const weekCourses = courses.value.filter(c => isCourseActiveInWeek(c, selectedWeek.value));
+  if (weekCourses.length === 0) {
+    showToast({ title: '本周无可导出的课程', type: 'warning' });
+    return;
+  }
+  const slotTimes = viewMode.value === 'combine' ? COMBINE_SLOT_TIMES : BASE_SLOT_TIMES;
+  const events = [];
+  for (const c of weekCourses) {
+    const range = parseSlotRange(slotTimes[c.sectionIndex - 1]?.time);
+    if (!range) continue;
+    const [sh, sm, eh, em] = range;
+    events.push({
+      summary: c.courseName,
+      location: c.location || '',
+      description: `教师: ${c.teacher || ''} 周次: ${c.weeks || '全学期'}`,
+      start: slotDate(selectedWeek.value, c.day, sh, sm),
+      end: slotDate(selectedWeek.value, c.day, eh, em)
+    });
+  }
+  if (events.length === 0) {
     showToast({ title: '暂无可导出的课程数据', type: 'warning' });
     return;
   }
-  const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//BetterHRBUST//Timetable//CN\nCALSCALE:GREGORIAN\n` +
-    courses.value.map(c => `BEGIN:VEVENT\nSUMMARY:${c.courseName}\nLOCATION:${c.location || ''}\nDESCRIPTION:教师: ${c.teacher || ''} 周次: ${c.weeks || ''}\nEND:VEVENT`).join('\n') +
-    `\nEND:VCALENDAR`;
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `HRBUST_课表_第${selectedWeek.value}周.ics`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast({ title: '日历已成功导出', message: '已生成 .ics 标准日历文件', type: 'success' });
+  const ics = buildIcsCalendar(events, { prodId: '-//BetterHRBUST//Timetable//CN' });
+  const result = await downloadIcs(`HRBUST_课表_第${selectedWeek.value}周.ics`, ics);
+  if (result === 'saved') {
+    showToast({ title: '日历已导出', message: `已保存第 ${selectedWeek.value} 周 ${events.length} 个课次`, type: 'success' });
+  } else if (result === 'fallback') {
+    // 回退路径：结果不可知，如实告知去向，不谎报"已保存"
+    showToast({ title: '日历已开始下载', message: `第 ${selectedWeek.value} 周 ${events.length} 个课次，存入浏览器默认下载目录`, type: 'success' });
+  }
+  // cancelled：用户主动取消保存，不打扰
 }
 </script>

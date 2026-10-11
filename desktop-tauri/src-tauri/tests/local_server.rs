@@ -264,10 +264,11 @@ async fn academic_redirect_location_and_cookie_domain_rewritten() {
         res.headers()[header::LOCATION].to_str().unwrap(),
         "/academic/index.jsp"
     );
-    // Domain 剥离 + 会话 Cookie 注入 Max-Age（跨冷启动持久化的关键）
+    // Domain 剥离 + 会话 Cookie 注入 Max-Age 与 SameSite/HttpOnly
+    // （跨冷启动持久化 + 阻断本机其他端口页面借 Cookie）
     assert_eq!(
         res.headers()[header::SET_COOKIE].to_str().unwrap(),
-        "JSESSIONID=mock123; Path=/academic; Max-Age=604800"
+        "JSESSIONID=mock123; Path=/academic; Max-Age=604800; SameSite=Strict; HttpOnly"
     );
 }
 
@@ -418,6 +419,25 @@ async fn storage_rejects_invalid_requests() {
     assert_eq!(res.status(), StatusCode::METHOD_NOT_ALLOWED);
 }
 
+#[tokio::test]
+async fn storage_oversized_put_rejected_with_413() {
+    // 超过 16MB 上限的 PUT 必须 413（Limited 在读到上限时即断流，不整包缓冲）
+    let dir = tempfile::tempdir().unwrap();
+    let origin = spawn_server_with_storage(dir.path().to_path_buf()).await;
+    let oversized = vec![b'x'; 16 * 1024 * 1024 + 1];
+    let request = Request::builder()
+        .method(http::Method::PUT)
+        .uri(format!("{origin}/__app/storage"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Full::new(Bytes::from(oversized)))
+        .unwrap();
+    let res = tokio::time::timeout(Duration::from_secs(30), client().request(request))
+        .await
+        .expect("请求超时")
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::PAYLOAD_TOO_LARGE);
+}
+
 /// 直接以原始文本作为 PUT 体（校验 4xx 路径）
 async fn put_raw(
     url: &str,
@@ -440,4 +460,80 @@ async fn storage_disabled_returns_503() {
     let origin = spawn_server("http://127.0.0.1:1").await;
     let res = get(&format!("{origin}/__app/storage"), &[]).await.unwrap();
     assert_eq!(res.status(), StatusCode::SERVICE_UNAVAILABLE);
+}
+
+// ---------------------------------------------------------------- 来源校验
+
+/// 以覆盖头发起请求（伪造 Host / Origin / Sec-Fetch-Site 模拟重绑定与跨站页面）
+async fn request_with_headers(
+    url: &str,
+    extra: &[(&str, &str)],
+) -> Result<Response<Incoming>, hyper_util::client::legacy::Error> {
+    // 先构造再覆盖：http crate 允许显式 Host 覆盖客户端默认值
+    let mut builder = Request::builder().uri(url);
+    for (name, value) in extra {
+        builder = builder.header(*name, *value);
+    }
+    let request = builder.body(Full::new(Bytes::new())).unwrap();
+    tokio::time::timeout(Duration::from_secs(10), client().request(request))
+        .await
+        .expect("请求超时")
+}
+
+#[tokio::test]
+async fn foreign_host_header_is_rejected_everywhere() {
+    // DNS rebinding 防护：重绑定后浏览器按攻击者域名发请求，
+    // Host 不指向本服务（静态与敏感端点同样）一律 403
+    let origin = spawn_server("http://127.0.0.1:1").await;
+    for path in ["/", "/__app/storage", "/academic/index.jsp"] {
+        let res = request_with_headers(&format!("{origin}{path}"), &[("host", "evil.example.com")])
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::FORBIDDEN, "path={path}");
+    }
+}
+
+#[tokio::test]
+async fn cross_site_browser_markers_rejected_on_sensitive_endpoints() {
+    let origin = spawn_server("http://127.0.0.1:1").await;
+    for (marker, value) in [("origin", "http://evil.example.com"), ("sec-fetch-site", "cross-site")] {
+        // 敏感端点：403
+        let res = request_with_headers(
+            &format!("{origin}/__app/storage"),
+            &[(marker, value)],
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), StatusCode::FORBIDDEN, "{marker}={value}");
+        let res = request_with_headers(
+            &format!("{origin}/academic/index.jsp"),
+            &[(marker, value)],
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), StatusCode::FORBIDDEN, "{marker}={value}");
+    }
+    // 应用自身标记放行：无 storage 时 /__app/storage 回到 503（未被来源校验拦截）
+    let res = request_with_headers(
+        &format!("{origin}/__app/storage"),
+        &[("sec-fetch-site", "same-origin")],
+    )
+    .await
+    .unwrap();
+    assert_eq!(res.status(), StatusCode::SERVICE_UNAVAILABLE);
+}
+
+#[tokio::test]
+async fn same_origin_and_plain_clients_pass_storage_gate() {
+    let dir = tempfile::tempdir().unwrap();
+    let origin = spawn_server_with_storage(dir.path().to_path_buf()).await;
+    // 应用自身 Origin：200
+    let port = origin.trim_start_matches("http://127.0.0.1:");
+    let res = request_with_headers(
+        &format!("{origin}/__app/storage"),
+        &[("origin", &format!("http://127.0.0.1:{port}"))],
+    )
+    .await
+    .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
 }

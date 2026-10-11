@@ -26,6 +26,7 @@ import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.LoadingView
 import com.glassous.betterhrbust.core.ui.components.PageHeaderTitle
 import com.glassous.betterhrbust.core.util.GpaCalculator
+import com.glassous.betterhrbust.data.repository.AccountSwitchedException
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -66,29 +67,33 @@ fun DashboardScreen(
     fun loadCache() {
         val currentPrefs = prefs ?: return
         coroutineScope.launch {
-            if (currentPrefs.username.isNotEmpty()) {
-                academicRepo.getPersonalInfo(currentPrefs.username, cacheOnly = true).collect { res ->
-                    if (res is Resource.Success) profile = res.data
+            try {
+                if (currentPrefs.username.isNotEmpty()) {
+                    academicRepo.getPersonalInfo(currentPrefs.username, cacheOnly = true).collect { res ->
+                        if (res is Resource.Success) profile = res.data
+                    }
                 }
-            }
-            if (currentPrefs.studentId.isNotEmpty()) {
-                academicRepo.getTimetable(
-                    currentPrefs.studentId,
-                    currentPrefs.year,
-                    currentPrefs.term,
-                    cacheOnly = true
-                ).collect { res ->
-                    if (res is Resource.Success) timetable = res.data
+                if (currentPrefs.studentId.isNotEmpty()) {
+                    academicRepo.getTimetable(
+                        currentPrefs.studentId,
+                        currentPrefs.year,
+                        currentPrefs.term,
+                        cacheOnly = true
+                    ).collect { res ->
+                        if (res is Resource.Success) timetable = res.data
+                    }
+                    academicRepo.getScores(currentPrefs.studentId, cacheOnly = true).collect { res ->
+                        if (res is Resource.Success) scoreResult = res.data
+                    }
+                    academicRepo.getExams(currentPrefs.studentId, cacheOnly = true).collect { res ->
+                        if (res is Resource.Success) exams = res.data
+                    }
+                    academicRepo.getCurriculumPlan(currentPrefs.studentId, cacheOnly = true).collect { res ->
+                        if (res is Resource.Success) plan = res.data
+                    }
                 }
-                academicRepo.getScores(currentPrefs.studentId, cacheOnly = true).collect { res ->
-                    if (res is Resource.Success) scoreResult = res.data
-                }
-                academicRepo.getExams(currentPrefs.studentId, cacheOnly = true).collect { res ->
-                    if (res is Resource.Success) exams = res.data
-                }
-                academicRepo.getCurriculumPlan(currentPrefs.studentId, cacheOnly = true).collect { res ->
-                    if (res is Resource.Success) plan = res.data
-                }
+            } catch (switched: AccountSwitchedException) {
+                // 账号已切换：旧页面缓存读取作废，新页面会自行加载
             }
         }
     }
@@ -97,12 +102,15 @@ fun DashboardScreen(
     fun refreshAll() {
         coroutineScope.launch {
             isRefreshing = true
-            val outcome = syncManager.syncAll(manual = true)
-            isRefreshing = false
-            if (outcome.expired) {
-                authRepo.markSessionExpired(true)
-            } else {
-                loadCache()
+            try {
+                val outcome = syncManager.syncAll(manual = true)
+                if (outcome.expired) {
+                    authRepo.markSessionExpired(true)
+                } else {
+                    loadCache()
+                }
+            } finally {
+                isRefreshing = false
             }
         }
     }
@@ -132,7 +140,8 @@ fun DashboardScreen(
         }?.sortedBy { it.sectionIndex } ?: emptyList()
     }
 
-    val upcomingExam = remember(exams) {
+    // 记忆键含 today：驻留跨天后倒计时按新日期重算，而非沿用进入页面当天的旧值
+    val upcomingExam = remember(exams, today) {
         exams.firstOrNull { it.isUpcoming && (it.countdownDays ?: 0) >= 0 }
     }
 

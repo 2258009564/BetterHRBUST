@@ -97,11 +97,7 @@ fn create_window(
         .initialization_script(SHIM)
         .on_navigation(move |nav| {
             let target = nav.as_str();
-            let same_origin = target.starts_with(&allowed_origin)
-                && (target.len() == allowed_origin.len()
-                    || target.as_bytes().get(allowed_origin.len()) == Some(&b'/')
-                    || target.as_bytes().get(allowed_origin.len()) == Some(&b'?'));
-            if same_origin {
+            if navigation_allowed(target, &allowed_origin) {
                 return true;
             }
             if nav.scheme() == "http" || nav.scheme() == "https" {
@@ -112,4 +108,61 @@ fn create_window(
         .build()?;
 
     Ok(())
+}
+
+/// 导航守卫判定：仅允许停留在应用源内（其余 http(s) 由调用方转系统浏览器）。
+/// 纵深防御：应用源内也拒绝文档导航进入 /academic 与 /__app 端点路径——
+/// 这些路径是给页面内 fetch/XHR 用的程序化端点，没有可展示的页面内容，
+/// 混入恶意文档导航只会扩大攻击面（fetch/XHR 不受本守卫影响）。
+fn navigation_allowed(target: &str, allowed_origin: &str) -> bool {
+    let same_origin = target.starts_with(allowed_origin)
+        && (target.len() == allowed_origin.len()
+            || target.as_bytes().get(allowed_origin.len()) == Some(&b'/')
+            || target.as_bytes().get(allowed_origin.len()) == Some(&b'?'));
+    if !same_origin {
+        return false;
+    }
+    let rest = &target[allowed_origin.len()..];
+    let path_only = match rest.find(['?', '#']) {
+        Some(index) => &rest[..index],
+        None => rest,
+    };
+    let is_endpoint_path = |prefix: &str| {
+        path_only == prefix || path_only.starts_with(&format!("{prefix}/"))
+    };
+    !(is_endpoint_path("/academic") || is_endpoint_path("/__app"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::navigation_allowed;
+
+    const ORIGIN: &str = "http://127.0.0.1:1950";
+
+    #[test]
+    fn allows_app_pages_and_assets() {
+        assert!(navigation_allowed("http://127.0.0.1:1950/", ORIGIN));
+        assert!(navigation_allowed("http://127.0.0.1:1950/index.html", ORIGIN));
+        assert!(navigation_allowed("http://127.0.0.1:1950/assets/app.js?v=1", ORIGIN));
+        assert!(navigation_allowed("http://127.0.0.1:1950?tab=1", ORIGIN));
+    }
+
+    #[test]
+    fn rejects_foreign_origins() {
+        assert!(!navigation_allowed("https://evil.example.com/", ORIGIN));
+        // 前缀相同但边界字符不同的伪装路径
+        assert!(!navigation_allowed("http://127.0.0.1:19500/x", ORIGIN));
+        assert!(!navigation_allowed("http://127.0.0.1:1950.evil.com/", ORIGIN));
+    }
+
+    #[test]
+    fn rejects_endpoint_document_navigation() {
+        assert!(!navigation_allowed("http://127.0.0.1:1950/academic/index.jsp", ORIGIN));
+        assert!(!navigation_allowed("http://127.0.0.1:1950/academic", ORIGIN));
+        assert!(!navigation_allowed("http://127.0.0.1:1950/__app/storage", ORIGIN));
+        assert!(!navigation_allowed("http://127.0.0.1:1950/__app/storage?key=k", ORIGIN));
+        // 前缀相似但不是端点路径的正常页面不误伤
+        assert!(navigation_allowed("http://127.0.0.1:1950/academics", ORIGIN));
+        assert!(navigation_allowed("http://127.0.0.1:1950/__apple", ORIGIN));
+    }
 }

@@ -27,6 +27,29 @@ assert.equal(computeCreditsProgress([], [direction]).categories[0].required,10);
 const ungraded = buildAcademicStats([course('VALID',90,3),{...course('PENDING',0,10),score:'缓考'}]);
 assert.equal(ungraded.degree.gpa,4);assert.equal(ungraded.degree.qualified,true);
 
+// L-1：未出分/缓考不再默认视为已通过（保守口径：未确认通过 ≠ 已通过）
+const pendingStats = buildAcademicStats([
+  course('OK', 70, 3),
+  { ...course('DEFER', 0, 5), score: '缓考', passed: false, pending: true },
+  { ...course('UNGRADED', 0, 2), score: '', passed: false, pending: true }
+]);
+assert.equal(pendingStats.earnedCredits, 3, 'pending 行不计入已获学分');
+assert.equal(pendingStats.failedCount, 0, 'pending 行不计入挂科门数');
+assert.equal(pendingStats.failedCredits, 0, 'pending 行不计入挂科学分');
+
+// 等级制成绩（及格标志列为空）：合格/优秀/免修是明确的"通过"结论，必须计入已获学分，
+// 不通过是明确的挂科结论（不得因保守化而丢进 pending）
+const gradeTextStats = buildAcademicStats([
+  course('GRADE_NUM', 70, 3),
+  { ...course('GRADE_PASS', 0, 4), score: '合格', passed: true, pending: false },
+  { ...course('GRADE_EXCL', 0, 1.5), score: '优秀', passed: true, pending: false },
+  { ...course('GRADE_EXEMPT', 0, 2), score: '免修', passed: true, pending: false },
+  { ...course('GRADE_FAIL', 0, 2), score: '不通过', passed: false, pending: false }
+]);
+assert.equal(gradeTextStats.earnedCredits, 10.5, '等级制"合格/优秀/免修"计入已获学分');
+assert.equal(gradeTextStats.failedCount, 1, '等级制"不通过"计入挂科门数');
+assert.equal(gradeTextStats.failedCredits, 2, '等级制"不通过"计入挂科学分');
+
 assert.deepEqual(degreeCourses([{...course('MATH',85,3),courseName:'高等数学(A)'},course('MAJOR',90,2.5,'专业选修','任选')]).map(s=>s.courseId),['MATH','MAJOR']);
 
 // GPA 走势学期顺序：教务「学年」列是学期所在公历年份（2023 秋 → 2024 春 → 2024 秋 连续），同一年内先春后秋
@@ -78,6 +101,20 @@ assert.equal(teachingWeekOn(new Date(2027,6,11)),19);
 assert.equal(teachingWeekOn(new Date(2027,6,12)),null);
 assert.equal(timetableDayDate(26,6,6,new Date(2026,9,10)),'10/10');
 assert.equal(timetableDayDate(6,20,1,new Date(2026,9,10)),'');
+
+const { buildIcsCalendar, escapeIcsText } = await import('../src/utils/ics.js');
+// ICS 转义（RFC 5545 3.3.11）：分号/逗号/换行必须转义，否则会被日历软件当分隔符
+assert.equal(escapeIcsText('a;b,c' + String.fromCharCode(13, 10) + 'd\\'), 'a\\;b\\,c\\nd\\\\');
+const longIcs = buildIcsCalendar([{ summary: '超'.repeat(60) + '长;课程,名', start: new Date(2026, 9, 5, 8, 0), end: new Date(2026, 9, 5, 9, 40) }]);
+assert.ok(longIcs.startsWith('BEGIN:VCALENDAR\r\n'), 'ICS 行尾必须 CRLF');
+assert.ok(longIcs.endsWith('END:VCALENDAR\r\n'), 'ICS 行尾必须 CRLF');
+assert.ok(longIcs.includes('\\;'), 'SUMMARY 中的分号必须转义');
+let folded = false;
+for (const line of longIcs.split('\r\n')) {
+  assert.ok(new TextEncoder().encode(line).length <= 75, 'ICS 内容行超过 75 字节未折叠: ' + line.slice(0, 24));
+  if (line.startsWith(' ')) folded = true;
+}
+assert.equal(folded, true, '超长中文 SUMMARY 必须产生以空格开头的折叠续行');
 
 const { execFileSync } = await import('node:child_process');
 const { fileURLToPath } = await import('node:url');

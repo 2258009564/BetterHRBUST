@@ -129,7 +129,9 @@ data class ScoreItem(
     val remark: String,
     val examType: String,
     val passMark: String,
-    val passed: Boolean
+    val passed: Boolean,
+    /** 未出分 / 缓考 / 缺考等无明确结论：不计入已获学分，也不计入挂科 */
+    val pending: Boolean = false
 )
 
 @Serializable

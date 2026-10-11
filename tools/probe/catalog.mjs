@@ -393,14 +393,18 @@ export const CATALOG = [
     module: 'student',
     path: 'student/studentinfo/loadphoto_added.jsdo',
     method: 'GET',
-    params: { primary: 'userid', kind: 'student', userid: '{studentId}' },
-    need: ['studentId'],
+    // userid 是加密串（不能自己拼），只带能确定的固定参数；
+    // 真实的 userid 依赖参数收割（harvest token）在第二轮生成带参候选
+    params: { primary: 'userid', kind: 'student' },
+    need: [],
     confidence: 'likely',
     binary: true,
+    skipInBatch: true,
     note:
       '实测：出现在「我的信息」页 `<img src="/academic/student/studentinfo/loadphoto_added.jsdo?' +
       'primary=userid&kind=student&userid=AbCdEfGhIjKlMnOpQrStUv==" height="108">`。\n' +
-      '⚠️ userid 是**加密串**（不是明文内部 ID），不能自己拼，必须从页面里取。'
+      '⚠️ userid 是**加密串**（不是明文内部 ID），不能自己拼，必须从页面里取；' +
+      '仅靠参数收割发现的带参地址才会被探测。'
   },
   {
     key: 'student.changeClass',

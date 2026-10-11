@@ -204,7 +204,7 @@ tools/probe/output/
 ├── manifest.md       # 人工可读汇总（含 404 清单与错误页清单）
 ├── analysis.md       # 样本结构分析报告（每个页面的表头/表单/按钮）
 ├── analysis.json     # 同上，结构化版本
-├── session.json      # 会话 Cookie（凭证文件，已被 gitignore）
+├── session.json      # 会话 Cookie 与登录学号（凭证文件；目录内含自忽略 .gitignore）
 ├── samples/          # 响应样本（已脱敏，UTF-8；二进制内容替换为说明文件）
 ├── decoded/          # 同 samples/（保留目录以兼容分析器）
 └── portal/           # 登录后门户页的多层框架抓取与分析
@@ -380,8 +380,11 @@ node tools/probe/probe.mjs --only 你的新key   # 单独验证
 
 ### 10.3 其它约定
 
-- 账号密码仅用于本次登录，**不会写入任何文件**；`session.json` 只保存 Cookie。
-  该文件属于凭证，已被 gitignore，请勿分享。
+- 账号密码仅用于本次登录，**不会写入任何文件**；`session.json` 只保存 Cookie
+  与登录学号（复用会话时据此脱敏样本中的学号）。该文件属于凭证，请勿分享。
+- 输出目录（含默认 `output/` 与 `--out` 自定义目录）运行时会自动放置
+  `*\n!.gitignore` 自忽略文件；但若把 `--out` 指到仓库外或其他位置，
+  产物是否被忽略以你本机 git 配置为准，分享前请自行确认。
 - 选课、退课、保存学籍等**会改变教务数据**的接口默认不探测，需显式 `--allow-mutating`。
 - 即使已脱敏，也不要把 `output/` 公开分享——文件中仍包含你的选课记录、
   课表安排等个人信息，只是不含能直接定位身份的字段。

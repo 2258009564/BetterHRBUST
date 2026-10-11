@@ -25,7 +25,7 @@ class AcademicRepository(
         val current = prefs.preferencesFlow.firstOrNull()
         if (snapshot == null || current == null || snapshot.username != current.username ||
             snapshot.studentId != current.studentId || snapshot.lastLoginAt != current.lastLoginAt) {
-            throw kotlinx.coroutines.CancellationException("账号已切换，旧请求已丢弃")
+            throw AccountSwitchedException()
         }
     }
 
@@ -37,7 +37,7 @@ class AcademicRepository(
         cacheOnly: Boolean = false
     ): Flow<Resource<TimetableResult>> = flow {
         val session = prefs.preferencesFlow.firstOrNull()
-        if (session?.studentId != studentId) throw kotlinx.coroutines.CancellationException("请求账号已失效")
+        if (session?.studentId != studentId) throw AccountSwitchedException("请求账号已失效")
         emit(Resource.Loading)
 
         // 1. Check local cache
@@ -49,6 +49,8 @@ class AcademicRepository(
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
+            } catch (switched: AccountSwitchedException) {
+                throw switched
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (_: Exception) {}
@@ -83,6 +85,8 @@ class AcademicRepository(
 
             requireCurrentSession(session)
             emit(Resource.Success(parsed, isOfflineCache = false))
+        } catch (switched: AccountSwitchedException) {
+            throw switched
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -92,6 +96,8 @@ class AcademicRepository(
                     requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
+                } catch (switched: AccountSwitchedException) {
+                    throw switched
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {}
@@ -106,7 +112,7 @@ class AcademicRepository(
         cacheOnly: Boolean = false
     ): Flow<Resource<ScoreResult>> = flow {
         val session = prefs.preferencesFlow.firstOrNull()
-        if (session?.studentId != studentId) throw kotlinx.coroutines.CancellationException("请求账号已失效")
+        if (session?.studentId != studentId) throw AccountSwitchedException("请求账号已失效")
         emit(Resource.Loading)
 
         val localEntity = database.scoreDao().getScores(studentId).firstOrNull()
@@ -117,6 +123,8 @@ class AcademicRepository(
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
+            } catch (switched: AccountSwitchedException) {
+                throw switched
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (_: Exception) {}
@@ -152,6 +160,8 @@ class AcademicRepository(
 
             requireCurrentSession(session)
             emit(Resource.Success(parsed, isOfflineCache = false))
+        } catch (switched: AccountSwitchedException) {
+            throw switched
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -161,6 +171,8 @@ class AcademicRepository(
                     requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
+                } catch (switched: AccountSwitchedException) {
+                    throw switched
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {}
@@ -183,6 +195,8 @@ class AcademicRepository(
             if (parsed.isNotEmpty()) return parsed
         } catch (e: SessionExpiredException) {
             throw e
+        } catch (switched: AccountSwitchedException) {
+            throw switched
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -198,7 +212,7 @@ class AcademicRepository(
         cacheOnly: Boolean = false
     ): Flow<Resource<List<ExamItem>>> = flow {
         val session = prefs.preferencesFlow.firstOrNull()
-        if (session?.studentId != studentId) throw kotlinx.coroutines.CancellationException("请求账号已失效")
+        if (session?.studentId != studentId) throw AccountSwitchedException("请求账号已失效")
         emit(Resource.Loading)
 
         val localEntity = database.examDao().getExams(studentId).firstOrNull()
@@ -212,6 +226,8 @@ class AcademicRepository(
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
+            } catch (switched: AccountSwitchedException) {
+                throw switched
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (_: Exception) {}
@@ -244,6 +260,8 @@ class AcademicRepository(
 
             requireCurrentSession(session)
             emit(Resource.Success(parsed, isOfflineCache = false))
+        } catch (switched: AccountSwitchedException) {
+            throw switched
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -255,6 +273,8 @@ class AcademicRepository(
                     requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
+                } catch (switched: AccountSwitchedException) {
+                    throw switched
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {}
@@ -269,7 +289,7 @@ class AcademicRepository(
         cacheOnly: Boolean = false
     ): Flow<Resource<PersonalInfo>> = flow {
         val session = prefs.preferencesFlow.firstOrNull()
-        if (session?.username != studentNumber) throw kotlinx.coroutines.CancellationException("请求账号已失效")
+        if (session?.username != studentNumber) throw AccountSwitchedException("请求账号已失效")
         emit(Resource.Loading)
 
         // 档案只按当前账号读取，禁止跨账号兜底。
@@ -282,6 +302,8 @@ class AcademicRepository(
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
+            } catch (switched: AccountSwitchedException) {
+                throw switched
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (_: Exception) {}
@@ -308,6 +330,8 @@ class AcademicRepository(
 
             requireCurrentSession(session)
             emit(Resource.Success(parsed, isOfflineCache = false))
+        } catch (switched: AccountSwitchedException) {
+            throw switched
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -318,6 +342,8 @@ class AcademicRepository(
                     requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
+                } catch (switched: AccountSwitchedException) {
+                    throw switched
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {}
@@ -332,7 +358,7 @@ class AcademicRepository(
         cacheOnly: Boolean = false
     ): Flow<Resource<CurriculumPlanResult>> = flow {
         val session = prefs.preferencesFlow.firstOrNull()
-        if (session?.studentId != studentId) throw kotlinx.coroutines.CancellationException("请求账号已失效")
+        if (session?.studentId != studentId) throw AccountSwitchedException("请求账号已失效")
         emit(Resource.Loading)
 
         val localEntity = database.curriculumDao().getPlan(studentId).firstOrNull()
@@ -343,6 +369,8 @@ class AcademicRepository(
                 emit(Resource.Success(cached, isOfflineCache = true))
                 // 离线只读模式：命中缓存后不再联网
                 if (cacheOnly) return@flow
+            } catch (switched: AccountSwitchedException) {
+                throw switched
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (_: Exception) {}
@@ -383,6 +411,8 @@ class AcademicRepository(
 
             requireCurrentSession(session)
             emit(Resource.Success(parsed, isOfflineCache = false))
+        } catch (switched: AccountSwitchedException) {
+            throw switched
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -392,6 +422,8 @@ class AcademicRepository(
                     requireCurrentSession(session)
                     emit(Resource.Success(cached, isOfflineCache = true))
                     return@flow
+                } catch (switched: AccountSwitchedException) {
+                    throw switched
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {}
@@ -406,6 +438,8 @@ class AcademicRepository(
             val html = client.get("teacher/teachresource/roomschedulequery.jsdo", preferredCharset = CharsetDecoderHelper.GBK)
             val options = AcademicParsers.parseClassroomQueryOptions(html)
             emit(Resource.Success(options))
+        } catch (switched: AccountSwitchedException) {
+            throw switched
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -430,6 +464,8 @@ class AcademicRepository(
             )
             val list = AcademicParsers.parseCourseList(html)
             emit(Resource.Success(list))
+        } catch (switched: AccountSwitchedException) {
+            throw switched
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -477,6 +513,8 @@ class AcademicRepository(
             }
             requireCurrentSession(session)
             database.noticeDao().insertAll(entities)
+            // 清理不在本次结果中的旧行；内容未变的公告因 id 哈希一致得以保留（含已读状态）
+            database.noticeDao().retainIds(entities.map { it.id })
 
             if (parsedUsable) {
                 requireCurrentSession(session)
@@ -484,6 +522,8 @@ class AcademicRepository(
             }
 
             emit(Resource.Success(calendarInfo.notices, isOfflineCache = false))
+        } catch (switched: AccountSwitchedException) {
+            throw switched
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -496,13 +536,19 @@ class AcademicRepository(
         }
     }
 
-    fun getTeachingWeek(): Flow<Int> = flow {
+    /**
+     * 拉取教学周。返回 Resource：解析失败为 Error，不再裸发回退值 1——
+     * syncAll 的「已全部同步」判定把裸 Int 一律当新数据，失败的教学周会
+     * 错误地满足完成条件。
+     */
+    fun getTeachingWeek(): Flow<Resource<Int>> = flow {
         val session = prefs.preferencesFlow.firstOrNull()
         try {
             val html = client.get("listLeft.do", preferredCharset = CharsetDecoderHelper.UTF_8)
             var week = AcademicParsers.parseTeachingWeek(html)
 
             // 每次同时取得校历，读取明确的学期长度；旧导航中的26不作为当前教学周。
+            // 校历请求失败不阻断主流程，但账号切换的业务信号必须穿透（M-7）
             var calendarWeeks: Int? = null
             try {
                 val calHtml = client.get("calendarinfo/viewCalendarInfo.do", preferredCharset = CharsetDecoderHelper.UTF_8)
@@ -510,16 +556,21 @@ class AcademicRepository(
                 calendarWeeks = calendar.teachingWeeks
                 val limit = calendarWeeks ?: session?.semesterTeachingWeeks ?: 20
                 if (week !in 1..limit && calendar.currentWeek in 1..limit) week = calendar.currentWeek
-            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-            catch (_: Exception) {}
+            } catch (switched: AccountSwitchedException) {
+                throw switched
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {}
 
             if (week in 1..(calendarWeeks ?: session?.semesterTeachingWeeks ?: 20)) {
                 requireCurrentSession(session)
                 prefs.setCurrentWeek(week, expected = session, teachingWeeks = calendarWeeks)
-                emit(week)
+                emit(Resource.Success(week))
             } else {
-                emit(1)
+                emit(Resource.Error("未能识别教学周"))
             }
+        } catch (switched: AccountSwitchedException) {
+            throw switched
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -531,13 +582,15 @@ class AcademicRepository(
                 if (calWeek > 1) {
                     requireCurrentSession(session)
                     prefs.setCurrentWeek(calWeek, expected = session)
-                    emit(calWeek)
+                    emit(Resource.Success(calWeek))
                     return@flow
                 }
+            } catch (switched: AccountSwitchedException) {
+                throw switched
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (_: Exception) {}
-            emit(1)
+            emit(Resource.Error("未能识别教学周"))
         }
     }
 }

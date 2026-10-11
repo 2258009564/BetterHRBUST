@@ -295,6 +295,7 @@ import { buildAcademicStats, computeCreditsProgress } from '@/services/academic/
 import { getCombineSlotTime, hasCombineSlotEnded } from '@/utils/periodTimes.js';
 import { getCourseColor } from '@/utils/courseColors.js';
 import { isCourseActiveInWeek } from '@/utils/courseWeeks.js';
+import { parseExamDateTime } from '@/utils/examTime.js';
 
 defineEmits(['navigate']);
 
@@ -324,16 +325,15 @@ const todayCourses = computed(() => {
 
 function isRecentExam(exam) {
   if (!exam.time) return true;
-  const m = exam.time.match(/(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})/);
-  if (!m) return true;
+  const parsed = parseExamDateTime(exam.time);
+  if (!parsed) return true;
 
-  const examDate = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   // 严格只显示未来的考试和过去 7 天以内的考试
-  return examDate >= sevenDaysAgo;
+  return parsed.date >= sevenDaysAgo;
 }
 
 const upcomingExams = computed(() => {
@@ -341,10 +341,8 @@ const upcomingExams = computed(() => {
     .filter(isRecentExam)
     .slice()
     .sort((a, b) => {
-      const ma = a.time?.match(/(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})/);
-      const mb = b.time?.match(/(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})/);
-      const ta = ma ? new Date(parseInt(ma[1], 10), parseInt(ma[2], 10) - 1, parseInt(ma[3], 10)).getTime() : 0;
-      const tb = mb ? new Date(parseInt(mb[1], 10), parseInt(mb[2], 10) - 1, parseInt(mb[3], 10)).getTime() : 0;
+      const ta = parseExamDateTime(a.time)?.date.getTime() || 0;
+      const tb = parseExamDateTime(b.time)?.date.getTime() || 0;
       return ta - tb;
     });
 });

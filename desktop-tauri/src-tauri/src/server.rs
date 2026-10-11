@@ -5,6 +5,8 @@
 //!    debug 模式直接读磁盘），SPA 回退、/assets 长缓存、路径穿越防护
 //!  - /academic/* → 反向代理 → http://jwzx.hrbust.edu.cn（见 proxy.rs）
 //!  - /__app/storage → 键值持久化（见 storage.rs，教务数据缓存落盘）
+//!  - 来源校验：全部请求校验 Host 指向本服务自身（阻断 DNS rebinding），
+//!    /academic 与 /__app/storage 追加 Origin / Sec-Fetch-Site 白名单
 //!  - 端口策略：固定 1950 起（建校年份），被占用向后顺延至多 10 次。
 //!    固定端口保证页面源（http://127.0.0.1:1950）跨冷启动稳定，
 //!    教务会话 Cookie 因此持久；数据缓存自 v1.1 起归 Rust 存储文件所有，
@@ -18,7 +20,7 @@ use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use http::{header, Method, Request, Response, StatusCode, Uri};
+use http::{header, HeaderMap, HeaderValue, Method, Request, Response, StatusCode, Uri};
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Full};
 use hyper::body::{Bytes, Incoming};
@@ -162,6 +164,8 @@ struct WebAssets;
 /// 每请求共享的客户端状态（hyper 连接池可克隆复用）
 #[derive(Clone)]
 struct AppState {
+    /// 实际绑定端口：Host/Origin 来源校验要求精确匹配（见 host_allowed）
+    port: u16,
     client: Client<hyper_util::client::legacy::connect::HttpConnector, AppBody>,
     upstream: Upstream,
     storage: Option<Arc<crate::storage::Storage>>,
@@ -183,17 +187,25 @@ pub async fn start(config: ServerConfig) -> io::Result<SocketAddr> {
         }
     });
     let state = AppState {
+        port: addr.port(),
         client: Client::builder(TokioExecutor::new()).build_http::<AppBody>(),
         upstream: config.upstream,
         storage,
     };
 
     tokio::spawn(async move {
+        // 连续 accept 失败（如 fd 耗尽）时指数退避，避免忙轮询打满 CPU
+        let mut backoff = std::time::Duration::from_millis(50);
         loop {
             let (stream, _peer) = match listener.accept().await {
                 Ok(accepted) => accepted,
-                Err(_) => continue,
+                Err(_) => {
+                    tokio::time::sleep(backoff).await;
+                    backoff = (backoff * 2).min(std::time::Duration::from_millis(2000));
+                    continue;
+                }
             };
+            backoff = std::time::Duration::from_millis(50);
             let state = state.clone();
             tokio::spawn(async move {
                 let service = service_fn(move |req| handle(state.clone(), req));
@@ -231,15 +243,59 @@ async fn bind_listener(port_base: u16, port_tries: u16) -> io::Result<TcpListene
 }
 
 /// 总入口：/academic 走反代（错误冒泡断连），/__app/storage 走键值持久化，
-/// 其余走静态托管（错误转 4xx/5xx 响应）
+/// 其余走静态托管（错误转 4xx/5xx 响应）。
+/// 所有请求先过 Host 校验（防 DNS rebinding），敏感端点再加 Origin/Sec-Fetch-Site 校验。
 async fn handle(state: AppState, req: Request<Incoming>) -> Result<Response<AppBody>, GatewayError> {
+    if !host_allowed(req.headers().get(header::HOST), state.port) {
+        return Ok(plain_response(StatusCode::FORBIDDEN, "forbidden host"));
+    }
     let path = req.uri().path();
     if path == "/academic" || path.starts_with("/academic/") {
+        if !browser_origin_allowed(req.headers(), state.port) {
+            return Ok(plain_response(StatusCode::FORBIDDEN, "forbidden origin"));
+        }
         crate::proxy::forward(&state.client, &state.upstream, req).await
     } else if path == "/__app/storage" {
+        if !browser_origin_allowed(req.headers(), state.port) {
+            return Ok(plain_response(StatusCode::FORBIDDEN, "forbidden origin"));
+        }
         Ok(crate::storage::handle(&state.storage, req).await)
     } else {
         Ok(static_response(&req))
+    }
+}
+
+/// Host 头白名单：只接受指向本服务实际端口的回环主机名（或无端口的裸主机名）。
+/// DNS rebinding 攻击中浏览器按攻击者域名发请求，Host 携带的是该域名，
+/// 在此被 403，使本服务无法被恶意页面变成「同源」资源。不带 Host 头的
+/// 客户端（部分 HTTP/1.0 工具）无法构造重绑定攻击，放行。
+fn host_allowed(host: Option<&HeaderValue>, port: u16) -> bool {
+    let Some(host) = host.and_then(|value| value.to_str().ok()) else {
+        return true;
+    };
+    let host = host.trim().to_ascii_lowercase();
+    host == format!("127.0.0.1:{port}")
+        || host == format!("localhost:{port}")
+        || host == "127.0.0.1"
+        || host == "localhost"
+}
+
+/// 敏感端点（/academic、/__app/storage）的浏览器来源校验：
+/// 带 Origin 头时必须精确等于本服务源；带 Sec-Fetch-Site 时只允许
+/// same-origin（应用自身）与 none（地址栏直达）。两个头都不带的
+/// 非浏览器客户端（curl / 集成测试）不受影响。
+fn browser_origin_allowed(headers: &HeaderMap, port: u16) -> bool {
+    if let Some(origin) = headers.get(header::ORIGIN).and_then(|value| value.to_str().ok()) {
+        let origin = origin.trim().to_ascii_lowercase();
+        return origin == format!("http://127.0.0.1:{port}")
+            || origin == format!("http://localhost:{port}");
+    }
+    match headers.get("sec-fetch-site").and_then(|value| value.to_str().ok()) {
+        Some(site) => {
+            let site = site.trim().to_ascii_lowercase();
+            site == "same-origin" || site == "none"
+        }
+        None => true,
     }
 }
 
@@ -284,6 +340,18 @@ fn asset_response(name: &str, asset: &rust_embed::EmbeddedFile, head_only: bool)
         .header(header::CONTENT_TYPE, mime.as_ref())
         .header(header::CONTENT_LENGTH, asset.data.len())
         .header("x-content-type-options", "nosniff");
+    if mime.type_() == mime_guess::mime::TEXT && mime.subtype() == mime_guess::mime::HTML {
+        // 文档响应补 CSP（纵深防御：静态资源全部同源、无内联脚本，
+        // 恶意注入的跨源脚本 / 内联脚本将被拒绝执行）。
+        // connect-src 额外放行 GitHub API：桌面端更新检查直连
+        // api.github.com（见 web/src/services/update.js），不经过本地反代
+        builder = builder.header(
+            header::CONTENT_SECURITY_POLICY,
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
+             img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.github.com; \
+             object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+        );
+    }
     if name == "index.html" {
         // 入口不缓存，保证发版即生效
         builder = builder.header(header::CACHE_CONTROL, "no-cache");
@@ -306,4 +374,46 @@ pub(crate) fn plain_response(status: StatusCode, text: &str) -> Response<AppBody
         .header("x-content-type-options", "nosniff")
         .body(full_body(Bytes::copy_from_slice(text.as_bytes())))
         .expect("纯文本响应构造不会失败")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn host_must_point_to_this_service() {
+        assert!(host_allowed(Some(&HeaderValue::from_static("127.0.0.1:1950")), 1950));
+        assert!(host_allowed(Some(&HeaderValue::from_static("localhost:1950")), 1950));
+        assert!(host_allowed(Some(&HeaderValue::from_static("LOCALHOST:1950")), 1950));
+        assert!(host_allowed(None, 1950));
+        // 重绑定形态：Host 为攻击者域名，即使端口指向本服务也拒绝
+        assert!(!host_allowed(Some(&HeaderValue::from_static("evil.example.com:1950")), 1950));
+        // 端口不匹配同样拒绝
+        assert!(!host_allowed(Some(&HeaderValue::from_static("127.0.0.1:9999")), 1950));
+    }
+
+    #[test]
+    fn browser_origin_must_be_own_source() {
+        // 应用自身源放行
+        let mut headers = HeaderMap::new();
+        headers.insert(header::ORIGIN, HeaderValue::from_static("http://127.0.0.1:1950"));
+        assert!(browser_origin_allowed(&headers, 1950));
+        // 他源 Origin 拒绝
+        let mut headers = HeaderMap::new();
+        headers.insert(header::ORIGIN, HeaderValue::from_static("http://evil.example.com"));
+        assert!(!browser_origin_allowed(&headers, 1950));
+        // 无 Origin / 无 Sec-Fetch-Site（curl、集成测试等非浏览器客户端）放行
+        assert!(browser_origin_allowed(&HeaderMap::new(), 1950));
+        // Sec-Fetch-Site：仅 same-origin（应用自身）与 none（地址栏直达）放行
+        for (site, allowed) in [
+            ("same-origin", true),
+            ("none", true),
+            ("same-site", false),
+            ("cross-site", false),
+        ] {
+            let mut headers = HeaderMap::new();
+            headers.insert("sec-fetch-site", HeaderValue::from_static(site));
+            assert_eq!(browser_origin_allowed(&headers, 1950), allowed, "site={site}");
+        }
+    }
 }

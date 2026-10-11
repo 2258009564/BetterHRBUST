@@ -11,8 +11,8 @@
 //!
 //! 存储文件为 `{app_data_dir}/storage.json`，数据归 Rust 进程所有：
 //! 页面源端口漂移（1950 被占顺延）或 WebView2 用户数据目录被清理时，
-//! 教务数据缓存与会话元数据不丢。写入采用「临时文件 + 原子改名」，
-//! 崩溃不会留下半写文件；意外损坏时把原文件改名 `.corrupt` 保留现场。
+//! 教务数据缓存与会话元数据不丢。写入采用「互斥锁内：临时文件 + 原子改名」，
+//! 并发写串行化，崩溃不会留下半写文件；意外损坏时把原文件改名 `.corrupt` 保留现场。
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -27,9 +27,9 @@ use hyper::body::{Bytes, Incoming};
 use crate::server::{full_body, plain_response, AppBody};
 
 /// PUT 请求体大小上限：全量数据（成绩/考试/公告等解析结果）通常 < 1MB，
-/// 16MB 纯防御性兜底（仅 127.0.0.1 可达，无外部攻击面）
+/// 16MB 纯防御性兜底（回环可达的任意本机进程都可访问该端点，
+/// 来源校验见 server.rs 的 Host / Origin 白名单）
 pub const MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
-
 /// 键名长度上限（应用侧键均为 `better_hrbust_*` / `saved_student_number` 短标识符）
 const MAX_KEY_LEN: usize = 256;
 
@@ -64,44 +64,38 @@ impl Storage {
         self.data.lock().expect("storage 锁中毒").clone()
     }
 
-    /// 写入单键并落盘
+    /// 写入单键并落盘（save 在锁内执行，见 save() 注释）
     pub fn set(&self, key: String, value: String) -> io::Result<()> {
-        let snapshot = {
-            let mut guard = self.data.lock().expect("storage 锁中毒");
-            guard.insert(key, value);
-            guard.clone()
-        };
-        self.save(&snapshot)
+        let mut guard = self.data.lock().expect("storage 锁中毒");
+        guard.insert(key, value);
+        self.save(&guard)
     }
 
     /// 删除单键并落盘；键不存在则无操作。返回键是否存在过
     pub fn remove(&self, key: &str) -> io::Result<bool> {
-        let (removed, snapshot) = {
-            let mut guard = self.data.lock().expect("storage 锁中毒");
-            let removed = guard.remove(key).is_some();
-            (removed, guard.clone())
-        };
+        let mut guard = self.data.lock().expect("storage 锁中毒");
+        let removed = guard.remove(key).is_some();
         if removed {
-            self.save(&snapshot)?;
+            self.save(&guard)?;
         }
         Ok(removed)
     }
 
     /// 清空全部键并落盘。返回清除的键数
     pub fn clear(&self) -> io::Result<usize> {
-        let (cleared, snapshot) = {
-            let mut guard = self.data.lock().expect("storage 锁中毒");
-            let cleared = guard.len();
-            guard.clear();
-            (cleared, guard.clone())
-        };
+        let mut guard = self.data.lock().expect("storage 锁中毒");
+        let cleared = guard.len();
+        guard.clear();
         if cleared > 0 {
-            self.save(&snapshot)?;
+            self.save(&guard)?;
         }
         Ok(cleared)
     }
 
-    /// 原子落盘：先写临时文件再改名（Windows 下 std::fs::rename 覆盖目标）
+    /// 原子落盘：先写临时文件再改名（Windows 下 std::fs::rename 覆盖目标）。
+    /// 必须在持有 data 锁时调用：所有请求共享同一个 tmp 路径，
+    /// 锁外并发写会出现交错截断或 rename 二次失败（ENOENT），
+    /// 轻则误报 500、重则 storage.json 损坏（下次启动整体改名 .corrupt）。
     fn save(&self, map: &BTreeMap<String, String>) -> io::Result<()> {
         let mut json = serde_json::to_vec(map)
             .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
@@ -110,6 +104,38 @@ impl Storage {
         fs::write(&tmp, &json)?;
         fs::rename(&tmp, &self.path)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 并发写盘不损坏存储文件：多线程交错 set 时 tmp 文件与 rename
+    /// 都必须在锁内串行化，否则 storage.json 可能混合截断
+    #[test]
+    fn concurrent_writes_do_not_corrupt_storage_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let storage = std::sync::Arc::new(Storage::open(dir.path()).unwrap());
+        let writers: Vec<_> = (0..8)
+            .map(|worker| {
+                let storage = std::sync::Arc::clone(&storage);
+                std::thread::spawn(move || {
+                    for i in 0..50 {
+                        storage
+                            .set(format!("w{worker}-k{i}"), "v".repeat(64))
+                            .expect("并发写入不应失败");
+                    }
+                })
+            })
+            .collect();
+        for writer in writers {
+            writer.join().expect("写入线程不应 panic");
+        }
+
+        // 重新打开：损坏的 JSON 会被改名 .corrupt 并从空开始，键数对不上即暴露
+        let reloaded = Storage::open(dir.path()).unwrap();
+        assert_eq!(reloaded.snapshot().len(), 8 * 50, "全部键应完整落盘且文件可解析");
     }
 }
 
@@ -133,13 +159,16 @@ pub async fn handle(storage: &Option<Arc<Storage>>, req: Request<Incoming>) -> R
                 .expect("存储 GET 响应构造不会失败")
         }
         Method::PUT => {
-            let bytes = match req.into_body().collect().await {
+            // Limited 逐帧计数，超限即断流（不经 CORS 预检的恶意超大 PUT
+            // 无法再把完整 body 缓冲进内存后才被拒绝）
+            let limited = http_body_util::Limited::new(req.into_body(), MAX_BODY_BYTES);
+            let bytes = match limited.collect().await {
                 Ok(collected) => collected.to_bytes(),
+                Err(err) if err.downcast_ref::<http_body_util::LengthLimitError>().is_some() => {
+                    return plain_response(StatusCode::PAYLOAD_TOO_LARGE, "payload too large");
+                }
                 Err(_) => return plain_response(StatusCode::BAD_REQUEST, "bad body"),
             };
-            if bytes.len() > MAX_BODY_BYTES {
-                return plain_response(StatusCode::PAYLOAD_TOO_LARGE, "payload too large");
-            }
             let payload: serde_json::Value = match serde_json::from_slice(&bytes) {
                 Ok(value) => value,
                 Err(_) => return plain_response(StatusCode::BAD_REQUEST, "invalid json"),

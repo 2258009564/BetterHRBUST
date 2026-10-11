@@ -50,6 +50,7 @@ import com.glassous.betterhrbust.core.ui.theme.CourseCardColors
 import com.glassous.betterhrbust.core.ui.theme.CourseColorPalette
 import com.glassous.betterhrbust.core.ui.theme.LocalDarkTheme
 import com.glassous.betterhrbust.core.util.SchoolCalendar
+import com.glassous.betterhrbust.data.repository.AccountSwitchedException
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -209,10 +210,19 @@ fun TimetableScreen(
         // 只有校历完全无法确定当前学期时才联网同步周次；
         // 已知学期的寒暑假（weekOn 返回 null 但 semesterOn 命中）保留初始定位，
         // 绝不用网络兜底把视图从假期末周拉回第 1 周。
-        if (prefs?.teachingWeekOn(today) == null && SchoolCalendar.semesterOn(today) == null) academicRepo.getTeachingWeek().collect { week ->
-            if (week in 1..maxTeachingWeek) {
-                selectedWeek = week
-                pagerState.scrollToPage(pageOf(viewMode, week, todayDay, maxTeachingWeek))
+        // getTeachingWeek 返回 Resource<Int>（L-12）：仅成功时定位，失败保持原位
+        if (prefs?.teachingWeekOn(today) == null && SchoolCalendar.semesterOn(today) == null) {
+            try {
+                academicRepo.getTeachingWeek().collect { res ->
+                    val week = (res as? Resource.Success)?.data ?: return@collect
+                    if (week in 1..maxTeachingWeek) {
+                        selectedWeek = week
+                        pagerState.scrollToPage(pageOf(viewMode, week, todayDay, maxTeachingWeek))
+                    }
+                }
+            } catch (switched: AccountSwitchedException) {
+                // 账号已切换：本次周次定位作废，新账号的课表页会自行加载。
+                // 业务信号必须在此消化——穿透 LaunchedEffect 会直接崩溃整个应用
             }
         }
     }
@@ -221,20 +231,24 @@ fun TimetableScreen(
     fun loadCache() {
         val currentPrefs = prefs ?: return
         coroutineScope.launch {
-            academicRepo.getTimetable(
-                currentPrefs.studentId,
-                currentPrefs.year,
-                currentPrefs.term,
-                cacheOnly = true
-            ).collect { res ->
-                when (res) {
-                    is Resource.Success -> {
-                        timetableResult = res.data
-                        cacheError = ""
+            try {
+                academicRepo.getTimetable(
+                    currentPrefs.studentId,
+                    currentPrefs.year,
+                    currentPrefs.term,
+                    cacheOnly = true
+                ).collect { res ->
+                    when (res) {
+                        is Resource.Success -> {
+                            timetableResult = res.data
+                            cacheError = ""
+                        }
+                        is Resource.Error -> cacheError = res.message
+                        else -> Unit
                     }
-                    is Resource.Error -> cacheError = res.message
-                    else -> Unit
                 }
+            } catch (switched: AccountSwitchedException) {
+                // 账号已切换：旧页面缓存读取作废，新页面会自行加载
             }
         }
     }
@@ -243,12 +257,15 @@ fun TimetableScreen(
     fun refreshAll() {
         coroutineScope.launch {
             isRefreshing = true
-            val outcome = syncManager.syncAll(manual = true)
-            isRefreshing = false
-            if (outcome.expired) {
-                authRepo.markSessionExpired(true)
-            } else {
-                loadCache()
+            try {
+                val outcome = syncManager.syncAll(manual = true)
+                if (outcome.expired) {
+                    authRepo.markSessionExpired(true)
+                } else {
+                    loadCache()
+                }
+            } finally {
+                isRefreshing = false
             }
         }
     }

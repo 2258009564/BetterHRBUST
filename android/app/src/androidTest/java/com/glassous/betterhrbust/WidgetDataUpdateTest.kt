@@ -159,7 +159,7 @@ class WidgetDataUpdateTest {
         } finally {
             instrumentation.runOnMainSync { host.deleteAppWidgetId(id);host.stopListening() }
             activity?.close()
-            app.preferencesManager.saveAuth(previous.username,"",previous.year,previous.term,previous.realName,previous.savedPassword)
+            app.preferencesManager.saveAuth(previous.username,"",previous.year,previous.term,previous.realName)
             app.preferencesManager.clearSession()
             for ((key,entity) in oldProfiles) {
                 if (entity==null) app.database.profileDao().clear(key) else app.database.profileDao().insert(entity)

@@ -130,7 +130,7 @@ class NativePreviewTest {
                 }
             }
         } finally {
-            app.preferencesManager.saveAuth(old.username,"",old.year,old.term,old.realName,old.savedPassword)
+            app.preferencesManager.saveAuth(old.username,"",old.year,old.term,old.realName)
             app.preferencesManager.clearSession();app.preferencesManager.setDarkTheme(when(old.darkTheme){true->"dark";false->"light";null->"system"})
             app.database.profileDao().clear(number);app.database.timetableDao().clear(sid)
         }

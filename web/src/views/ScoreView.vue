@@ -324,6 +324,7 @@ import {
   hasCredits,
   gradePoint,
   isRequired,
+  parseScoreValue,
   resolveProperty,
   semesterSortKey,
   EARNED_CREDITS_NOTE,
@@ -396,9 +397,11 @@ const trendPolyline = computed(() => {
 });
 
 const distribution = computed(() => {
-  const total = countedRecords.value.length || 1;
+  // 与 GPA 口径一致：无法折算分数的记录（缓考/未出分等）不进入分段统计
+  const scored = countedRecords.value.filter(s => parseScoreValue(s.score).estimated !== null);
+  const total = scored.length || 1;
   const segs = { '90分及以上 (优秀)': 0, '80-89分 (良好)': 0, '70-79分 (中等)': 0, '60-69分 (及格)': 0, '60分以下 (不及格)': 0 };
-  countedRecords.value.forEach(s => {
+  scored.forEach(s => {
     const n = parseFloat(s.score);
     if (n >= 90 || s.score === '优秀' || s.score === '优') segs['90分及以上 (优秀)'] += 1;
     else if (n >= 80 || s.score === '良好' || s.score === '良') segs['80-89分 (良好)'] += 1;

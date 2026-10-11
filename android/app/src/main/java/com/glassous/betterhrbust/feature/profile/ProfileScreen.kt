@@ -21,6 +21,7 @@ import com.glassous.betterhrbust.core.ui.LocalTopContentInset
 import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.LoadingView
 import com.glassous.betterhrbust.core.ui.components.PageHeaderTitle
+import com.glassous.betterhrbust.data.repository.AccountSwitchedException
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 
@@ -46,10 +47,14 @@ fun ProfileScreen(
     fun loadCache() {
         val currentPrefs = prefs ?: return
         coroutineScope.launch {
-            academicRepo.getPersonalInfo(currentPrefs.username, cacheOnly = true).collect { res ->
-                if (res is Resource.Success) {
-                    profile = res.data
+            try {
+                academicRepo.getPersonalInfo(currentPrefs.username, cacheOnly = true).collect { res ->
+                    if (res is Resource.Success) {
+                        profile = res.data
+                    }
                 }
+            } catch (switched: AccountSwitchedException) {
+                // 账号已切换：旧页面缓存读取作废，新页面会自行加载
             }
         }
     }
@@ -58,12 +63,15 @@ fun ProfileScreen(
     fun refreshAll() {
         coroutineScope.launch {
             isRefreshing = true
-            val outcome = syncManager.syncAll(manual = true)
-            isRefreshing = false
-            if (outcome.expired) {
-                authRepo.markSessionExpired(true)
-            } else {
-                loadCache()
+            try {
+                val outcome = syncManager.syncAll(manual = true)
+                if (outcome.expired) {
+                    authRepo.markSessionExpired(true)
+                } else {
+                    loadCache()
+                }
+            } finally {
+                isRefreshing = false
             }
         }
     }

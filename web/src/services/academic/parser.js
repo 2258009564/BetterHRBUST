@@ -5,6 +5,13 @@ import { semesterOn, teachingWeekOn } from '../../utils/schoolCalendar.js';
  */
 
 /**
+ * 等级制成绩文本（二级制 / 五级制 / 免修类）：总评列本身即是明确的"通过"结论，
+ * 反之为明确的不通过；其余文本（缓考 / 缺考 / 未出分）仍按 pending 保守处理。
+ */
+const PASS_GRADE_TEXTS = new Set(['优秀', '良好', '中等', '及格', '合格', '通过', '免修', '免听', '免考']);
+const FAIL_GRADE_TEXTS = new Set(['不及格', '不合格', '不通过']);
+
+/**
  * 将 HTML 文本解析为 DOM 树
  * @param {string} html
  * @returns {Document}
@@ -262,15 +269,23 @@ export function parseScores(html) {
         const examType = tds[colExamType]?.textContent.trim() || '';
         const passMark = tds[colPassMark]?.textContent.trim() || '';
 
-        // 判断是否及格
+        // 判断是否及格。保守方向：未确认通过 ≠ 已通过——
+        // 未出分（无成绩无标志）与缓考/缺考等无明确结论的行标记 pending，
+        // 既不计入已获学分，也不计入挂科统计
         const numScore = parseFloat(rawScore);
-        let passed = true;
+        let passed = false;
+        let pending = false;
         if (!isNaN(numScore)) {
           passed = numScore >= 60;
         } else if (passMark) {
           passed = !passMark.includes('不') && passMark !== '不及格';
-        } else if (rawScore) {
-          passed = rawScore !== '不及格' && rawScore !== '不合格';
+        } else if (PASS_GRADE_TEXTS.has(rawScore)) {
+          // 等级制成绩（合格 / 优秀 / 免修…）是明确的通过结论，必须计入已获学分
+          passed = true;
+        } else if (FAIL_GRADE_TEXTS.has(rawScore)) {
+          passed = false;
+        } else {
+          pending = true;
         }
 
         scores.push({
@@ -287,7 +302,8 @@ export function parseScores(html) {
           remark,
           examType,
           passMark,
-          passed
+          passed,
+          pending
         });
       }
     }
@@ -478,6 +494,8 @@ export function parseCalendarInfo(html) {
   const teachingWeeks = count && Number(count[1]) >= 1 && Number(count[1]) <= 26 ? Number(count[1]) : null;
 
   // 3. 公告内容
+  // 教务源页面不含发布日期；留空而非用当天日期伪造（错误日期永不纠正），
+  // UI 对空日期隐藏日期字段
   const notices = [];
   const textWrapper = doc.querySelector('#textwrapper');
   if (textWrapper) {
@@ -488,7 +506,7 @@ export function parseCalendarInfo(html) {
         notices.push({
           title: text.slice(0, 50),
           content: text,
-          date: new Date().toLocaleDateString('zh-CN')
+          date: ''
         });
       }
     });

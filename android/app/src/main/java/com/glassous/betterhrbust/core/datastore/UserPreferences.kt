@@ -39,8 +39,6 @@ data class AppPreferences(
     val sessionExpired: Boolean = false,
     /** 真实姓名（供概览页在档案缓存缺失时兜底展示，避免回退为占位文案） */
     val realName: String = "",
-    /** 记住的登录密码（仅本地 DataStore，用于免重复输入） */
-    val savedPassword: String = "",
     /** 上次版本更新检测时间（毫秒时间戳），用于启动静默检测的"按天节流" */
     val lastUpdateCheckAt: Long = 0L,
     /** 导航坞折叠态（用户手动在坞内展开 / 折叠后持久化，冷启动沿用） */
@@ -80,6 +78,8 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
         private val KEY_LAST_FULL_SYNC_DATE = stringPreferencesKey("last_full_sync_date")
         private val KEY_SESSION_EXPIRED = booleanPreferencesKey("session_expired")
         private val KEY_REAL_NAME = stringPreferencesKey("real_name")
+        // 历史版本曾以该键明文持久化教务密码（安全修复后停止保存），
+        // 保留常量仅用于启动时清除旧设备上的残留值
         private val KEY_SAVED_PASSWORD = stringPreferencesKey("saved_password")
         private val KEY_LAST_UPDATE_CHECK_AT = longPreferencesKey("last_update_check_at")
         private val KEY_NAVIGATION_DOCK_COLLAPSED = booleanPreferencesKey("navigation_dock_collapsed")
@@ -111,7 +111,6 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
             lastFullSyncDate = prefs[KEY_LAST_FULL_SYNC_DATE] ?: "",
             sessionExpired = prefs[KEY_SESSION_EXPIRED] ?: false,
             realName = prefs[KEY_REAL_NAME] ?: "",
-            savedPassword = prefs[KEY_SAVED_PASSWORD] ?: "",
             lastUpdateCheckAt = prefs[KEY_LAST_UPDATE_CHECK_AT] ?: 0L,
             navigationDockCollapsed = prefs[KEY_NAVIGATION_DOCK_COLLAPSED] ?: false
         )
@@ -126,11 +125,13 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
         }
     }
 
-    /** 记住登录密码（仅存本地，便于免重复输入） */
-    suspend fun setSavedPassword(password: String) {
-        store.edit { prefs ->
-            if (password.isEmpty()) prefs.remove(KEY_SAVED_PASSWORD) else prefs[KEY_SAVED_PASSWORD] = password
-        }
+    /**
+     * 清除历史版本残留的明文密码键（升级迁移）。
+     * 密码不再持久化（与 Web 端对齐，仅保留学号），旧安装上的
+     * saved_password 值需在启动时主动删除，避免明文凭证留在 DataStore 文件中。
+     */
+    suspend fun purgeLegacySavedPassword() {
+        store.edit { prefs -> prefs.remove(KEY_SAVED_PASSWORD) }
     }
 
     /**
@@ -148,24 +149,25 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
         }
     }
 
-    suspend fun saveAuth(username: String, studentId: String, year: String, term: String, realName: String = "", savedPassword: String? = null) {
+    suspend fun saveAuth(username: String, studentId: String, year: String, term: String, realName: String = "") {
         store.edit { prefs ->
             if (prefs[KEY_USERNAME] != username) {
                 prefs.remove(KEY_LAST_FULL_SYNC_DATE)
-                prefs.remove(KEY_SAVED_PASSWORD)
                 prefs.remove(KEY_WEEK_REFERENCE_DATE)
                 prefs.remove(KEY_CURRENT_WEEK)
                 prefs.remove(KEY_SELECTED_WEEK)
             }
+            // 学年或学期变化同样需要重置周次缓存（shared 校历学期切换）
             if (prefs[KEY_USERNAME] != username || prefs[KEY_YEAR] != year || prefs[KEY_TERM] != term) {
                 prefs.remove(KEY_WEEK_REFERENCE_DATE)
                 prefs.remove(KEY_CURRENT_WEEK)
                 prefs.remove(KEY_SELECTED_WEEK)
                 prefs.remove(KEY_SEMESTER_WEEKS)
             }
+            // 无论是否换账号，都清掉历史版本可能残留的明文密码键（H-2，不恢复 savedPassword 存储）
+            prefs.remove(KEY_SAVED_PASSWORD)
             prefs.remove(KEY_LAST_FULL_SYNC_DATE)
             prefs[KEY_REAL_NAME] = realName
-            if (savedPassword != null) prefs[KEY_SAVED_PASSWORD] = savedPassword
             prefs[KEY_LAST_LOGIN_AT] = System.currentTimeMillis()
             prefs.remove(KEY_LAST_PROMPT_AT)
             prefs.remove(KEY_SESSION_EXPIRED)
@@ -262,7 +264,7 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
 
     /**
      * 退出登录时清理会话数据。
-     * 注意：保留「账号」与「记住的密码」，以便下次登录免重复输入（需求：登录页持久保存用户名与密码）。
+     * 保留「账号」以便下次登录免输入学号；密码不落盘（与 Web 端对齐）。
      */
     suspend fun clearSession() {
         store.edit { prefs ->
