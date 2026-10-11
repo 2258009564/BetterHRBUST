@@ -342,11 +342,13 @@ fn asset_response(name: &str, asset: &rust_embed::EmbeddedFile, head_only: bool)
         .header("x-content-type-options", "nosniff");
     if mime.type_() == mime_guess::mime::TEXT && mime.subtype() == mime_guess::mime::HTML {
         // 文档响应补 CSP（纵深防御：静态资源全部同源、无内联脚本，
-        // 恶意注入的跨源脚本 / 内联脚本将被拒绝执行）
+        // 恶意注入的跨源脚本 / 内联脚本将被拒绝执行）。
+        // connect-src 额外放行 GitHub API：桌面端更新检查直连
+        // api.github.com（见 web/src/services/update.js），不经过本地反代
         builder = builder.header(
             header::CONTENT_SECURITY_POLICY,
             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
-             img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; \
+             img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.github.com; \
              object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
         );
     }

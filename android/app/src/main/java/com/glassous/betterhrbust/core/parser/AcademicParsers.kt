@@ -381,6 +381,11 @@ object AcademicParsers {
                 val colExamType = headers.indexOfFirst { it == "考试性质" }
                 val colPassMark = headers.indexOfFirst { it == "及格标志" }
 
+                // 等级制成绩文本（二级制/五级制/免修类）：总评列本身即是明确的通过结论，
+                // 反之为明确的不通过；其余文本（缓考/缺考/未出分）仍按 pending 保守处理（与 web parser.js 同构）
+                val passGradeTexts = setOf("优秀", "良好", "中等", "及格", "合格", "通过", "免修", "免听", "免考")
+                val failGradeTexts = setOf("不及格", "不合格", "不通过")
+
                 for (i in 1 until trList.size) {
                     val tds = trList[i].select("td")
                     if (tds.isEmpty()) continue
@@ -409,7 +414,8 @@ object AcademicParsers {
                     when {
                         numScore != null -> passed = numScore >= 60.0
                         passMark.isNotEmpty() -> passed = !passMark.contains("不") && passMark != "不及格"
-                        rawScore == "不及格" || rawScore == "不合格" -> passed = false
+                        rawScore in passGradeTexts -> passed = true
+                        rawScore in failGradeTexts -> passed = false
                         else -> pending = true
                     }
 

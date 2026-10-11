@@ -5,6 +5,13 @@ import { semesterOn, teachingWeekOn } from '../../utils/schoolCalendar.js';
  */
 
 /**
+ * 等级制成绩文本（二级制 / 五级制 / 免修类）：总评列本身即是明确的"通过"结论，
+ * 反之为明确的不通过；其余文本（缓考 / 缺考 / 未出分）仍按 pending 保守处理。
+ */
+const PASS_GRADE_TEXTS = new Set(['优秀', '良好', '中等', '及格', '合格', '通过', '免修', '免听', '免考']);
+const FAIL_GRADE_TEXTS = new Set(['不及格', '不合格', '不通过']);
+
+/**
  * 将 HTML 文本解析为 DOM 树
  * @param {string} html
  * @returns {Document}
@@ -272,7 +279,10 @@ export function parseScores(html) {
           passed = numScore >= 60;
         } else if (passMark) {
           passed = !passMark.includes('不') && passMark !== '不及格';
-        } else if (rawScore === '不及格' || rawScore === '不合格') {
+        } else if (PASS_GRADE_TEXTS.has(rawScore)) {
+          // 等级制成绩（合格 / 优秀 / 免修…）是明确的通过结论，必须计入已获学分
+          passed = true;
+        } else if (FAIL_GRADE_TEXTS.has(rawScore)) {
           passed = false;
         } else {
           pending = true;

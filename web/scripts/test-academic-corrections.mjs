@@ -37,6 +37,19 @@ assert.equal(pendingStats.earnedCredits, 3, 'pending 行不计入已获学分');
 assert.equal(pendingStats.failedCount, 0, 'pending 行不计入挂科门数');
 assert.equal(pendingStats.failedCredits, 0, 'pending 行不计入挂科学分');
 
+// 等级制成绩（及格标志列为空）：合格/优秀/免修是明确的"通过"结论，必须计入已获学分，
+// 不通过是明确的挂科结论（不得因保守化而丢进 pending）
+const gradeTextStats = buildAcademicStats([
+  course('GRADE_NUM', 70, 3),
+  { ...course('GRADE_PASS', 0, 4), score: '合格', passed: true, pending: false },
+  { ...course('GRADE_EXCL', 0, 1.5), score: '优秀', passed: true, pending: false },
+  { ...course('GRADE_EXEMPT', 0, 2), score: '免修', passed: true, pending: false },
+  { ...course('GRADE_FAIL', 0, 2), score: '不通过', passed: false, pending: false }
+]);
+assert.equal(gradeTextStats.earnedCredits, 10.5, '等级制"合格/优秀/免修"计入已获学分');
+assert.equal(gradeTextStats.failedCount, 1, '等级制"不通过"计入挂科门数');
+assert.equal(gradeTextStats.failedCredits, 2, '等级制"不通过"计入挂科学分');
+
 assert.deepEqual(degreeCourses([{...course('MATH',85,3),courseName:'高等数学(A)'},course('MAJOR',90,2.5,'专业选修','任选')]).map(s=>s.courseId),['MATH','MAJOR']);
 
 // GPA 走势学期顺序：教务「学年」列是学期所在公历年份（2023 秋 → 2024 春 → 2024 秋 连续），同一年内先春后秋
