@@ -2,9 +2,9 @@ name: Android 验证与构建
 
 on:
   pull_request:
-    paths: ['android/**', '.github/workflows/android.yml']
+    paths: ['android/**', 'shared/school-calendar.json', 'tools/generate-school-calendar.mjs', '.github/workflows/android.yml']
   push:
-    paths: ['android/**', '.github/workflows/android.yml']
+    paths: ['android/**', 'shared/school-calendar.json', 'tools/generate-school-calendar.mjs', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:
@@ -22,6 +22,8 @@ jobs:
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+      - name: 检查校历共享数据
+        run: node tools/generate-school-calendar.mjs --check
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
