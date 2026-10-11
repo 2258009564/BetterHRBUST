@@ -33,11 +33,22 @@ for (const ref of refs) {
 }
 
 const js = [...html.matchAll(/src="((?:\.\/)?assets\/[^"]+\.js)"/g)].map((m) => m[1]);
-const css = [...html.matchAll(/href="((?:\.\/)?assets\/[^"]+\.css)"/g)].map((m) => m[1]);
-assert.ok(js.length > 0 && css.length > 0, '缺少 JS/CSS 产物引用');
+// 入口 HTML 必须直接引用 JS 入口；CSS 不作此要求——全局样式已拆进各页面
+// 组件 chunk 由 JS 动态加载，index.html 不再必然携带 <link rel="stylesheet">
+assert.ok(js.length > 0, '缺少 JS 产物引用');
 
+// 校验范围覆盖全部 CSS 产物（HTML 直连的 + JS chunk 携带的），
+// 而非仅 HTML 引用到的——任何一份 CSS 内的字体/图片引用失效都应挡下
+const cssFiles = fs.existsSync(path.join(root, 'assets'))
+  ? [...new Set([
+      ...[...html.matchAll(/href="((?:\.\/)?assets\/[^"]+\.css)"/g)].map((m) => m[1]),
+      ...fs.readdirSync(path.join(root, 'assets'))
+        .filter((f) => f.endsWith('.css'))
+        .map((f) => `assets/${f}`)
+    ])]
+  : [];
 // CSS 内引用的字体/图片（非 data:/http:）必须存在
-for (const cssFile of css) {
+for (const cssFile of cssFiles) {
   const text = fs.readFileSync(path.join(root, cssFile), 'utf8');
   for (const m of text.matchAll(/url\((?!['"]?data:|['"]?https?:|['"]?#)(['"]?)([^'")]+)\1\)/g)) {
     const rel = path.posix.join(path.posix.dirname(cssFile), m[2]);
