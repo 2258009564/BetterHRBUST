@@ -49,6 +49,7 @@ import com.glassous.betterhrbust.core.ui.components.LoadingView
 import com.glassous.betterhrbust.core.ui.theme.CourseCardColors
 import com.glassous.betterhrbust.core.ui.theme.CourseColorPalette
 import com.glassous.betterhrbust.core.ui.theme.LocalDarkTheme
+import com.glassous.betterhrbust.core.util.SchoolCalendar
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -205,7 +206,10 @@ fun TimetableScreen(
         selectedWeek = currentWeek
         selectedDay = todayDay
         pagerState.scrollToPage(pageOf(viewMode, currentWeek, todayDay, maxTeachingWeek))
-        if (prefs?.teachingWeekOn(today) == null) academicRepo.getTeachingWeek().collect { week ->
+        // 只有校历完全无法确定当前学期时才联网同步周次；
+        // 已知学期的寒暑假（weekOn 返回 null 但 semesterOn 命中）保留初始定位，
+        // 绝不用网络兜底把视图从假期末周拉回第 1 周。
+        if (prefs?.teachingWeekOn(today) == null && SchoolCalendar.semesterOn(today) == null) academicRepo.getTeachingWeek().collect { week ->
             if (week in 1..maxTeachingWeek) {
                 selectedWeek = week
                 pagerState.scrollToPage(pageOf(viewMode, week, todayDay, maxTeachingWeek))
