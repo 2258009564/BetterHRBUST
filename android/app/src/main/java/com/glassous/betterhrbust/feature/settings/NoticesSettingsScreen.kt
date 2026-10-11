@@ -34,6 +34,7 @@ import com.glassous.betterhrbust.core.ui.components.AppPullToRefreshBox
 import com.glassous.betterhrbust.core.ui.components.EmptyView
 import com.glassous.betterhrbust.core.ui.components.LoadingView
 import com.glassous.betterhrbust.core.ui.components.PageHeaderTitle
+import com.glassous.betterhrbust.data.repository.AccountSwitchedException
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 
@@ -77,15 +78,19 @@ fun NoticesSettingsScreen(
      */
     fun loadCache() {
         coroutineScope.launch {
-            academicRepo.getNotices(forceRefresh = false, cacheOnly = true).collect { res ->
-                when (res) {
-                    is Resource.Success -> {
-                        notices = res.data
-                        cacheError = ""
+            try {
+                academicRepo.getNotices(forceRefresh = false, cacheOnly = true).collect { res ->
+                    when (res) {
+                        is Resource.Success -> {
+                            notices = res.data
+                            cacheError = ""
+                        }
+                        is Resource.Error -> cacheError = res.message
+                        else -> Unit
                     }
-                    is Resource.Error -> cacheError = res.message
-                    else -> Unit
                 }
+            } catch (switched: AccountSwitchedException) {
+                // 账号已切换：旧页面缓存读取作废，新页面会自行加载
             }
         }
     }
@@ -99,13 +104,16 @@ fun NoticesSettingsScreen(
     fun refreshAll(fromPullDown: Boolean = false) {
         coroutineScope.launch {
             if (fromPullDown) isRefreshing = true
-            val outcome = syncManager.syncAll(manual = true)
-            syncMessage = outcome.message
-            if (fromPullDown) isRefreshing = false
-            if (outcome.expired) {
-                authRepo.markSessionExpired(true)
-            } else {
-                loadCache()
+            try {
+                val outcome = syncManager.syncAll(manual = true)
+                syncMessage = outcome.message
+                if (outcome.expired) {
+                    authRepo.markSessionExpired(true)
+                } else {
+                    loadCache()
+                }
+            } finally {
+                if (fromPullDown) isRefreshing = false
             }
         }
     }
@@ -511,7 +519,18 @@ fun NoticesSettingsScreen(
                 confirmButton = {
                     TextButton(onClick = {
                         coroutineScope.launch {
-                            database.profileDao().clearAll()
+                            // 清理范围与文案承诺一致：当前账号的 6 张表全部清除
+                            // （课表/成绩/考试/培养方案按 studentId，档案按学号，公告无账号键整表清）
+                            val snapshot = prefs
+                            if (snapshot != null && snapshot.studentId.isNotEmpty()) {
+                                database.timetableDao().clear(snapshot.studentId)
+                                database.scoreDao().clear(snapshot.studentId)
+                                database.examDao().clear(snapshot.studentId)
+                                database.curriculumDao().clear(snapshot.studentId)
+                            }
+                            if (snapshot != null && snapshot.username.isNotEmpty()) {
+                                database.profileDao().clear(snapshot.username)
+                            }
                             database.noticeDao().clearAll()
                             showClearCacheDialog = false
                         }

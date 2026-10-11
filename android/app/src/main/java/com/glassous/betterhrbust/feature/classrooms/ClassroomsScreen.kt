@@ -132,6 +132,13 @@ fun ClassroomsScreen(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+            Spacer(modifier = Modifier.height(2.dp))
+            // 诚实标注：列表为示例数据，实时占用查询尚未接入教务系统
+            Text(
+                text = "以下为示例数据（含虚构的空闲时段与容量），暂未接入教务实时占用查询",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline
+            )
         }
 
         if (filteredRooms.isEmpty()) {
@@ -183,12 +190,12 @@ fun ClassroomsScreen(
                         Column(horizontalAlignment = Alignment.End) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.tertiaryContainer
+                                color = MaterialTheme.colorScheme.surfaceVariant
                             ) {
                                 Text(
-                                    text = room.freeSlot,
+                                    text = "示例 · ${room.freeSlot}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }

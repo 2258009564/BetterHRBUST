@@ -57,7 +57,7 @@
                 <th class="p-3">教学楼</th>
                 <th class="p-3">教室名称</th>
                 <th class="p-3 text-center">座位数</th>
-                <th class="p-3 text-center">自习状态</th>
+                <th class="p-3 text-center">数据状态</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
@@ -71,7 +71,7 @@
                 <td class="p-3 font-semibold text-zinc-900 dark:text-zinc-100">{{ room.name }}</td>
                 <td class="p-3 text-center text-zinc-500">{{ room.capacity }} 座</td>
                 <td class="p-3 text-center">
-                  <UiBadge size="sm" variant="success">全天空闲开放</UiBadge>
+                  <UiBadge size="sm" variant="outline">示例数据</UiBadge>
                 </td>
               </tr>
             </tbody>
@@ -80,11 +80,7 @@
 
         <template #footer>
           <div class="flex items-center justify-between text-xs text-zinc-500">
-            <span>教室占用数据直接依据教务系统排课时间表实时核查</span>
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-xs bg-emerald-500"></span>
-              <span>空闲可用 (可自习)</span>
-            </div>
+            <span>下表为示例数据（含虚构的座位数），暂未接入教务实时占用查询；校区与教学楼选项来自教务系统</span>
           </div>
         </template>
       </UiCard>

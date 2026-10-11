@@ -144,6 +144,10 @@ class AcademicSyncManager(
                     _lastSyncMessage.value = message
                     SyncOutcome(success = complete, expired = false, message = message)
                 }
+            } catch (switched: com.glassous.betterhrbust.data.repository.AccountSwitchedException) {
+                // 账号切换不是异常场景：旧同步结果作废，静默返回（不再用
+                // CancellationException 承载该信号——那会取消兄弟任务并穿透本 catch）
+                SyncOutcome(success = false, expired = false, message = "账号已切换，旧同步结果已丢弃")
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {

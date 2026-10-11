@@ -29,3 +29,28 @@ export function isCourseActiveInWeek(course, week) {
   }
   return parts.length === 0;
 }
+
+/**
+ * 把周次表达式展开为具体教学周列表。
+ * 表达式为空时视为全学期（1~maxWeek）。
+ * @param {string} weeksExpr 形如「1-16周(单)」「3-5,9-16周(双)」
+ * @param {number} [maxWeek] 空表达式的上限，默认 26
+ * @returns {number[]}
+ */
+export function expandCourseWeeks(weeksExpr, maxWeek = 26) {
+  const expr = String(weeksExpr || '');
+  const isOdd = expr.includes('单');
+  const isEven = expr.includes('双');
+  const parts = expr.match(/\d+(?:-\d+)?/g) || [];
+  const weeks = [];
+  if (parts.length === 0) {
+    for (let w = 1; w <= maxWeek; w += 1) weeks.push(w);
+  } else {
+    for (const p of parts) {
+      const [start, end] = p.split('-').map(Number);
+      const to = end || start;
+      for (let w = start; w <= to && w <= maxWeek; w += 1) weeks.push(w);
+    }
+  }
+  return weeks.filter(w => (!isOdd || w % 2 !== 0) && (!isEven || w % 2 !== 0));
+}

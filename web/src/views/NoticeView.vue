@@ -24,6 +24,11 @@
             正在拉取教务运行公告与校历...
           </div>
 
+          <div v-else-if="loadFailed" class="py-8 text-center text-xs text-zinc-400 space-y-2">
+            <p>本周公告加载失败，请检查网络后重试</p>
+            <UiButton variant="outline" size="sm" @click="fetchNotices">重新加载</UiButton>
+          </div>
+
           <div v-else-if="notices.length === 0" class="py-8 text-center text-xs text-zinc-400">
             本周教务在线暂无最新运行公告通知
           </div>
@@ -95,6 +100,7 @@
 import { ref, computed } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiBadge from '@/components/ui/UiBadge.vue';
+import UiButton from '@/components/ui/UiButton.vue';
 import UiModal from '@/components/ui/UiModal.vue';
 import UiSelect from '@/components/ui/UiSelect.vue';
 import Icon from '@/components/icons/Icon.vue';
@@ -106,6 +112,7 @@ const { currentWeek } = useSession();
 const { notices: cachedNotices, loadNoticesForWeek } = useAcademicData();
 
 const loading = ref(false);
+const loadFailed = ref(false);
 const weekNotices = ref([]);
 const selectedWeek = ref(0);
 const showModal = ref(false);
@@ -121,16 +128,30 @@ const weekItems = computed(() => [
   ...Array.from({ length: 26 }, (_, i) => ({ label: `第 ${i + 1} 周`, value: i + 1 }))
 ]);
 
+// 请求序号：loading 中仍可切换周次，回包只写入仍处于所请求周次的界面
+let fetchSeq = 0;
+
 async function fetchNotices() {
+  const seq = ++fetchSeq;
   if (selectedWeek.value === 0) {
     weekNotices.value = [];
+    loadFailed.value = false;
+    loading.value = false;
     return;
   }
   loading.value = true;
+  loadFailed.value = false;
+  const requestedWeek = selectedWeek.value;
   try {
-    weekNotices.value = await loadNoticesForWeek(selectedWeek.value);
+    const list = await loadNoticesForWeek(requestedWeek);
+    if (seq !== fetchSeq || selectedWeek.value !== requestedWeek) return;
+    weekNotices.value = list;
+  } catch {
+    if (seq !== fetchSeq || selectedWeek.value !== requestedWeek) return;
+    weekNotices.value = [];
+    loadFailed.value = true;
   } finally {
-    loading.value = false;
+    if (seq === fetchSeq) loading.value = false;
   }
 }
 

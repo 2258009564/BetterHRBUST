@@ -34,6 +34,7 @@ import com.glassous.betterhrbust.core.ui.components.ResponsiveStatGrid
 import com.glassous.betterhrbust.core.ui.components.StatEntry
 import com.glassous.betterhrbust.core.ui.registerInputField
 import com.glassous.betterhrbust.core.util.GpaCalculator
+import com.glassous.betterhrbust.data.repository.AccountSwitchedException
 import com.glassous.betterhrbust.data.repository.Resource
 import kotlinx.coroutines.launch
 
@@ -67,15 +68,19 @@ fun ScoresScreen(
     fun loadCache() {
         val currentPrefs = prefs ?: return
         coroutineScope.launch {
-            academicRepo.getScores(currentPrefs.studentId, cacheOnly = true).collect { res ->
-                when (res) {
-                    is Resource.Success -> {
-                        scoreResult = res.data
-                        cacheError = ""
+            try {
+                academicRepo.getScores(currentPrefs.studentId, cacheOnly = true).collect { res ->
+                    when (res) {
+                        is Resource.Success -> {
+                            scoreResult = res.data
+                            cacheError = ""
+                        }
+                        is Resource.Error -> cacheError = res.message
+                        else -> Unit
                     }
-                    is Resource.Error -> cacheError = res.message
-                    else -> Unit
                 }
+            } catch (switched: AccountSwitchedException) {
+                // 账号已切换：旧页面缓存读取作废，新页面会自行加载
             }
         }
     }
@@ -84,12 +89,15 @@ fun ScoresScreen(
     fun refreshAll() {
         coroutineScope.launch {
             isRefreshing = true
-            val outcome = syncManager.syncAll(manual = true)
-            isRefreshing = false
-            if (outcome.expired) {
-                authRepo.markSessionExpired(true)
-            } else {
-                loadCache()
+            try {
+                val outcome = syncManager.syncAll(manual = true)
+                if (outcome.expired) {
+                    authRepo.markSessionExpired(true)
+                } else {
+                    loadCache()
+                }
+            } finally {
+                isRefreshing = false
             }
         }
     }

@@ -158,156 +158,159 @@ async function syncAll({ markManual = false } = {}) {
   let expired = false;
   const failures = [];
 
-  // 先取上下文：内部学生 ID 与当前学年学期是课表请求的必要参数
   try {
-    const ctx = await academicApi.getStudentContext();
-    if (!isCurrent()) return { success: false, expired: false, message: '账号已切换，旧同步结果已丢弃' };
-    if (expectedStudentId && ctx.studentId && ctx.studentId !== expectedStudentId) {
-      // 与 checkAuth 对同一事件的处理保持一致：完整清理旧账号的数据缓存与档案 PII
-      // （clearRegisteredDataCaches 会连带调用本模块的 clearDataCache，复位 syncing）
-      clearRegisteredDataCaches();
-      resetProfile();
-      studentId.value = '';
-      markSessionExpired({ manual: markManual });
-      return { success: false, expired: true, message: '教务会话账号已变化，请重新登录' };
+    // 先取上下文：内部学生 ID 与当前学年学期是课表请求的必要参数
+    try {
+      const ctx = await academicApi.getStudentContext();
+      if (!isCurrent()) return { success: false, expired: false, message: '账号已切换，旧同步结果已丢弃' };
+      if (expectedStudentId && ctx.studentId && ctx.studentId !== expectedStudentId) {
+        // 与 checkAuth 对同一事件的处理保持一致：完整清理旧账号的数据缓存与档案 PII
+        // （clearRegisteredDataCaches 会连带调用本模块的 clearDataCache）
+        clearRegisteredDataCaches();
+        resetProfile();
+        studentId.value = '';
+        markSessionExpired({ manual: markManual });
+        return { success: false, expired: true, message: '教务会话账号已变化，请重新登录' };
+      }
+      if (ctx.studentId) studentId.value = ctx.studentId;
+      if (ctx.year) currentSemester.yearId = ctx.year;
+      if (ctx.term) currentSemester.termId = ctx.term;
+      currentCourses.value = ctx.courses || [];
+      writeJson(CACHE_KEYS.currentCourses, currentCourses.value);
+    } catch (err) {
+      if (!isCurrent()) return { success: false, expired: false, message: '账号已切换，旧同步结果已丢弃' };
+      if (isSessionExpiredError(err)) {
+        markSessionExpired({ manual: markManual });
+        return { success: false, expired: true, message: '会话已失效，请重新登录' };
+      }
+      failures.push(`上下文：${err.message}`);
     }
-    if (ctx.studentId) studentId.value = ctx.studentId;
-    if (ctx.year) currentSemester.yearId = ctx.year;
-    if (ctx.term) currentSemester.termId = ctx.term;
-    currentCourses.value = ctx.courses || [];
-    writeJson(CACHE_KEYS.currentCourses, currentCourses.value);
-  } catch (err) {
+
+    // 不使用硬编码学期兜底：上下文未取到真实学年学期时跳过课表请求，避免用错误学期覆盖本地正确缓存
+    const yearId = currentSemester.yearId;
+    const termId = currentSemester.termId;
+    const sid = studentId.value;
+    if (!yearId || !termId) {
+      failures.push('课表：未获取到当前学年学期，已跳过本次课表同步');
+    }
+
+    const run = async (label, fn, apply) => {
+      try {
+        const res = await fn();
+        if (!isCurrent()) return false;
+        apply(res);
+        return true;
+      } catch (err) {
+        if (!isCurrent()) return false;
+        if (isSessionExpiredError(err)) {
+          expired = true;
+          return false;
+        }
+        failures.push(`${label}：${err.message}`);
+        return false;
+      }
+    };
+
+    const tasks = [
+      run(
+        '成绩',
+        () => academicApi.getScores(),
+        res => {
+          scores.value = res.scores || [];
+          yearOptions.value = res.yearOptions || [];
+          writeJson(CACHE_KEYS.scores, scores.value);
+          writeJson(CACHE_KEYS.yearOptions, yearOptions.value);
+        }
+      ),
+      run(
+        '培养方案',
+        () => academicApi.getCurriculumPlan(),
+        res => {
+          plan.value = res || { groups: [] };
+          writeJson(CACHE_KEYS.plan, plan.value);
+        }
+      ),
+      run(
+        '考试',
+        () => academicApi.getExams(),
+        res => {
+          exams.value = Array.isArray(res) ? res : [];
+          writeJson(CACHE_KEYS.exams, exams.value);
+        }
+      ),
+      run(
+        '个人档案',
+        () => academicApi.getPersonalInfo(),
+        res => {
+          if (String(res.studentNumber || '').trim() !== account) throw new Error('档案账号与当前登录账号不一致，已拒绝更新');
+          Object.assign(userProfile, res);
+          userProfile.internalId = sid;
+          if (res.studentNumber) studentNumber.value = res.studentNumber;
+          writeJson('better_hrbust_cached_profile', { ...userProfile });
+        }
+      ),
+      run(
+        '公告',
+        () => academicApi.getCalendarInfo(currentWeek.value),
+        res => {
+          if (res.currentWeek) currentWeek.value = res.currentWeek;
+          if (res.semesterName) currentSemester.name = res.semesterName;
+          notices.value = res.notices || [];
+          writeJson(CACHE_KEYS.notices, notices.value);
+        }
+      )
+    ];
+
+    // 课表：大节 (COMBINE) 与小节 (BASE) 各缓存一份，供课表页切换视图时离线使用
+    if (sid && yearId && termId) {
+      tasks.push(
+        run(
+          '课表(大节)',
+          () => academicApi.getTimetable({ studentId: sid, yearId, termId, sectionType: 'COMBINE' }),
+          res => {
+            timetableCombine.value = { cells: res.cells || [], unarranged: res.unarranged || [] };
+            registerCourseColors(timetableCombine.value.cells);
+            writeJson(CACHE_KEYS.timetableCombine, timetableCombine.value);
+          }
+        )
+      );
+      tasks.push(
+        run(
+          '课表(小节)',
+          () => academicApi.getTimetable({ studentId: sid, yearId, termId, sectionType: 'BASE' }),
+          res => {
+            timetableBase.value = { cells: res.cells || [], unarranged: res.unarranged || [] };
+            registerCourseColors(timetableBase.value.cells);
+            writeJson(CACHE_KEYS.timetableBase, timetableBase.value);
+          }
+        )
+      );
+    }
+
+    await Promise.allSettled(tasks);
     if (!isCurrent()) return { success: false, expired: false, message: '账号已切换，旧同步结果已丢弃' };
-    if (isSessionExpiredError(err)) {
-      syncing.value = false;
+
+    if (expired) {
       markSessionExpired({ manual: markManual });
       return { success: false, expired: true, message: '会话已失效，请重新登录' };
     }
-    failures.push(`上下文：${err.message}`);
-  }
 
-  // 不使用硬编码学期兜底：上下文未取到真实学年学期时跳过课表请求，避免用错误学期覆盖本地正确缓存
-  const yearId = currentSemester.yearId;
-  const termId = currentSemester.termId;
-  const sid = studentId.value;
-  if (!yearId || !termId) {
-    failures.push('课表：未获取到当前学年学期，已跳过本次课表同步');
-  }
+    syncMeta.lastSyncAt = Date.now();
+    syncMeta.lastSyncDate = todayKey();
+    syncMeta.lastError = failures.join('；');
+    syncError.value = syncMeta.lastError;
+    persistMeta();
 
-  const run = async (label, fn, apply) => {
-    try {
-      const res = await fn();
-      if (!isCurrent()) return false;
-      apply(res);
-      return true;
-    } catch (err) {
-      if (!isCurrent()) return false;
-      if (isSessionExpiredError(err)) {
-        expired = true;
-        return false;
-      }
-      failures.push(`${label}：${err.message}`);
-      return false;
-    }
-  };
-
-  const tasks = [
-    run(
-      '成绩',
-      () => academicApi.getScores(),
-      res => {
-        scores.value = res.scores || [];
-        yearOptions.value = res.yearOptions || [];
-        writeJson(CACHE_KEYS.scores, scores.value);
-        writeJson(CACHE_KEYS.yearOptions, yearOptions.value);
-      }
-    ),
-    run(
-      '培养方案',
-      () => academicApi.getCurriculumPlan(),
-      res => {
-        plan.value = res || { groups: [] };
-        writeJson(CACHE_KEYS.plan, plan.value);
-      }
-    ),
-    run(
-      '考试',
-      () => academicApi.getExams(),
-      res => {
-        exams.value = Array.isArray(res) ? res : [];
-        writeJson(CACHE_KEYS.exams, exams.value);
-      }
-    ),
-    run(
-      '个人档案',
-      () => academicApi.getPersonalInfo(),
-      res => {
-        if (String(res.studentNumber || '').trim() !== account) throw new Error('档案账号与当前登录账号不一致，已拒绝更新');
-        Object.assign(userProfile, res);
-        userProfile.internalId = sid;
-        if (res.studentNumber) studentNumber.value = res.studentNumber;
-        writeJson('better_hrbust_cached_profile', { ...userProfile });
-      }
-    ),
-    run(
-      '公告',
-      () => academicApi.getCalendarInfo(currentWeek.value),
-      res => {
-        if (res.currentWeek) currentWeek.value = res.currentWeek;
-        if (res.semesterName) currentSemester.name = res.semesterName;
-        notices.value = res.notices || [];
-        writeJson(CACHE_KEYS.notices, notices.value);
-      }
-    )
-  ];
-
-  // 课表：大节 (COMBINE) 与小节 (BASE) 各缓存一份，供课表页切换视图时离线使用
-  if (sid && yearId && termId) {
-    tasks.push(
-      run(
-        '课表(大节)',
-        () => academicApi.getTimetable({ studentId: sid, yearId, termId, sectionType: 'COMBINE' }),
-        res => {
-          timetableCombine.value = { cells: res.cells || [], unarranged: res.unarranged || [] };
-          registerCourseColors(timetableCombine.value.cells);
-          writeJson(CACHE_KEYS.timetableCombine, timetableCombine.value);
-        }
-      )
-    );
-    tasks.push(
-      run(
-        '课表(小节)',
-        () => academicApi.getTimetable({ studentId: sid, yearId, termId, sectionType: 'BASE' }),
-        res => {
-          timetableBase.value = { cells: res.cells || [], unarranged: res.unarranged || [] };
-          registerCourseColors(timetableBase.value.cells);
-          writeJson(CACHE_KEYS.timetableBase, timetableBase.value);
-        }
-      )
-    );
-  }
-
-  await Promise.allSettled(tasks);
-  if (!isCurrent()) return { success: false, expired: false, message: '账号已切换，旧同步结果已丢弃' };
-
-  if (expired) {
+    return {
+      success: failures.length === 0,
+      expired: false,
+      message: failures.length === 0 ? '数据已全部同步' : `部分数据同步失败：${failures.join('；')}`
+    };
+  } finally {
+    // 三条 isCurrent() 早退路径与会话失效路径统一在此复位：
+    // 否则并发会话失效后 syncing 永久为 true，刷新按钮永久禁用
     syncing.value = false;
-    markSessionExpired({ manual: markManual });
-    return { success: false, expired: true, message: '会话已失效，请重新登录' };
   }
-
-  syncMeta.lastSyncAt = Date.now();
-  syncMeta.lastSyncDate = todayKey();
-  syncMeta.lastError = failures.join('；');
-  syncError.value = syncMeta.lastError;
-  persistMeta();
-
-  syncing.value = false;
-  return {
-    success: failures.length === 0,
-    expired: false,
-    message: failures.length === 0 ? '数据已全部同步' : `部分数据同步失败：${failures.join('；')}`
-  };
 }
 
 /**
@@ -331,7 +334,9 @@ async function refreshAll() {
 }
 
 /**
- * 读取指定周次的公告（优先本地缓存，命中失败时按需拉取一次）
+ * 读取指定周次的公告（优先本地缓存，未命中时按需拉取一次）
+ * @throws 网络失败时抛出原始错误，调用方据此区分「本周无公告」与「加载失败」；
+ *         会话失效错误在抛出前已触发 markSessionExpired
  */
 async function loadNoticesForWeek(week) {
   const generation = cacheGeneration;
@@ -353,7 +358,7 @@ async function loadNoticesForWeek(week) {
     if (isSessionExpiredError(err)) {
       useSession().markSessionExpired({ manual: false });
     }
-    return [];
+    throw err;
   }
 }
 
