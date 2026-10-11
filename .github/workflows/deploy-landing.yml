@@ -3,10 +3,11 @@ name: Deploy Landing
 # 推送 landing/ 相关改动到 main 时自动构建介绍页并部署到 1Panel 服务器。
 # 构建全程在 GitHub 云端运行器完成（不在服务器上 build），产物经 rsync --delete
 # 同步到 /opt/1panel/www/sites/betterhrbust/index/dist（全量清理,避免旧哈希产物堆积）。
-# 依赖 Secrets:SERVER_HOST / SERVER_USER / SERVER_SSH_KEY / SERVER_KNOWN_HOSTS,
-# 可选 SERVER_PORT(默认 22)。SERVER_KNOWN_HOSTS 为主机公钥（本机执行
-# `ssh-keyscan -p 端口 -H 主机` 的输出）,用于替代部署时现场抓取——防止
-# 攻击者占据部署时刻的网络位置（DNS 劫持等）冒充分发端点（TOFU）。
+# 依赖 Secrets:SERVER_HOST / SERVER_USER / SERVER_SSH_KEY,可选 SERVER_PORT(默认 22)。
+#
+# ⚠️ 已知风险（审计 M-12，暂保留现状）：known_hosts 由部署时现场 ssh-keyscan 获取
+# （TOFU）。彻底修复需上游仓库配置 SERVER_KNOWN_HOSTS Secret（ssh-keyscan -p 端口
+# -H 主机 的输出）并改用预置内容——本仓库无 Secrets 配置权限，待向上游提 PR 时注明。
 on:
   push:
     branches: [main]
@@ -49,22 +50,23 @@ jobs:
           npm run test:build
 
       # 私钥仅通过 env 注入并落盘到 ~/.ssh,避免出现在命令行回显与日志中。
-      # 主机公钥来自 SERVER_KNOWN_HOSTS Secret(ssh-keyscan -p 端口 -H 主机 的输出),
-      # 不在部署时现场抓取——StrictHostKeyChecking 校验的必须是事先信任的密钥。
+      # 主机密钥仍为部署时现场抓取（TOFU,见文件头注释;彻底修复需上游配置
+      # SERVER_KNOWN_HOSTS Secret 后改为预置内容）。
       - name: Setup SSH
         env:
           SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
-          SERVER_KNOWN_HOSTS: ${{ secrets.SERVER_KNOWN_HOSTS }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          if [ -z "${SERVER_KNOWN_HOSTS// /}" ]; then
-            echo "::error::缺少 SERVER_KNOWN_HOSTS Secret。请在配置了服务器网络的机器上执行 ssh-keyscan -p 端口 -H 主机,把输出存为该 Secret 后重试。"
+          ssh-keyscan -p "$SERVER_PORT" -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error::ssh-keyscan 未能获取 $SERVER_HOST:$SERVER_PORT 的主机密钥,请检查 SERVER_HOST/SERVER_PORT 是否正确"
             exit 1
           fi
-          printf '%s\n' "$SERVER_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
       - name: Prepare remote directory
