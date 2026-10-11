@@ -44,8 +44,10 @@ console.log(`便携版已生成: ${zip}`);
 
 // 2) 安装版：NSIS 产物统一改名（产物名由 tauri 决定，这里只做改名，便于直接上传 Release）
 const nsisDir = path.join(root, 'src-tauri', 'target', 'release', 'bundle', 'nsis');
+// 必须按当前版本精确匹配：bundle 目录里可能残留历史版本的 setup.exe，
+// endsWith('-setup.exe') 这类宽松匹配会把旧版本安装包误当本次产物复制走
 const installer = existsSync(nsisDir)
-  ? readdirSync(nsisDir).find((name) => name.endsWith('-setup.exe'))
+  ? readdirSync(nsisDir).find((name) => name === `BetterHRBUST_${version}_x64-setup.exe`)
   : undefined;
 
 if (installer) {
