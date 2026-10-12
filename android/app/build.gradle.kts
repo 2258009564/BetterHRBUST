@@ -5,6 +5,12 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// ---------- 版本信息（唯一来源） ----------
+// 升级版本号 / 版本名只需改这两行：versionName 同时用于 defaultConfig 与 APK 产物命名
+// （BetterHRBUST-x.y.z-android.apk），避免两者各写一份导致不一致。
+val appVersionCode = 3
+val appVersionName = "1.1.1"
+
 // ---------- 正式签名配置 ----------
 // CI 通过 GitHub Secrets 注入环境变量（见 .github/workflows/android.yml）；
 // 本地可写入 ~/.gradle/gradle.properties（androidKeystorePath / androidKeystorePassword /
@@ -37,18 +43,25 @@ android {
         applicationId = "com.glassous.betterhrbust"
         minSdk = 30
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         debug {
-            // 本地真机验证使用独立包名，保留维护者签名的正式版；默认 CI Debug 不变。
+            // Debug 与 Release 完全分离：独立包名后缀，可与正式版在同一台设备共存，
+            // 互不覆盖（正式版覆盖升级仍依赖同一份正式签名）。
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            // 调试包不参与资源压缩，保留完整符号便于排查问题。
+            isMinifyEnabled = false
+            isShrinkResources = false
+            // 本地真机验证小部件时再加一层包名后缀，保留维护者签名的正式版；默认 CI Debug 不变。
             if (providers.gradleProperty("localWidgetPreview").orNull == "true") {
-                applicationIdSuffix = ".widgetpreview"
-                versionNameSuffix = "-widget-preview"
+                applicationIdSuffix = ".debug.widgetpreview"
+                versionNameSuffix = "-debug-widget-preview"
             }
         }
         release {
@@ -81,6 +94,25 @@ android {
 
     buildFeatures {
         compose = true
+    }
+}
+
+// ---------- APK 产物命名 ----------
+// Debug 与 Release 分目录、分名字输出，便于区分与分发：
+//   release       → BetterHRBUST-<version>-android.apk（未配置正式密钥时同上，但为未签名包）
+//   debug         → BetterHRBUST-<version>-android-debug.apk
+//   widgetPreview → BetterHRBUST-<version>-android-widget-preview.apk
+// 版本号取自上方 appVersionName，与 versionName 保持一致。
+androidComponents {
+    onVariants { variant ->
+        val suffix = when (variant.name) {
+            "release" -> "-android"
+            "debug" -> "-android-debug"
+            else -> "-android-${variant.name}"
+        }
+        variant.outputs.forEach { output ->
+            output.outputFileName.set("BetterHRBUST-$appVersionName$suffix.apk")
+        }
     }
 }
 

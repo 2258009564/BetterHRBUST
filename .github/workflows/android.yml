@@ -54,19 +54,30 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease --stacktrace
+      # 产物命名见 android/app/build.gradle.kts 的 androidComponents 块：
+      #   release → BetterHRBUST-<version>-android.apk / debug → BetterHRBUST-<version>-android-debug.apk
       - name: 校验 Release 包签名
         if: env.ANDROID_KEYSTORE_BASE64 != ''
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         shell: bash
         run: |
-          APK=android/app/build/outputs/apk/release/app-release.apk
-          if [ ! -f "$APK" ]; then
-            echo "::error::未找到已签名的 Release 包 $APK，请检查 signingConfig 是否生效。"
+          APK=$(ls android/app/build/outputs/apk/release/*.apk 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then
+            echo "::error::未找到 Release 包（预期 android/app/build/outputs/apk/release/BetterHRBUST-*-android.apk），请检查构建与 naming 配置。"
             exit 1
           fi
           APKSIGNER=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/*/apksigner | tail -1)
           "$APKSIGNER" verify --print-certs "$APK"
+      - name: 核对 APK 产物命名
+        shell: bash
+        run: |
+          RELEASE=$(ls android/app/build/outputs/apk/release/*.apk 2>/dev/null | head -1)
+          DEBUG=$(ls android/app/build/outputs/apk/debug/*.apk 2>/dev/null | head -1)
+          echo "release: ${RELEASE:-<缺失>}"
+          echo "debug: ${DEBUG:-<缺失>}"
+          [[ "$RELEASE" == *"BetterHRBUST-"*"-android.apk" ]] || { echo "::error::Release 产物命名不符合 BetterHRBUST-<version>-android.apk：$RELEASE"; exit 1; }
+          [[ "$DEBUG" == *"BetterHRBUST-"*"-android-debug.apk" ]] || { echo "::error::Debug 产物命名不符合 BetterHRBUST-<version>-android-debug.apk：$DEBUG"; exit 1; }
       - name: 保存验证报告与构建产物
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

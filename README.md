@@ -107,7 +107,7 @@ npm run build
 
 在「更多」页进入「教学评价助手」或「资料查找」。Android 网络层保留 HTTP，限制同源跳转，禁止自动重放表单 POST；教学评价采用 GBK 编码并刷新每门课程的隐藏令牌。
 
-`.github/workflows/android.yml` 在 PR 与代码推送时运行单元测试、Lint、Debug 与 Release 构建，保存 APK 和报告。配置好签名密钥后，CI 会用与本地发布**同一份正式密钥**自动签名 Release 包并校验签名，保证后续版本在同一台设备上可直接覆盖安装。Debug APK 只用于测试，不能用调试签名替代正式升级签名。
+`.github/workflows/android.yml` 在 PR 与代码推送时运行单元测试、Lint、Debug 与 Release 构建，校验产物命名后保存 APK 和报告。配置好签名密钥后，CI 会用与本地发布**同一份正式密钥**自动签名 Release 包并校验签名，保证后续版本在同一台设备上可直接覆盖安装。Debug APK 只用于测试，不能用调试签名替代正式升级签名。
 
 Kotlin + Jetpack Compose 编写的原生 Android 客户端，与 Web 端共用同一套业务口径（接口路径、HTML 解析规则、五分制绩点与特色算法、缓存与刷新策略）。
 
@@ -116,8 +116,11 @@ Kotlin + Jetpack Compose 编写的原生 Android 客户端，与 Web 端共用�
 ```bash
 cd android
 
-# 构建 Debug 安装包（产物：app/build/outputs/apk/debug/app-debug.apk）
+# 构建 Debug 安装包（产物：app/build/outputs/apk/debug/BetterHRBUST-1.1.1-android-debug.apk）
 ./gradlew :app:assembleDebug
+
+# 构建正式安装包（产物：app/build/outputs/apk/release/BetterHRBUST-1.1.1-android.apk）
+./gradlew :app:assembleRelease
 
 # 运行单元测试（JVM）
 ./gradlew :app:testDebugUnitTest
@@ -130,8 +133,10 @@ cd android
 .\gradlew.bat :app:assembleDebug
 ```
 
-构建完成后用 `adb install -r app\build\outputs\apk\debug\app-debug.apk` 安装到设备，或直接在 Android Studio 中运行。
-开启 R8 压缩后 Release 包体量约 **3.8 MB**（已签名 `app-release.apk`；未提供密钥时为 `app-release-unsigned.apk`），Debug 包约 66 MB（含调试符号与未压缩资源）。
+Debug 与 Release 完全分离：Debug 包带有 `applicationIdSuffix ".debug"`（安装后包名为 `com.glassous.betterhrbust.debug`），可与正式版在同一台设备共存、互不覆盖，版本号显示为 `1.1.1-debug`；正式版覆盖升级仍只依赖同一份正式签名。
+
+构建完成后用 `adb install -r app\build\outputs\apk\debug\BetterHRBUST-1.1.1-android-debug.apk` 安装到设备，或直接在 Android Studio 中运行。
+开启 R8 压缩后 Release 包体量约 **3.8 MB**（产物 `BetterHRBUST-<version>-android.apk`；未提供密钥时为未签名包，文件名不变），Debug 包约 66 MB（含调试符号与未压缩资源）。
 
 > [!NOTE]
 > Release 构建（`./gradlew :app:assembleRelease`）已启用 R8 代码压缩与资源压缩（规则见 `app/src/main/keepRules/`）。
@@ -164,11 +169,11 @@ androidKeyAlias=xxxx
 androidKeyPassword=xxxx
 ```
 
-发布前可用 `apksigner verify --print-certs app-release.apk` 核对新旧安装包的签名证书指纹是否一致。
+发布前可用 `apksigner verify --print-certs BetterHRBUST-<版本>-android.apk` 核对新旧安装包的签名证书指纹是否一致。
 
 > [!IMPORTANT]
-> **安装包命名格式**：发布到 GitHub Release 时统一命名为 `BetterHRBUST-<版本>-android.apk`
-> （如 `BetterHRBUST-1.0.0-android.apk`，构建产物 `app-release.apk` 重命名即可），
+> **安装包命名格式**：`./gradlew :app:assembleRelease` 直接产出 `BetterHRBUST-<版本>-android.apk`
+> （如 `BetterHRBUST-1.1.1-android.apk`，命名规则见 `app/build.gradle.kts` 的 `androidComponents` 块，版本号取自同一处的 `appVersionName`，无需手动重命名），
 > 与桌面端安装版 `BetterHRBUST-<版本>-windows-setup.exe`、便携版 `BetterHRBUST-<版本>-windows-portable.zip`
 > 保持同一命名格式，便于用户识别与 README 快捷下载链接对齐。
 > 详见「[发布 Release 与更新检测](#5-发布-release-与更新检测)」。
@@ -243,7 +248,7 @@ npm run dist    # 构建 web + 打包 + 统一命名，产物见 desktop-tauri/r
 | 端 | 更新检测入口 | 当前版本来源 |
 | --- | --- | --- |
 | Windows 桌面端 | 设置页最底部「版本更新」卡片（**仅 Tauri 端渲染**，网页 / 油猴不显示） | `tauri.conf.json` 的 `version`（运行时经 `getVersion()` 读取） |
-| Android | 「更多」页最底部「关于与更新」 | `app/build.gradle.kts` 的 `versionName` |
+| Android | 「更多」页最底部「关于与更新」 | `app/build.gradle.kts` 的 `appVersionName`（即 `versionName`） |
 | Web / 油猴 | 不显示更新模块（油猴凭 `@updateURL` 自动更新） | — |
 
 **Release 产物命名**（统一格式 `BetterHRBUST-<version>-<平台>[-<形态>].<扩展名>`）：
@@ -252,11 +257,11 @@ npm run dist    # 构建 web + 打包 + 统一命名，产物见 desktop-tauri/r
 | --- | --- | --- |
 | Windows 安装版 | `BetterHRBUST-<version>-windows-setup.exe` | CI / `npm run dist` 自动统一命名 |
 | Windows 便携版 | `BetterHRBUST-<version>-windows-portable.zip` | 同上（单文件 exe 压缩，解压即用） |
-| Android | `BetterHRBUST-<version>-android.apk` | `./gradlew :app:assembleRelease` 后重命名 |
+| Android | `BetterHRBUST-<version>-android.apk` | `./gradlew :app:assembleRelease`（构建脚本自动命名，见 `app/build.gradle.kts`） |
 
 **发布流程**：
 
-1. 桌面端产物从 Actions 的 `betterhrbust-desktop-windows` 下载（已统一命名）；Android 从 Actions 的 `BetterHRBUST-Android` 下载 CI 已签名的 `app-release.apk` 后重命名；
+1. 桌面端产物从 Actions 的 `betterhrbust-desktop-windows` 下载（已统一命名）；Android 从 Actions 的 `BetterHRBUST-Android` 下载 CI 已签名、已按 `BetterHRBUST-<version>-android.apk` 命名的 APK；
 2. 打 tag `v<version>`（如 `v1.0.0`）并创建 Release，标题建议 `BetterHRBUST v<version>`，正文填写更新日志；
 3. 上传上述三个产物；
 4. 把 README 顶部「快捷下载」徽章链接中的版本号同步替换为新版本。
