@@ -122,11 +122,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Icon from '@/components/icons/Icon.vue';
 import logoUrl from '@/assets/BetterHRBUST.png';
-import { isDesktopApp, isUserscript } from '@/utils/platform.js';
+import { isUserscript } from '@/utils/platform.js';
 import { useSession } from '@/composables/useSession.js';
 
-// 意见反馈走独立服务端接口，仅浏览器 Web 环境具备完整链路
-const feedbackAvailable = !isDesktopApp && !isUserscript;
+// 意见反馈走独立服务端接口：Web 同源反代、桌面端直连公共服务端（见 services/feedback.js），油猴端无服务链路不提供入口
+const feedbackAvailable = !isUserscript;
 
 const { isLoggedIn, userProfile, studentNumber, openLoginModal } = useSession();
 
@@ -194,7 +194,7 @@ const navGroups = [
     items: [
       { id: 'profile', label: '学籍档案与隐私', icon: 'profile' },
       { id: 'notice', label: '教学公告与校历', icon: 'notice' },
-      // 意见反馈依赖服务端接口，仅在 Web 环境提供入口（桌面端与油猴端不接入）
+      // 意见反馈依赖服务端接口，油猴端不接入
       ...(feedbackAvailable ? [{ id: 'feedback', label: '意见反馈', icon: 'message' }] : []),
       { id: 'settings', label: '设置与系统状态', icon: 'settings' }
     ]

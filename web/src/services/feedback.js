@@ -4,12 +4,22 @@
  * 隐私约定：请求体只包含反馈正文、可选联系方式、可选姓名文本与匿名标记，
  * 不携带学号、教务内部 ID、Cookie 或任何其他身份信息。
  *
- * 基址来自构建期注入的 VITE_API_BASE：
- *  - Web：默认 `/api`，开发由 Vite 代理、生产由 nginx 反代到 Go 服务；
- *  - 桌面端 / 油猴端不提供本功能入口（见 utils/platform.js 判定）。
+ * 基址解析：
+ *  - 桌面端生产包：直连公共服务端（与 Android 端 FeedbackRepository.BASE_URL
+ *    指向同一 Go 服务），webview 无同源 /api 反代可用；
+ *  - 其余环境：取构建期注入的 VITE_API_BASE，默认 `/api`，
+ *    Web 开发由 Vite 代理、生产由 nginx 反代，桌面端开发态同走 Vite 代理；
+ *  - 油猴端不提供本功能入口（见 utils/platform.js 判定）。
  */
+import { isDesktopApp } from '@/utils/platform.js';
 
-const API_BASE = (import.meta.env?.VITE_API_BASE || '/api').replace(/\/+$/, '');
+const DESKTOP_API_ORIGIN = 'https://bthadmin.vodyanitsa.top';
+
+const API_BASE = (
+  isDesktopApp && !import.meta.env?.DEV
+    ? `${DESKTOP_API_ORIGIN}/api`
+    : import.meta.env?.VITE_API_BASE || '/api'
+).replace(/\/+$/, '');
 
 /** 反馈正文与附属字段的长度限制，与服务端校验保持一致 */
 export const FEEDBACK_LIMITS = {
