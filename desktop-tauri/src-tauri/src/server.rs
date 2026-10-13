@@ -299,6 +299,21 @@ fn browser_origin_allowed(headers: &HeaderMap, port: u16) -> bool {
     }
 }
 
+/// HTML 文档响应的 CSP（纵深防御：静态资源全部同源、无内联脚本，
+/// 恶意注入的跨源脚本 / 内联脚本将被拒绝执行）。
+///
+/// connect-src 额外放行的来源都是前端直连、不经过本地反代的目标：
+///  - `https://api.github.com`：桌面端更新检查（web/src/services/update.js）；
+///  - `https://bthadmin.vodyanitsa.top`：意见反馈提交（web/src/services/feedback.js，
+///    与 Android FeedbackRepository.BASE_URL 同一地址）。
+///
+/// 生产页面由本服务响应头管控，tauri.conf.json 的 `app.security.csp` 只作用于
+/// dev 与 `tauri://` 协议资源，两处必须同步修改（有测试盯着）。
+const HTML_CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
+     img-src 'self' data: blob:; font-src 'self' data:; \
+     connect-src 'self' https://api.github.com https://bthadmin.vodyanitsa.top; \
+     object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
+
 /// 静态托管：MIME、缓存策略、SPA 回退、路径穿越防护
 fn static_response(req: &Request<Incoming>) -> Response<AppBody> {
     if !matches!(*req.method(), Method::GET | Method::HEAD) {
@@ -341,16 +356,7 @@ fn asset_response(name: &str, asset: &rust_embed::EmbeddedFile, head_only: bool)
         .header(header::CONTENT_LENGTH, asset.data.len())
         .header("x-content-type-options", "nosniff");
     if mime.type_() == mime_guess::mime::TEXT && mime.subtype() == mime_guess::mime::HTML {
-        // 文档响应补 CSP（纵深防御：静态资源全部同源、无内联脚本，
-        // 恶意注入的跨源脚本 / 内联脚本将被拒绝执行）。
-        // connect-src 额外放行 GitHub API：桌面端更新检查直连
-        // api.github.com（见 web/src/services/update.js），不经过本地反代
-        builder = builder.header(
-            header::CONTENT_SECURITY_POLICY,
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
-             img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.github.com; \
-             object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
-        );
+        builder = builder.header(header::CONTENT_SECURITY_POLICY, HTML_CSP);
     }
     if name == "index.html" {
         // 入口不缓存，保证发版即生效
@@ -414,6 +420,33 @@ mod tests {
             let mut headers = HeaderMap::new();
             headers.insert("sec-fetch-site", HeaderValue::from_static(site));
             assert_eq!(browser_origin_allowed(&headers, 1950), allowed, "site={site}");
+        }
+    }
+
+    /// 直连来源只允许出现在 connect-src：漏放会让更新检查 / 意见反馈被 CSP 静默拦截，
+    /// 放错指令（如 default-src）则会顺带放宽其他资源类型。
+    #[test]
+    fn html_csp_only_whitelists_direct_origins_in_connect_src() {
+        let connect_src = HTML_CSP
+            .split(';')
+            .map(str::trim)
+            .find(|directive| directive.starts_with("connect-src"))
+            .expect("CSP 必须声明 connect-src");
+
+        for origin in ["https://api.github.com", "https://bthadmin.vodyanitsa.top"] {
+            assert!(connect_src.contains(origin), "connect-src 未放行直连来源 {origin}");
+            let occurrences = HTML_CSP.matches(origin).count();
+            assert_eq!(occurrences, 1, "{origin} 应只在 connect-src 中出现一次");
+        }
+    }
+
+    /// tauri.conf.json 的 CSP 作用于 dev 与 tauri:// 协议资源，
+    /// 与生产页面实际生效的 HTML_CSP 必须保持同一份直连来源清单。
+    #[test]
+    fn tauri_config_csp_keeps_same_direct_origins() {
+        let config = include_str!("../tauri.conf.json");
+        for origin in ["https://api.github.com", "https://bthadmin.vodyanitsa.top"] {
+            assert!(config.contains(origin), "tauri.conf.json 的 CSP 未放行 {origin}");
         }
     }
 }
