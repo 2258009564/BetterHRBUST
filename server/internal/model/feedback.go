@@ -28,4 +28,23 @@ type Feedback struct {
 	IsRead    bool       `bson:"isRead" json:"isRead"`
 	ReadAt    *time.Time `bson:"readAt,omitempty" json:"readAt,omitempty"`
 	CreatedAt time.Time  `bson:"createdAt" json:"createdAt"`
+
+	// Replies 管理端已发送的邮件回复记录（仅存管理员昵称，不涉及学生信息）。
+	// 列表接口会通过投影排除该字段，仅在详情中返回。
+	Replies []FeedbackReply `bson:"replies,omitempty" json:"replies,omitempty"`
+
+	// Email 只读计算字段：从 Contact 文本中提取出的邮箱地址，不落库。
+	// 由 service 在返回前填充，前端据此决定是否展示「回复邮件」区域。
+	Email string `bson:"-" json:"email,omitempty"`
+}
+
+// FeedbackReply 一条已成功发送的邮件回复记录。
+type FeedbackReply struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Subject   string             `bson:"subject" json:"subject"`
+	Body      string             `bson:"body" json:"body"`
+	To        string             `bson:"to" json:"to"`
+	AdminID   string             `bson:"adminId,omitempty" json:"adminId,omitempty"`
+	AdminName string             `bson:"adminName" json:"adminName"`
+	SentAt    time.Time          `bson:"sentAt" json:"sentAt"`
 }

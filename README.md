@@ -255,6 +255,7 @@ docker run -d --name bh-redis -p 6379:6379 redis:7-alpine
 # ② 启动服务端（默认 http://127.0.0.1:9191）
 cd server
 cp .env.example .env      # 按需修改，生产环境务必替换 JWT_SECRET
+                          # 该文件是服务端配置的唯一来源，容器部署也复用它
 go test ./...             # 单元测试
 go run ./cmd/server
 
@@ -271,11 +272,17 @@ cd ../admin && npm install && npm run dev      # http://localhost:5174
 **容器化部署（web + server + MongoDB + Redis，不含管理端）**：
 
 ```bash
-cp .env.example .env      # 必须替换 JWT_SECRET
+cp server/.env.example server/.env   # 必须替换 JWT_SECRET；容器直接复用这份服务端配置
+cp .env.example .env                 # 可选：仅用于调整对外映射端口（默认 9191 / 8080）
 docker compose up -d --build
 docker compose exec server seed-admin -username admin -nickname 超级管理员
 # Web: http://localhost:8080   |   接口: http://localhost:9191/api/healthz
 ```
+
+> 服务端配置只维护 `server/.env` 一处：本地开发由 `config.Load()` 直接读取，
+> 容器内由 `docker-compose.yml` 的 `env_file` 注入。仅 `MONGO_URI`、`REDIS_ADDR`、
+> `PORT`、`TRUSTED_PROXIES` 会在容器内被 compose 覆盖为容器内网取值；
+> `JWT_SECRET`、SMTP 等其余配置对本地与容器完全一致，不再需要两处同步。
 
 管理端可构建为静态产物后由任意静态服务器托管，并把 `/api` 反向代理到服务端
 （或在 `admin/.env.local` 中设置 `VITE_API_BASE` 指向服务端地址）：

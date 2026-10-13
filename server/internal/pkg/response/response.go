@@ -16,6 +16,11 @@ const (
 	CodeUsernameTaken    = 1006
 	CodePasswordTooWeak  = 1007
 	CodePasswordMismatch = 1008
+	// 邮件回复相关：未配置 SMTP / 无法投递 / 缺少收件邮箱 / 收件邮箱格式错误。
+	CodeMailNotConfigured  = 1009
+	CodeMailSendFailed     = 1010
+	CodeNoReplyTarget      = 1011
+	CodeInvalidReplyTarget = 1012
 
 	CodeUnauthorized        = 2001
 	CodeForbidden           = 2002

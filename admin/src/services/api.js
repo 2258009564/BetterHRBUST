@@ -10,6 +10,10 @@ const API_BASE = (import.meta.env?.VITE_API_BASE || '/api').replace(/\/+$/, '');
 export const ErrorCode = {
   OK: 0,
   RATE_LIMITED: 1002,
+  MAIL_NOT_CONFIGURED: 1009,
+  MAIL_SEND_FAILED: 1010,
+  NO_REPLY_TARGET: 1011,
+  INVALID_REPLY_TARGET: 1012,
   UNAUTHORIZED: 2001,
   FORBIDDEN: 2002,
   PASSWORD_CHANGE_REQUIRED: 2003,
@@ -95,6 +99,11 @@ export const adminApi = {
   setFeedbackRead: (id, isRead) =>
     request(`/admin/feedback/${encodeURIComponent(id)}/read`, { method: 'PATCH', body: { isRead } }),
   deleteFeedback: id => request(`/admin/feedback/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // 快捷回复文案与发信能力状态
+  listReplyTemplates: () => request('/admin/reply-templates'),
+  replyFeedback: (id, payload) =>
+    request(`/admin/feedback/${encodeURIComponent(id)}/reply`, { method: 'POST', body: payload }),
 
   listUsers: () => request('/admin/users'),
   createUser: payload => request('/admin/users', { method: 'POST', body: payload }),

@@ -81,10 +81,12 @@ func (r *FeedbackRepository) List(ctx context.Context, filter FeedbackFilter) ([
 		return nil, 0, err
 	}
 
+	// 列表只用于预览，投影排除回复记录，避免历史回复累积后响应体膨胀。
 	opts := options.Find().
 		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
 		SetLimit(filter.Limit).
-		SetSkip(filter.Offset)
+		SetSkip(filter.Offset).
+		SetProjection(bson.M{"replies": 0})
 
 	cursor, err := r.collection.Find(ctx, query, opts)
 	if err != nil {
@@ -156,4 +158,28 @@ func (r *FeedbackRepository) Delete(ctx context.Context, id string) error {
 // UnreadCount 未读数量，用于管理端角标。
 func (r *FeedbackRepository) UnreadCount(ctx context.Context) (int64, error) {
 	return r.collection.CountDocuments(ctx, bson.M{"isRead": false})
+}
+
+// AppendReply 把一条已发送成功的回复追加到反馈文档，返回补齐了 ID 与发送时间的记录。
+// 仅追加、不覆盖，多条回复按发送先后顺序保存。
+func (r *FeedbackRepository) AppendReply(ctx context.Context, id string, reply model.FeedbackReply) (model.FeedbackReply, error) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return model.FeedbackReply{}, ErrNotFound
+	}
+	if reply.ID.IsZero() {
+		reply.ID = primitive.NewObjectID()
+	}
+	if reply.SentAt.IsZero() {
+		reply.SentAt = time.Now().UTC()
+	}
+
+	result, err := r.collection.UpdateOne(ctx, bson.M{"_id": oid}, bson.M{"$push": bson.M{"replies": reply}})
+	if err != nil {
+		return model.FeedbackReply{}, err
+	}
+	if result.MatchedCount == 0 {
+		return model.FeedbackReply{}, ErrNotFound
+	}
+	return reply, nil
 }

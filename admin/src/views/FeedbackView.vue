@@ -163,6 +163,22 @@
               {{ selected.content }}
             </p>
 
+            <!-- 回复区常驻：识别到邮箱会自动填入收件人，未识别到也可手动填写 -->
+            <FeedbackReplyPanel
+              :key="selected.id"
+              :feedback="selected"
+              :templates="replyTemplates"
+              :mail-enabled="mailEnabled"
+              :sender-prefix="senderPrefix"
+              @sent="handleReplySent"
+            />
+
+            <FeedbackReplyHistory
+              v-if="selected.replies?.length"
+              :feedback-id="selected.id"
+              :replies="selected.replies"
+            />
+
             <div class="rounded-xl border border-zinc-200/80 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800/80">
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
                 <span class="text-[11px] text-zinc-400">提交时间</span>
@@ -178,6 +194,10 @@
                 <span class="text-[11px] text-zinc-400">联系方式</span>
                 <span class="sm:col-span-2 text-xs text-zinc-700 dark:text-zinc-300 break-all">
                   {{ selected.contact || '未填写' }}
+                  <span v-if="selected.email" class="mt-1 flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                    <Icon name="check-circle" customClass="w-3 h-3 shrink-0" />
+                    已识别邮箱 {{ selected.email }}，已自动填入回复区
+                  </span>
                 </span>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
@@ -223,6 +243,8 @@ import UiButton from '@/components/ui/UiButton.vue';
 import UiInput from '@/components/ui/UiInput.vue';
 import UiTabs from '@/components/ui/UiTabs.vue';
 import UiModal from '@/components/ui/UiModal.vue';
+import FeedbackReplyPanel from '@/components/feedback/FeedbackReplyPanel.vue';
+import FeedbackReplyHistory from '@/components/feedback/FeedbackReplyHistory.vue';
 import Icon from '@/components/icons/Icon.vue';
 import { adminApi } from '@/services/api.js';
 import { useAuth } from '@/composables/useAuth.js';
@@ -245,6 +267,10 @@ const actionLoading = ref(false);
 const selected = ref(null);
 const mobileDetail = ref(false);
 const showDeleteModal = ref(false);
+// 快捷回复文案、发信能力与发件人前缀（均由服务端下发，避免前端写死配置）
+const replyTemplates = ref([]);
+const mailEnabled = ref(false);
+const senderPrefix = ref('');
 
 let searchTimer;
 
@@ -270,7 +296,8 @@ async function load() {
     setUnreadCount(unread.value);
     if (selected.value) {
       const fresh = items.value.find(item => item.id === selected.value.id);
-      if (fresh) selected.value = fresh;
+      // 列表不含回复历史（服务端已投影排除），因此合并更新而非整体替换
+      if (fresh) selected.value = { ...selected.value, ...fresh };
     }
   } catch (error) {
     showToast({ title: '加载失败', message: error?.message || '请稍后重试', type: 'danger' });
@@ -298,6 +325,37 @@ function handleStateChange(value) {
 function openItem(item) {
   selected.value = item;
   mobileDetail.value = true;
+  loadDetail(item.id);
+}
+
+/** 详情接口才会返回回复历史，列表点击后按需拉取一次 */
+async function loadDetail(id) {
+  try {
+    const data = await adminApi.getFeedback(id);
+    if (data?.item && selected.value?.id === id) selected.value = { ...selected.value, ...data.item };
+  } catch (error) {
+    console.error('[feedback] 加载反馈详情失败', error);
+  }
+}
+
+/** 拉取快捷回复文案与发信能力，失败不阻塞反馈列表使用 */
+async function loadReplyConfig() {
+  try {
+    const data = await adminApi.listReplyTemplates();
+    replyTemplates.value = data?.templates || [];
+    mailEnabled.value = !!data?.mailEnabled;
+    senderPrefix.value = data?.fromName || '';
+  } catch (error) {
+    console.error('[feedback] 加载快捷回复文案失败', error);
+  }
+}
+
+/** 回复成功后同步详情，使回复历史立即出现 */
+function handleReplySent(updated) {
+  if (!updated) return;
+  selected.value = { ...selected.value, ...updated };
+  const target = items.value.find(item => item.id === updated.id);
+  if (target) target.isRead = updated.isRead;
 }
 
 async function toggleRead(isRead) {
@@ -339,6 +397,9 @@ watch(keyword, () => {
   searchTimer = window.setTimeout(reload, 350);
 });
 
-onMounted(load);
+onMounted(() => {
+  load();
+  loadReplyConfig();
+});
 onUnmounted(() => window.clearTimeout(searchTimer));
 </script>

@@ -16,6 +16,7 @@ import (
 	"github.com/Glassous/BetterHRBUST/server/internal/config"
 	"github.com/Glassous/BetterHRBUST/server/internal/database"
 	"github.com/Glassous/BetterHRBUST/server/internal/middleware"
+	"github.com/Glassous/BetterHRBUST/server/internal/pkg/mailer"
 	"github.com/Glassous/BetterHRBUST/server/internal/repository"
 	"github.com/Glassous/BetterHRBUST/server/internal/router"
 	"github.com/Glassous/BetterHRBUST/server/internal/service"
@@ -60,7 +61,18 @@ func main() {
 	feedbackRepo := repository.NewFeedbackRepository(db)
 	adminRepo := repository.NewAdminRepository(db)
 
-	feedbackService := service.NewFeedbackService(feedbackRepo)
+	// SMTP 未配置时返回 nil，管理端「回复邮件」自动降级为不可用
+	mailClient := mailer.New(mailer.Config{
+		Host:     cfg.SMTPHost,
+		Port:     cfg.SMTPPort,
+		Username: cfg.SMTPUsername,
+		Password: cfg.SMTPPassword,
+		From:     cfg.SMTPFrom,
+		FromName: cfg.SMTPFromName,
+		UseTLS:   cfg.SMTPUseTLS,
+	})
+
+	feedbackService := service.NewFeedbackService(feedbackRepo, mailClient, cfg.ReplyTemplates)
 	adminService := service.NewAdminService(adminRepo, cfg.JWTSecret, cfg.JWTTTL)
 
 	limiter := middleware.NewRateLimiter(redisClient, cfg.JWTSecret, router.FeedbackRules...)
@@ -95,7 +107,7 @@ func main() {
 	defer stop()
 
 	go func() {
-		log.Printf("服务已启动，监听 :%s（限流: %v，数据库: %s）", cfg.Port, limiter.Enabled(), cfg.MongoDB)
+		log.Printf("服务已启动，监听 :%s（限流: %v，数据库: %s，邮件回复: %v）", cfg.Port, limiter.Enabled(), cfg.MongoDB, mailClient.Enabled())
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("HTTP 服务异常退出: %v", err)
 		}

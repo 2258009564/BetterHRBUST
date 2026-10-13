@@ -93,7 +93,10 @@ func New(deps Deps) *gin.Engine {
 	authorized.GET("/feedback", feedbackHandler.List)
 	authorized.GET("/feedback/:id", feedbackHandler.Detail)
 	authorized.PATCH("/feedback/:id/read", feedbackHandler.SetRead)
+	authorized.POST("/feedback/:id/reply", feedbackHandler.Reply)
 	authorized.DELETE("/feedback/:id", feedbackHandler.Delete)
+	// 快捷回复文案独立成枝，避免与 /feedback/:id 在同一层级产生路由冲突
+	authorized.GET("/reply-templates", feedbackHandler.ReplyTemplates)
 
 	superOnly := authorized.Group("")
 	superOnly.Use(middleware.RequireSuper())

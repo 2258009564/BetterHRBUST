@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -93,6 +94,77 @@ func (h *AdminFeedbackHandler) SetRead(c *gin.Context) {
 		return
 	}
 	response.OK(c, gin.H{"item": item})
+}
+
+type replyRequest struct {
+	// To 可留空：留空时由服务端从反馈的联系方式中提取收件邮箱
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Body    string `json:"body"`
+}
+
+// Reply POST /api/admin/feedback/:id/reply —— 通过 SMTP 回复反馈留下或提取到的邮箱
+func (h *AdminFeedbackHandler) Reply(c *gin.Context) {
+	admin, ok := middleware.CurrentAdmin(c)
+	if !ok {
+		response.Fail(c, http.StatusUnauthorized, response.CodeUnauthorized, "请先登录管理端")
+		return
+	}
+
+	var req replyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, http.StatusBadRequest, response.CodeInvalidParam, "参数格式不正确")
+		return
+	}
+
+	item, err := h.feedback.Reply(c.Request.Context(), c.Param("id"), service.ReplyInput{
+		To:      req.To,
+		Subject: req.Subject,
+		Body:    req.Body,
+	}, admin)
+	if err != nil {
+		respondReplyError(c, err)
+		return
+	}
+
+	// 日志只记录反馈 ID 与管理员，不打印收件邮箱与正文，避免邮件内容进入服务端日志。
+	log.Printf("[feedback] 管理员 %s 已回复反馈 %s", admin.Username, c.Param("id"))
+	response.OK(c, gin.H{"item": item, "message": "回复邮件已发送"})
+}
+
+// ReplyTemplates GET /api/admin/reply-templates —— 下发快捷回复文案、发信能力与发件人前缀
+func (h *AdminFeedbackHandler) ReplyTemplates(c *gin.Context) {
+	response.OK(c, gin.H{
+		"templates":   h.feedback.ReplyTemplates(),
+		"mailEnabled": h.feedback.MailEnabled(),
+		"fromName":    h.feedback.SenderName(),
+	})
+}
+
+// respondReplyError 把回复链路的业务错误映射为响应码与面向管理员的提示。
+func respondReplyError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, repository.ErrNotFound):
+		response.Fail(c, http.StatusNotFound, response.CodeNotFound, "反馈不存在或已被删除")
+	case errors.Is(err, service.ErrNoReplyTarget):
+		response.Fail(c, http.StatusBadRequest, response.CodeNoReplyTarget, "请填写收件邮箱：该反馈的联系方式中没有可识别的邮箱")
+	case errors.Is(err, service.ErrInvalidReplyTarget):
+		response.Fail(c, http.StatusBadRequest, response.CodeInvalidReplyTarget, "收件邮箱格式不正确，请检查后重试")
+	case errors.Is(err, service.ErrMailNotConfigured):
+		response.Fail(c, http.StatusServiceUnavailable, response.CodeMailNotConfigured, "服务端尚未配置邮件服务（SMTP），请联系超级管理员")
+	case errors.Is(err, service.ErrSubjectRequired):
+		response.Fail(c, http.StatusBadRequest, response.CodeInvalidParam, "请填写邮件标题")
+	case errors.Is(err, service.ErrSubjectTooLong):
+		response.Fail(c, http.StatusBadRequest, response.CodeInvalidParam, "邮件标题过长，请精简后重试")
+	case errors.Is(err, service.ErrReplyBodyTooShort):
+		response.Fail(c, http.StatusBadRequest, response.CodeInvalidParam, "请填写回复正文")
+	case errors.Is(err, service.ErrReplyBodyTooLong):
+		response.Fail(c, http.StatusBadRequest, response.CodeInvalidParam, "回复正文过长，请精简后重试")
+	case errors.Is(err, service.ErrReplySendFailed):
+		response.Fail(c, http.StatusBadGateway, response.CodeMailSendFailed, "邮件发送失败："+err.Error())
+	default:
+		response.Fail(c, http.StatusInternalServerError, response.CodeInternal, "回复失败，请稍后重试")
+	}
 }
 
 // Delete DELETE /api/admin/feedback/:id —— 仅超级管理员
