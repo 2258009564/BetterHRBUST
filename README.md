@@ -27,7 +27,7 @@
 
 自制的现代化哈尔滨理工大学教务在线（URP）客户端：Web / 油猴 / Windows 桌面端 / Android 原生四端同源。
 
-Android 源码版本为 **1.1.1（versionCode 3）**，新增教学评价助手与资料查找，同步 HTTP 登录与重定向修复；修复验证码刷新并发、旧图片残留、网络错误提示和 Cookie 路径隔离。资料索引来自教务处公开下载栏目，包含 **9 个分类、97 条资料及 126 个附件链接**；网页与 Android 使用同一份索引。正式安装包以 [Releases](https://github.com/Glassous/BetterHRBUST/releases) 中已经发布的文件为准。
+Android 源码版本为 **1.2.0（versionCode 4）**，新增教学评价助手与资料查找，同步 HTTP 登录与重定向修复；修复验证码刷新并发、旧图片残留、网络错误提示和 Cookie 路径隔离。资料索引来自教务处公开下载栏目，包含 **9 个分类、97 条资料及 126 个附件链接**；网页与 Android 使用同一份索引。正式安装包以 [Releases](https://github.com/Glassous/BetterHRBUST/releases) 中已经发布的文件为准。
 
 新版发布页位于 [`landing/`](landing/README.md)，提供浅色/深色主题、平台下载入口和使用指南。GitHub Pages 工作流只在原仓库 `Glassous/BetterHRBUST` 的 `main` 分支部署，PR 和 fork 只构建验证。
 
@@ -118,10 +118,10 @@ Kotlin + Jetpack Compose 编写的原生 Android 客户端，与 Web 端共用�
 ```bash
 cd android
 
-# 构建 Debug 安装包（产物：app/build/outputs/apk/debug/BetterHRBUST-1.1.1-android-debug.apk）
+# 构建 Debug 安装包（产物：app/build/outputs/apk/debug/BetterHRBUST-1.2.0-android-debug.apk）
 ./gradlew :app:assembleDebug
 
-# 构建正式安装包（产物：app/build/outputs/apk/release/BetterHRBUST-1.1.1-android.apk）
+# 构建正式安装包（产物：app/build/outputs/apk/release/BetterHRBUST-1.2.0-android.apk）
 ./gradlew :app:assembleRelease
 
 # 运行单元测试（JVM）
@@ -135,9 +135,9 @@ cd android
 .\gradlew.bat :app:assembleDebug
 ```
 
-Debug 与 Release 完全分离：Debug 包带有 `applicationIdSuffix ".debug"`（安装后包名为 `com.glassous.betterhrbust.debug`），可与正式版在同一台设备共存、互不覆盖，版本号显示为 `1.1.1-debug`；正式版覆盖升级仍只依赖同一份正式签名。
+Debug 与 Release 完全分离：Debug 包带有 `applicationIdSuffix ".debug"`（安装后包名为 `com.glassous.betterhrbust.debug`），可与正式版在同一台设备共存、互不覆盖，版本号显示为 `1.2.0-debug`；正式版覆盖升级仍只依赖同一份正式签名。
 
-构建完成后用 `adb install -r app\build\outputs\apk\debug\BetterHRBUST-1.1.1-android-debug.apk` 安装到设备，或直接在 Android Studio 中运行。
+构建完成后用 `adb install -r app\build\outputs\apk\debug\BetterHRBUST-1.2.0-android-debug.apk` 安装到设备，或直接在 Android Studio 中运行。
 开启 R8 压缩后 Release 包体量约 **3.8 MB**（产物 `BetterHRBUST-<version>-android.apk`；未提供密钥时为未签名包，文件名不变），Debug 包约 66 MB（含调试符号与未压缩资源）。
 
 > [!NOTE]
@@ -175,7 +175,7 @@ androidKeyPassword=xxxx
 
 > [!IMPORTANT]
 > **安装包命名格式**：`./gradlew :app:assembleRelease` 直接产出 `BetterHRBUST-<版本>-android.apk`
-> （如 `BetterHRBUST-1.1.1-android.apk`，命名规则见 `app/build.gradle.kts` 的 `androidComponents` 块，版本号取自同一处的 `appVersionName`，无需手动重命名），
+> （如 `BetterHRBUST-1.2.0-android.apk`，命名规则见 `app/build.gradle.kts` 的 `androidComponents` 块，版本号取自同一处的 `appVersionName`，无需手动重命名），
 > 与桌面端安装版 `BetterHRBUST-<版本>-windows-setup.exe`、便携版 `BetterHRBUST-<版本>-windows-portable.zip`
 > 保持同一命名格式，便于用户识别与 README 快捷下载链接对齐。
 > 详见「[发布 Release 与更新检测](#5-发布-release-与更新检测)」。
@@ -377,7 +377,7 @@ node tools/probe/probe.mjs --user 你的学号
    - 网页客户端采用纯前端直连与本地缓存架构，所有会话凭证（Cookie）及个人信息**仅保存在用户本地浏览器内**，不上传到任何服务器。
    - Android 客户端同样为直连架构：会话 Cookie 由本地 `CookieJar` 持有，教务数据落盘于应用私有目录（Room 数据库），登录态与偏好存于 DataStore，**不请求任何第三方服务**，卸载应用即清除全部本地数据。
    - 探测工具默认启用自动脱敏逻辑，测试数据落盘前自动屏蔽敏感隐私字段。
-2. **服务端只保存意见反馈文本**（`server/`，仅服务于 Web 端的「意见反馈」功能）：
+2. **服务端只保存意见反馈文本**（`server/`，服务于 Web / Android / 桌面端的「意见反馈」功能）：
    - 服务端不代理教务请求、不接触教务会话，**不建立任何学生实体**：数据库中不存在学号、教务内部 ID、成绩、课表、Cookie、设备信息等字段。
    - 反馈记录只包含：反馈正文、用户选填的联系方式、开启「实名发布」时随反馈一并提交的姓名文本、是否匿名、阅读状态与提交时间。姓名仅作为该条反馈的一部分存放，不与任何账号建立关联。
    - 访问日志只记录方法、路径、状态码与耗时，**不记录 IP、User-Agent 与请求体**；限流计数保存在 Redis 中且仅保存来源地址的加盐哈希，并随过期时间自动清除，不做持久化。
