@@ -7,14 +7,7 @@
         <Icon name="send" customClass="w-3.5 h-3.5" />
         回复该反馈
       </span>
-      <span
-        v-if="autoDetected"
-        class="ml-auto inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400"
-      >
-        <Icon name="check-circle" customClass="w-3 h-3 shrink-0" />
-        已从联系方式识别到邮箱
-      </span>
-      <span v-else class="ml-auto text-[11px] text-zinc-400 dark:text-zinc-500">联系方式中未识别到邮箱，可手动填写收件人</span>
+      <span v-if="!autoDetected" class="ml-auto text-[11px] text-zinc-400 dark:text-zinc-500">联系方式中未识别到邮箱，可手动填写收件人</span>
     </header>
 
     <div class="p-4 space-y-3.5">

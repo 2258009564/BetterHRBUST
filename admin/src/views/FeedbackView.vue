@@ -1,226 +1,168 @@
 <template>
   <div class="space-y-5">
-    <!-- 顶部工具栏 -->
-    <UiCard body-class="p-4">
-      <div class="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-10 h-10 rounded-xl bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 flex items-center justify-center shrink-0">
-            <Icon name="inbox" customClass="w-5 h-5" />
+    <!-- ==================== 第一级：反馈列表（网格） ==================== -->
+    <template v-if="!selected">
+      <UiCard body-class="p-4">
+        <div class="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 flex items-center justify-center shrink-0">
+              <Icon name="inbox" customClass="w-5 h-5" />
+            </div>
+            <div class="min-w-0">
+              <h1 class="text-base font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">意见反馈</h1>
+              <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                共 {{ total }} 条 · 未读 {{ unread }} 条
+              </p>
+            </div>
           </div>
-          <div class="min-w-0">
-            <h1 class="text-base font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">意见反馈</h1>
-            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-              共 {{ total }} 条 · 未读 {{ unread }} 条
-            </p>
-          </div>
-        </div>
 
-        <div class="flex flex-wrap items-center gap-2.5">
-          <div class="w-full sm:w-64">
-            <UiInput v-model="keyword" placeholder="搜索反馈正文、姓名或联系方式" clearable @enter="reload">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <div class="w-full sm:w-64">
+              <UiInput v-model="keyword" placeholder="搜索反馈正文、姓名或联系方式" clearable @enter="reload">
+                <template #prefix>
+                  <Icon name="search" customClass="w-4 h-4" />
+                </template>
+              </UiInput>
+            </div>
+            <UiTabs :items="stateTabs" :modelValue="state" @update:modelValue="handleStateChange" />
+            <UiButton variant="outline" size="md" :loading="loading" @click="reload">
               <template #prefix>
-                <Icon name="search" customClass="w-4 h-4" />
+                <Icon name="refresh" customClass="w-4 h-4" :class="loading ? 'animate-spin' : ''" />
               </template>
-            </UiInput>
+              刷新
+            </UiButton>
           </div>
-          <UiTabs :items="stateTabs" :modelValue="state" @update:modelValue="handleStateChange" />
-          <UiButton variant="outline" size="md" :loading="loading" @click="reload">
+        </div>
+      </UiCard>
+
+      <FeedbackGrid :items="items" :loading="loading" :keyword="keyword" @open="openItem" />
+
+      <div v-if="total > pageSize" class="flex items-center justify-between pt-1">
+        <UiButton variant="ghost" size="sm" :disabled="page <= 1 || loading" @click="goPage(page - 1)">
+          上一页
+        </UiButton>
+        <span class="text-[11px] text-zinc-400">第 {{ page }} / {{ totalPages }} 页</span>
+        <UiButton variant="ghost" size="sm" :disabled="page >= totalPages || loading" @click="goPage(page + 1)">
+          下一页
+        </UiButton>
+      </div>
+    </template>
+
+    <!-- ==================== 第二级：详情 + 回复 ==================== -->
+    <template v-else>
+      <UiCard body-class="p-3.5">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <UiButton variant="ghost" size="sm" @click="backToList">
             <template #prefix>
-              <Icon name="refresh" customClass="w-4 h-4" :class="loading ? 'animate-spin' : ''" />
+              <Icon name="chevron-left" customClass="w-4 h-4" />
             </template>
-            刷新
+            返回列表
           </UiButton>
-        </div>
-      </div>
-    </UiCard>
 
-    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] gap-5 items-start">
-      <!-- 列表 -->
-      <div :class="['space-y-3', mobileDetail ? 'hidden lg:block' : '']">
-        <div
-          v-if="loading && items.length === 0"
-          class="p-8 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#1c1e24] flex items-center justify-center gap-2.5 text-xs text-zinc-500"
-        >
-          <Icon name="refresh" customClass="w-4 h-4 animate-spin" />
-          正在加载反馈…
-        </div>
+          <div class="hidden sm:block w-px h-4 bg-zinc-200 dark:bg-zinc-700" />
 
-        <div
-          v-else-if="items.length === 0"
-          class="p-8 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#1c1e24] text-center"
-        >
-          <Icon name="message" customClass="w-6 h-6 mx-auto text-zinc-300 dark:text-zinc-600" />
-          <p class="text-xs text-zinc-500 mt-2.5">
-            {{ keyword ? '没有匹配的反馈' : '暂时还没有反馈' }}
+          <h1 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">反馈详情</h1>
+          <UiBadge :variant="selected.isRead ? 'default' : 'danger'" size="sm" :dot="!selected.isRead">
+            {{ selected.isRead ? '已读' : '未读' }}
+          </UiBadge>
+
+          <div class="ml-auto flex items-center gap-2">
+            <UiButton
+              v-if="!selected.isRead"
+              variant="secondary"
+              size="sm"
+              :loading="actionLoading"
+              @click="toggleRead(true)"
+            >
+              <template #prefix>
+                <Icon name="check" customClass="w-3.5 h-3.5" />
+              </template>
+              标记已读
+            </UiButton>
+            <UiButton
+              v-else
+              variant="ghost"
+              size="sm"
+              :loading="actionLoading"
+              @click="toggleRead(false)"
+            >
+              标记未读
+            </UiButton>
+            <UiButton
+              v-if="isSuperAdmin"
+              variant="danger"
+              size="sm"
+              @click="showDeleteModal = true"
+            >
+              <template #prefix>
+                <Icon name="trash" customClass="w-3.5 h-3.5" />
+              </template>
+              删除
+            </UiButton>
+          </div>
+        </div>
+      </UiCard>
+
+      <!-- 宽屏：左详情（更宽）+ 右回复；窄屏（<1280）：回复排到详情下方 -->
+      <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] gap-5 items-start">
+        <UiCard body-class="p-6" custom-class="min-w-0">
+          <p class="text-sm leading-[1.9] text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap break-words">
+            {{ selected.content }}
           </p>
-        </div>
 
-        <button
-          v-for="item in items"
-          :key="item.id"
-          type="button"
-          :class="[
-            'w-full text-left p-4 rounded-xl border transition-all duration-150 cursor-pointer',
-            selected?.id === item.id
-              ? 'border-zinc-400 dark:border-zinc-600 bg-white dark:bg-[#1c1e24] shadow-md'
-              : 'border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-[#1c1e24] hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-sm'
-          ]"
-          @click="openItem(item)"
-        >
-          <div class="flex items-center gap-2">
-            <span
-              class="w-2 h-2 rounded-full shrink-0"
-              :class="item.isRead ? 'bg-zinc-300 dark:bg-zinc-600' : 'bg-rose-500'"
-            />
-            <span class="text-[11px] font-medium" :class="item.isRead ? 'text-zinc-400' : 'text-rose-500'">
-              {{ item.isRead ? '已读' : '未读' }}
-            </span>
-            <span class="ml-auto text-[11px] text-zinc-400">{{ formatRelative(item.createdAt) }}</span>
+          <div class="mt-5 rounded-xl border border-zinc-200/80 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800/80">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
+              <span class="text-[11px] text-zinc-400">提交时间</span>
+              <span class="sm:col-span-2 text-xs text-zinc-700 dark:text-zinc-300">{{ formatDateTime(selected.createdAt) }}</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
+              <span class="text-[11px] text-zinc-400">发布方式</span>
+              <span class="sm:col-span-2 text-xs text-zinc-700 dark:text-zinc-300">
+                {{ selected.anonymous ? '匿名提交' : `实名提交（${selected.signature || '未填写姓名'}）` }}
+              </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
+              <span class="text-[11px] text-zinc-400">联系方式</span>
+              <span class="sm:col-span-2 text-xs text-zinc-700 dark:text-zinc-300 break-all">
+                {{ selected.contact || '未填写' }}
+              </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
+              <span class="text-[11px] text-zinc-400">阅读时间</span>
+              <span class="sm:col-span-2 text-xs text-zinc-700 dark:text-zinc-300">{{ formatDateTime(selected.readAt) }}</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
+              <span class="text-[11px] text-zinc-400">回复次数</span>
+              <span class="sm:col-span-2 text-xs text-zinc-700 dark:text-zinc-300">
+                {{ selected.replies?.length ? `已回复 ${selected.replies.length} 次` : '尚未回复' }}
+              </span>
+            </div>
           </div>
 
-          <p class="mt-2 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
-            {{ excerpt(item.content) }}
+          <p class="mt-5 text-[11px] text-zinc-400 leading-relaxed">
+            反馈内容为用户自愿提交的文本，系统中不含学号、成绩、课表等任何学生身份数据。
           </p>
-
-          <div class="mt-2.5 flex items-center gap-2 text-[11px] text-zinc-400">
-            <UiBadge :variant="item.anonymous ? 'default' : 'info'" size="sm">
-              {{ item.anonymous ? '匿名' : (item.signature || '实名') }}
-            </UiBadge>
-            <span v-if="item.contact" class="inline-flex items-center gap-1 truncate">
-              <Icon name="mail" customClass="w-3 h-3 shrink-0" />
-              <span class="truncate">{{ item.contact }}</span>
-            </span>
-          </div>
-        </button>
-
-        <!-- 分页 -->
-        <div v-if="total > pageSize" class="flex items-center justify-between pt-1">
-          <UiButton variant="ghost" size="sm" :disabled="page <= 1 || loading" @click="goPage(page - 1)">
-            上一页
-          </UiButton>
-          <span class="text-[11px] text-zinc-400">第 {{ page }} / {{ totalPages }} 页</span>
-          <UiButton variant="ghost" size="sm" :disabled="page >= totalPages || loading" @click="goPage(page + 1)">
-            下一页
-          </UiButton>
-        </div>
-      </div>
-
-      <!-- 详情 -->
-      <div :class="[mobileDetail ? '' : 'hidden lg:block']">
-        <UiCard v-if="selected" body-class="p-0">
-          <template #header>
-            <div class="flex items-center gap-2.5 min-w-0">
-              <button
-                type="button"
-                class="lg:hidden p-1.5 -ml-1 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-                @click="mobileDetail = false"
-              >
-                <Icon name="chevron-left" customClass="w-4 h-4" />
-              </button>
-              <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">反馈详情</h3>
-              <UiBadge :variant="selected.isRead ? 'default' : 'danger'" size="sm" :dot="!selected.isRead">
-                {{ selected.isRead ? '已读' : '未读' }}
-              </UiBadge>
-            </div>
-            <div class="flex items-center gap-2">
-              <UiButton
-                v-if="!selected.isRead"
-                variant="secondary"
-                size="sm"
-                :loading="actionLoading"
-                @click="toggleRead(true)"
-              >
-                <template #prefix>
-                  <Icon name="check" customClass="w-3.5 h-3.5" />
-                </template>
-                标记已读
-              </UiButton>
-              <UiButton
-                v-else
-                variant="ghost"
-                size="sm"
-                :loading="actionLoading"
-                @click="toggleRead(false)"
-              >
-                标记未读
-              </UiButton>
-              <UiButton
-                v-if="isSuperAdmin"
-                variant="danger"
-                size="sm"
-                @click="showDeleteModal = true"
-              >
-                <template #prefix>
-                  <Icon name="trash" customClass="w-3.5 h-3.5" />
-                </template>
-                删除
-              </UiButton>
-            </div>
-          </template>
-
-          <div class="p-6 space-y-5">
-            <p class="text-sm leading-[1.9] text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap break-words">
-              {{ selected.content }}
-            </p>
-
-            <!-- 回复区常驻：识别到邮箱会自动填入收件人，未识别到也可手动填写 -->
-            <FeedbackReplyPanel
-              :key="selected.id"
-              :feedback="selected"
-              :templates="replyTemplates"
-              :mail-enabled="mailEnabled"
-              :sender-prefix="senderPrefix"
-              @sent="handleReplySent"
-            />
-
-            <FeedbackReplyHistory
-              v-if="selected.replies?.length"
-              :feedback-id="selected.id"
-              :replies="selected.replies"
-            />
-
-            <div class="rounded-xl border border-zinc-200/80 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800/80">
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
-                <span class="text-[11px] text-zinc-400">提交时间</span>
-                <span class="sm:col-span-2 text-xs text-zinc-700 dark:text-zinc-300">{{ formatDateTime(selected.createdAt) }}</span>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
-                <span class="text-[11px] text-zinc-400">发布方式</span>
-                <span class="sm:col-span-2 text-xs text-zinc-700 dark:text-zinc-300">
-                  {{ selected.anonymous ? '匿名提交' : `实名提交（${selected.signature || '未填写姓名'}）` }}
-                </span>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
-                <span class="text-[11px] text-zinc-400">联系方式</span>
-                <span class="sm:col-span-2 text-xs text-zinc-700 dark:text-zinc-300 break-all">
-                  {{ selected.contact || '未填写' }}
-                  <span v-if="selected.email" class="mt-1 flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
-                    <Icon name="check-circle" customClass="w-3 h-3 shrink-0" />
-                    已识别邮箱 {{ selected.email }}，已自动填入回复区
-                  </span>
-                </span>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 p-3.5">
-                <span class="text-[11px] text-zinc-400">阅读时间</span>
-                <span class="sm:col-span-2 text-xs text-zinc-700 dark:text-zinc-300">{{ formatDateTime(selected.readAt) }}</span>
-              </div>
-            </div>
-
-            <p class="text-[11px] text-zinc-400 leading-relaxed">
-              反馈内容为用户自愿提交的文本，系统中不含学号、成绩、课表等任何学生身份数据。
-            </p>
-          </div>
         </UiCard>
 
-        <div
-          v-else
-          class="hidden lg:flex flex-col items-center justify-center h-64 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center"
-        >
-          <Icon name="inbox" customClass="w-6 h-6 text-zinc-300 dark:text-zinc-600" />
-          <p class="text-xs text-zinc-500 mt-2.5">从左侧选择一条反馈查看详情</p>
+        <div class="space-y-4 min-w-0">
+          <!-- 回复区常驻：识别到邮箱会自动填入收件人，未识别到也可手动填写 -->
+          <FeedbackReplyPanel
+            :key="selected.id"
+            :feedback="selected"
+            :templates="replyTemplates"
+            :mail-enabled="mailEnabled"
+            :sender-prefix="senderPrefix"
+            @sent="handleReplySent"
+          />
+
+          <FeedbackReplyHistory
+            v-if="selected.replies?.length"
+            :feedback-id="selected.id"
+            :replies="selected.replies"
+          />
         </div>
       </div>
-    </div>
+    </template>
 
     <!-- 删除确认 -->
     <UiModal v-model="showDeleteModal" title="删除这条反馈？" max-width="sm">
@@ -243,6 +185,7 @@ import UiButton from '@/components/ui/UiButton.vue';
 import UiInput from '@/components/ui/UiInput.vue';
 import UiTabs from '@/components/ui/UiTabs.vue';
 import UiModal from '@/components/ui/UiModal.vue';
+import FeedbackGrid from '@/components/feedback/FeedbackGrid.vue';
 import FeedbackReplyPanel from '@/components/feedback/FeedbackReplyPanel.vue';
 import FeedbackReplyHistory from '@/components/feedback/FeedbackReplyHistory.vue';
 import Icon from '@/components/icons/Icon.vue';
@@ -250,7 +193,7 @@ import { adminApi } from '@/services/api.js';
 import { useAuth } from '@/composables/useAuth.js';
 import { useToast } from '@/composables/useToast.js';
 import { setUnreadCount } from '@/composables/useFeedbackStats.js';
-import { excerpt, formatDateTime, formatRelative } from '@/utils/format.js';
+import { formatDateTime } from '@/utils/format.js';
 
 const { isSuperAdmin } = useAuth();
 const { showToast } = useToast();
@@ -264,8 +207,8 @@ const keyword = ref('');
 const state = ref('all');
 const loading = ref(false);
 const actionLoading = ref(false);
+// 非空即进入第二级（详情 + 回复），为空时停留在列表网格
 const selected = ref(null);
-const mobileDetail = ref(false);
 const showDeleteModal = ref(false);
 // 快捷回复文案、发信能力与发件人前缀（均由服务端下发，避免前端写死配置）
 const replyTemplates = ref([]);
@@ -324,8 +267,11 @@ function handleStateChange(value) {
 
 function openItem(item) {
   selected.value = item;
-  mobileDetail.value = true;
   loadDetail(item.id);
+}
+
+function backToList() {
+  selected.value = null;
 }
 
 /** 详情接口才会返回回复历史，列表点击后按需拉取一次 */
@@ -381,8 +327,8 @@ async function confirmDelete() {
   try {
     await adminApi.deleteFeedback(selected.value.id);
     showDeleteModal.value = false;
+    // 删除后回到列表网格
     selected.value = null;
-    mobileDetail.value = false;
     await load();
     showToast({ title: '反馈已删除', type: 'success' });
   } catch (error) {
