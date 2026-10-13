@@ -144,7 +144,18 @@ class AuthRepository(
         return client.checkCaptcha(code)
     }
 
-    fun login(username: String, password: String, captcha: String): Flow<Resource<StudentContext>> = flow {
+    /**
+     * 登录教务系统。
+     *
+     * @param rememberPassword 用户在登录页勾选「记住密码」时为 true：
+     *   登录成功后把密码混淆后存入本地，供下次打开自动填入；未勾选则清除本机已保存的密码。
+     */
+    fun login(
+        username: String,
+        password: String,
+        captcha: String,
+        rememberPassword: Boolean = false
+    ): Flow<Resource<StudentContext>> = flow {
         sessionGeneration.incrementAndGet()
         emit(Resource.Loading)
         try {
@@ -197,8 +208,7 @@ class AuthRepository(
             _sessionPromptDismissed.value = false
             pendingManualPrompt = false
             promptDecided = false
-            // 身份、姓名和登录时间一次性写入，账号重建界面时不会读取旧账号字段。
-            // 密码不持久化（安全对齐 Web 端，仅保留学号免输入）
+            // 身份、姓名和登录时间一次性写入，账号重建界面时不会读取旧账号字段
             prefs.saveAuth(
                 username = username,
                 studentId = studentContext.studentId,
@@ -206,6 +216,9 @@ class AuthRepository(
                 term = studentContext.term,
                 realName = profile.realName
             )
+            // 「记住密码」：勾选则保存混淆后的凭证，未勾选则清除本机已保存的密码
+            if (rememberPassword) prefs.setSavedCredential(username, password)
+            else prefs.clearSavedCredential()
             preparedLoginAccount = null
             emit(Resource.Success(studentContext))
         } catch (e: kotlinx.coroutines.CancellationException) {

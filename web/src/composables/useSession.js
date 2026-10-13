@@ -3,6 +3,7 @@ import { ref, reactive, computed } from 'vue';
 import { academicApi } from '@/services/academic/api.js';
 import { clearRegisteredDataCaches } from '@/composables/dataCacheBridge.js';
 import { storageGetItem, storageSetItem, storageRemoveItem } from '@/services/storage.js';
+import { saveCredential, clearCredential } from '@/services/savedCredential.js';
 
 const SESSION_FLAG_KEY = 'better_hrbust_has_session';
 const SESSION_CACHE_KEY = 'better_hrbust_cached_profile';
@@ -335,8 +336,13 @@ async function login({ username, password, captcha, remember = true }) {
     studentId.value = ctx.studentId;
     currentSemester.yearId = ctx.year || '';
     currentSemester.termId = ctx.term || '';
-    if (remember) storageSetItem('saved_student_number', username);
-    else storageRemoveItem('saved_student_number');
+    if (remember) {
+      storageSetItem('saved_student_number', username);
+      saveCredential(username, password);
+    } else {
+      storageRemoveItem('saved_student_number');
+      clearCredential();
+    }
     isLoggedIn.value = true;
     clearSessionExpired();
     recordLoginTime();

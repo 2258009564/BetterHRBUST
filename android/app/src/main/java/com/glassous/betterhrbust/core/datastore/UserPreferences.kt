@@ -43,6 +43,8 @@ data class AppPreferences(
     val lastUpdateCheckAt: Long = 0L,
     /** 导航坞折叠态（用户手动在坞内展开 / 折叠后持久化，冷启动沿用） */
     val navigationDockCollapsed: Boolean = false,
+    /** 「记住密码」保存的凭证（`学号\n混淆后的密码`），为空表示未保存 */
+    val savedCredential: String = "",
 ) {
     fun teachingWeekOn(date: java.time.LocalDate): Int? {
         if (com.glassous.betterhrbust.core.util.SchoolCalendar.semesterOn(date) != null)
@@ -78,11 +80,30 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
         private val KEY_LAST_FULL_SYNC_DATE = stringPreferencesKey("last_full_sync_date")
         private val KEY_SESSION_EXPIRED = booleanPreferencesKey("session_expired")
         private val KEY_REAL_NAME = stringPreferencesKey("real_name")
-        // 历史版本曾以该键明文持久化教务密码（安全修复后停止保存），
-        // 保留常量仅用于启动时清除旧设备上的残留值
+        // 历史版本曾以该键明文持久化教务密码，保留常量仅用于启动时清除旧设备上的残留值；
+        // 新的「记住密码」改用 KEY_SAVED_CREDENTIAL（只存混淆后的密文）
         private val KEY_SAVED_PASSWORD = stringPreferencesKey("saved_password")
         private val KEY_LAST_UPDATE_CHECK_AT = longPreferencesKey("last_update_check_at")
         private val KEY_NAVIGATION_DOCK_COLLAPSED = booleanPreferencesKey("navigation_dock_collapsed")
+        /**
+         * 「记住密码」保存的凭证（`学号\n混淆后的密码`）。
+         * DataStore 位于应用私有目录，且不参与系统云备份与换机迁移
+         * （见 res/xml/backup_rules.xml 与 res/xml/data_extraction_rules.xml）。
+         */
+        private val KEY_SAVED_CREDENTIAL = stringPreferencesKey("saved_credential")
+
+        /**
+         * 解析已保存凭证中属于 [username] 的密码。
+         * 学号不匹配、格式损坏或未保存时返回 null，避免把 A 的密码填到 B 的账号上。
+         */
+        fun resolveSavedPassword(username: String, value: String): String? {
+            val name = username.trim()
+            if (name.isEmpty() || value.isEmpty()) return null
+            val separator = value.indexOf('\n')
+            if (separator <= 0) return null
+            if (value.substring(0, separator).trim() != name) return null
+            return CredentialObfuscator.deobfuscate(value.substring(separator + 1))
+        }
     }
 
     val preferencesFlow: Flow<AppPreferences> = store.data.map { prefs ->
@@ -112,7 +133,8 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
             sessionExpired = prefs[KEY_SESSION_EXPIRED] ?: false,
             realName = prefs[KEY_REAL_NAME] ?: "",
             lastUpdateCheckAt = prefs[KEY_LAST_UPDATE_CHECK_AT] ?: 0L,
-            navigationDockCollapsed = prefs[KEY_NAVIGATION_DOCK_COLLAPSED] ?: false
+            navigationDockCollapsed = prefs[KEY_NAVIGATION_DOCK_COLLAPSED] ?: false,
+            savedCredential = prefs[KEY_SAVED_CREDENTIAL] ?: ""
         )
     }
 
@@ -127,11 +149,28 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
 
     /**
      * 清除历史版本残留的明文密码键（升级迁移）。
-     * 密码不再持久化（与 Web 端对齐，仅保留学号），旧安装上的
-     * saved_password 值需在启动时主动删除，避免明文凭证留在 DataStore 文件中。
+     * 该键存的是明文密码，旧安装上的值需在启动时主动删除，避免明文凭证留在
+     * DataStore 文件中；「记住密码」改用 [setSavedCredential]（只存混淆后的密文）。
      */
     suspend fun purgeLegacySavedPassword() {
         store.edit { prefs -> prefs.remove(KEY_SAVED_PASSWORD) }
+    }
+
+    /**
+     * 保存「记住密码」凭证（登录成功后按用户勾选调用）。
+     * 密码混淆后落盘，并一并记录学号用于校验；入参为空等价于清除。
+     */
+    suspend fun setSavedCredential(username: String, password: String) {
+        val name = username.trim()
+        store.edit { prefs ->
+            if (name.isEmpty() || password.isEmpty()) prefs.remove(KEY_SAVED_CREDENTIAL)
+            else prefs[KEY_SAVED_CREDENTIAL] = "$name\n${CredentialObfuscator.obfuscate(password)}"
+        }
+    }
+
+    /** 清除已保存的密码（取消勾选「记住密码」） */
+    suspend fun clearSavedCredential() {
+        store.edit { prefs -> prefs.remove(KEY_SAVED_CREDENTIAL) }
     }
 
     /**
@@ -264,7 +303,8 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
 
     /**
      * 退出登录时清理会话数据。
-     * 保留「账号」以便下次登录免输入学号；密码不落盘（与 Web 端对齐）。
+     * 保留「账号」以便下次登录免输入学号；勾选过「记住密码」时凭证同样保留，
+     * 便于重新登录自动填入（取消勾选时由 [clearSavedCredential] 立即清除）。
      */
     suspend fun clearSession() {
         store.edit { prefs ->

@@ -34,6 +34,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.glassous.betterhrbust.BetterHrbustApp
+import com.glassous.betterhrbust.core.datastore.UserPreferencesManager
 import com.glassous.betterhrbust.core.ui.AppTextFieldShape
 import com.glassous.betterhrbust.core.ui.registerInputField
 import com.glassous.betterhrbust.data.repository.Resource
@@ -56,6 +57,7 @@ fun AuthScreen(
     var password by remember { mutableStateOf("") }
     var captcha by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var rememberPassword by remember { mutableStateOf(false) }
     var prefilled by remember { mutableStateOf(false) }
 
     var captchaBytes by remember { mutableStateOf<ByteArray?>(null) }
@@ -95,13 +97,19 @@ fun AuthScreen(
         refreshCaptcha()
     }
 
-    // 回填本地保存的账号（仅首次生效，不覆盖用户正在输入的内容）；
-    // 密码不落盘（安全策略，与 Web 端对齐），每次登录需重新输入
+    // 回填本地保存的账号与「记住密码」凭证（仅首次生效，不覆盖用户正在输入的内容）
     LaunchedEffect(prefs) {
         val snapshot = prefs ?: return@LaunchedEffect
         if (prefilled) return@LaunchedEffect
         if (snapshot.username.isNotEmpty() && username.isBlank()) {
             username = snapshot.username
+        }
+        if (password.isBlank()) {
+            val saved = UserPreferencesManager.resolveSavedPassword(username, snapshot.savedCredential)
+            if (saved != null) {
+                password = saved
+                rememberPassword = true
+            }
         }
         prefilled = true
     }
@@ -124,7 +132,7 @@ fun AuthScreen(
         isLoading = true
         coroutineScope.launch {
             BetterHrbustApp.instance.syncManager.isSyncing.first { !it }
-            authRepo.login(username.trim(), password, captcha.trim()).collect { resource ->
+            authRepo.login(username.trim(), password, captcha.trim(), rememberPassword).collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {
                         isLoading = true
@@ -358,7 +366,29 @@ fun AuthScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 记住密码：勾选后账号密码保存在本机，下次打开自动填入；取消勾选立即清除
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = rememberPassword,
+                            onCheckedChange = { checked ->
+                                rememberPassword = checked
+                                if (!checked) coroutineScope.launch { prefsManager.clearSavedCredential() }
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "记住密码",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Submit Button
                     Button(

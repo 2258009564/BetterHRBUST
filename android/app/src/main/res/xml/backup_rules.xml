@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- API < 31 的云备份规则：DataStore（files/datastore/）含会话元数据，
-     且历史版本曾明文存有教务密码，凭据类数据不应随系统备份离开设备 -->
+<!-- API < 31 的云备份规则：DataStore（files/datastore/）含会话元数据与
+     「记住密码」凭证（混淆存储），凭据类数据不应随系统备份离开设备 -->
 <full-backup-content>
     <exclude domain="file" path="datastore" />
 </full-backup-content>

@@ -22,6 +22,8 @@ const api={
 };
 const env={ref,reactive,computed,academicApi:api,Date,console,
  storageGetItem:key=>store.get(key)||null,storageSetItem:(key,value)=>store.set(key,String(value)),storageRemoveItem:key=>store.delete(key),
+ saveCredential:(username,password)=>store.set('better_hrbust_saved_credential',JSON.stringify({username,password})),
+ clearCredential:()=>store.delete('better_hrbust_saved_credential'),
  registerDataCacheCleaner:fn=>cleaners.push(fn),clearRegisteredDataCaches:()=>cleaners.forEach(fn=>fn()),registerCourseColors:()=>{}};
 function load(file, additions={}) {
  const source=readFileSync(new URL('../src/composables/'+file,import.meta.url),'utf8').replace(/^import[\s\S]*?;\r?\n/gm,'').replace(/^export /gm,'');
@@ -50,6 +52,7 @@ assert.equal(data.scores.value[0].courseName,B+'课程','旧请求不能覆盖�
 const originalLogin = api.login;
 api.login = async()=>({success:false,message:'学号或密码错误'});
 assert.equal((await session.login({username:B,password:'wrong',captcha:'0000'})).success,false);
+assert.equal(JSON.parse(store.get('better_hrbust_saved_credential')||'{}').username,B,'登录失败不能覆盖已保存的账号密码');
 assert.equal(store.get('better_hrbust_has_session'),undefined);
 assert.equal(session.offlineMode.value,true,'失败重认证不会持久化为已登录');
 api.login = originalLogin;
@@ -70,6 +73,7 @@ const blocked=await session.login({username:B,password:'test',captcha:'0000'});
 assert.equal(blocked.success,false);assert.equal(posted,0,'退出失败不能继续提交新凭证');
 api.logout=originalLogout;await session.prepareLoginAccount(B);
 assert.equal((await session.login({username:B,password:'test',captcha:'0000'})).success,true);
+assert.equal(JSON.parse(store.get('better_hrbust_saved_credential')||'{}').username,B,'登录成功后应保存账号密码供下次自动填入');
 // syncAll 在途期间并发判定会话失效（复现 M-1：早退不复位 syncing 导致刷新永久卡死）
 hold={};const inflight=data.syncAll();
 while(!hold.resolve)await new Promise(resolve=>setTimeout(resolve,0));
@@ -82,4 +86,6 @@ assert.equal(data.syncing.value,false,'并发会话失效的早退路径必须�
 const refreshBlocked=await data.refreshAll();
 assert.equal(refreshBlocked.expired,true,'失效后刷新应要求重新登录');
 assert.equal(data.syncing.value,false,'刷新入口不残留 syncing 状态');
-console.log('通过：A→B→A、缓存隔离、旧同步丢弃、错误身份拒绝、退出失败阻止新凭证提交及同步在途会话失效复位');
+assert.equal((await session.login({username:B,password:'test',captcha:'0000',remember:false})).success,true);
+assert.equal(store.has('better_hrbust_saved_credential'),false,'取消"记住密码"后应清除本地已保存的密码');
+console.log('通过：A→B→A、缓存隔离、旧同步丢弃、错误身份拒绝、退出失败阻止新凭证提交、同步在途会话失效复位及记住密码凭证的保存/清除');

@@ -161,15 +161,18 @@
             </div>
           </div>
 
-          <!-- Remember Me -->
+          <!-- Remember Password -->
           <div class="flex items-center text-xs pt-1">
-            <label class="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 cursor-pointer select-none">
+            <label
+              class="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 cursor-pointer select-none"
+              title="密码混淆后仅保存在本机，下次登录自动填入"
+            >
               <input
                 type="checkbox"
                 v-model="rememberMe"
                 class="rounded border-zinc-300 dark:border-zinc-700 text-zinc-900 focus:ring-0 cursor-pointer"
               />
-              <span>记住学号</span>
+              <span>记住密码</span>
             </label>
           </div>
 
@@ -193,7 +196,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import UiCard from '@/components/ui/UiCard.vue';
 import UiInput from '@/components/ui/UiInput.vue';
 import UiButton from '@/components/ui/UiButton.vue';
@@ -202,6 +205,7 @@ import logoUrl from '@/assets/HRBUST.png';
 import { useSession } from '@/composables/useSession.js';
 import { useToast } from '@/composables/useToast.js';
 import { academicApi } from '@/services/academic/api.js';
+import { readSavedCredential, clearCredential } from '@/services/savedCredential.js';
 
 const {
   isLoggedIn,
@@ -217,6 +221,9 @@ const {
 
 const { showToast } = useToast();
 
+// 上次登录成功后保存的账号密码（"记住密码"），用于重新登录时自动填入
+const savedCredential = readSavedCredential();
+
 const showPassword = ref(false);
 const rememberMe = ref(true);
 const captchaImgUrl = ref('');
@@ -225,9 +232,14 @@ const captchaError = ref(false);
 const errorMessage = ref('');
 
 const form = reactive({
-  username: studentNumber.value || '',
-  password: '',
+  username: savedCredential?.username || studentNumber.value || '',
+  password: savedCredential?.password || '',
   captcha: ''
+});
+
+// 取消勾选立即清除本地保存的密码，避免下次打开仍然自动填入
+watch(rememberMe, (value) => {
+  if (!value) clearCredential();
 });
 
 const canSubmit = computed(() => {
