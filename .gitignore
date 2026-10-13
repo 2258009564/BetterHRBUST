@@ -24,6 +24,17 @@ dist-ssr/
 .vite/
 *.local
 
+# ---------- 服务端本地配置与构建产物 ----------
+server/bin/
+server/tmp/
+server/.env
+admin/.env
+web/.env
+
+# ---------- 容器化部署本地配置（含 JWT_SECRET，绝不能入库）----------
+.env
+!.env.example
+
 # Tauri 桌面端：Rust 构建产物 / 权限 schema 生成物 / 打包输出
 desktop-tauri/src-tauri/target/
 desktop-tauri/src-tauri/gen/
@@ -86,3 +97,5 @@ captures/
 .claude/
 
 __pycache__/
+# Playwright CLI 快照与调试产物
+.playwright-cli/

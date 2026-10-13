@@ -40,6 +40,8 @@ BetterHRBUST/
 ├── docs/api/        # 接口逆向文档（13 篇，手写整理，详细踩坑记录）
 ├── tools/probe/     # 接口探测与逆向工具（零依赖 Node.js CLI + 网页控制台）
 ├── web/             # 现代化 Web 客户端（Vue 3 + Vite + Tailwind CSS）
+├── server/          # 意见反馈服务端（Go + Gin + MongoDB，Redis 限流）
+├── admin/           # 意见反馈管理端（Vue 3 + Vite + Tailwind CSS，独立部署）
 ├── android/         # Android 原生客户端（Kotlin + Jetpack Compose + Room）
 └── desktop-tauri/   # Windows 桌面端（Tauri + Rust，内置本地反向代理）
 ```
@@ -240,7 +242,51 @@ npm run dist    # 构建 web + 打包 + 统一命名，产物见 desktop-tauri/r
 
 ---
 
-### 5. 发布 Release 与更新检测
+### 5. 服务端、意见反馈与管理端
+
+意见反馈由独立服务端承载（仅 Web 环境提供入口，Android 后续补充），管理端用于阅读反馈。
+服务端不代理教务请求、不保存任何学生信息，详见「隐私、安全与合规声明」。
+
+```bash
+# ① 启动依赖（本地开发：MongoDB + Redis）
+docker run -d --name bh-mongo -p 27017:27017 mongo:7
+docker run -d --name bh-redis -p 6379:6379 redis:7-alpine
+
+# ② 启动服务端（默认 http://127.0.0.1:9191）
+cd server
+cp .env.example .env      # 按需修改，生产环境务必替换 JWT_SECRET
+go test ./...             # 单元测试
+go run ./cmd/server
+
+# ③ 创建初始超级管理员（无 -password 时自动生成口令并打印一次）
+go run ./cmd/seed-admin -username admin -nickname 超级管理员
+
+# ④ 启动 Web 端（会自动把 /api 代理到服务端）
+cd ../web && npm install && npm run dev        # http://localhost:5173
+
+# ⑤ 启动管理端（独立部署，不进入容器）
+cd ../admin && npm install && npm run dev      # http://localhost:5174
+```
+
+**容器化部署（web + server + MongoDB + Redis，不含管理端）**：
+
+```bash
+cp .env.example .env      # 必须替换 JWT_SECRET
+docker compose up -d --build
+docker compose exec server seed-admin -username admin -nickname 超级管理员
+# Web: http://localhost:8080   |   接口: http://localhost:9191/api/healthz
+```
+
+管理端可构建为静态产物后由任意静态服务器托管，并把 `/api` 反向代理到服务端
+（或在 `admin/.env.local` 中设置 `VITE_API_BASE` 指向服务端地址）：
+
+```bash
+cd admin && npm run build   # 产物：admin/dist
+```
+
+---
+
+### 6. 发布 Release 与更新检测
 
 桌面端与 Android 端的更新检测均读取 GitHub 的 **latest Release**
 （`https://api.github.com/repos/Glassous/BetterHRBUST/releases/latest`，请求按天节流）：
@@ -276,7 +322,7 @@ npm run dist    # 构建 web + 打包 + 统一命名，产物见 desktop-tauri/r
 
 ---
 
-### 6. 接口探测工具 (`tools/probe/`)
+### 7. 接口探测工具 (`tools/probe/`)
 
 教务系统改版或需验证底层接口时，可直接运行逆向探测工具：
 
@@ -321,9 +367,14 @@ node tools/probe/probe.mjs --user 你的学号
 ## 🔒 隐私、安全与合规声明
 
 1. **隐私安全至上**：
-   - 网页客户端采用纯前端直连与本地缓存架构，所有会话凭证（Cookie）及个人信息**仅保存在用户本地浏览器内**，绝不收集或上传到任何第三方服务器。
+   - 网页客户端采用纯前端直连与本地缓存架构，所有会话凭证（Cookie）及个人信息**仅保存在用户本地浏览器内**，不上传到任何服务器。
    - Android 客户端同样为直连架构：会话 Cookie 由本地 `CookieJar` 持有，教务数据落盘于应用私有目录（Room 数据库），登录态与偏好存于 DataStore，**不请求任何第三方服务**，卸载应用即清除全部本地数据。
    - 探测工具默认启用自动脱敏逻辑，测试数据落盘前自动屏蔽敏感隐私字段。
+2. **服务端只保存意见反馈文本**（`server/`，仅服务于 Web 端的「意见反馈」功能）：
+   - 服务端不代理教务请求、不接触教务会话，**不建立任何学生实体**：数据库中不存在学号、教务内部 ID、成绩、课表、Cookie、设备信息等字段。
+   - 反馈记录只包含：反馈正文、用户选填的联系方式、开启「实名发布」时随反馈一并提交的姓名文本、是否匿名、阅读状态与提交时间。姓名仅作为该条反馈的一部分存放，不与任何账号建立关联。
+   - 访问日志只记录方法、路径、状态码与耗时，**不记录 IP、User-Agent 与请求体**；限流计数保存在 Redis 中且仅保存来源地址的加盐哈希，并随过期时间自动清除，不做持久化。
+   - 提交入口仅在已登录教务时开放，但登录凭证不会随反馈上传；管理端账号口令以 bcrypt 哈希存储。
 2. **只读保护原则**：
    - 本项目核心目标为**改善信息查询与日程体验**。
    - 任何涉及修改教务数据的高风险写操作（如选课、退课、修改学籍等）均不在客户端内提供，请登录官方教务系统原站办理。
@@ -359,6 +410,21 @@ node tools/probe/probe.mjs --user 你的学号
 
 - **容器**：Tauri 2（Rust 主进程 + 系统 WebView2）
 - **内置服务**：仅监听 `127.0.0.1` 的本地反向代理，静态托管 `web/dist`
+
+### 服务端 (`server/`)
+
+- **语言与框架**：Go 1.26 + Gin（默认监听 `9191`）
+- **数据库**：MongoDB（`go.mongodb.org/mongo-driver`，仅 `feedback` / `admins` 两个集合）
+- **限流**：Redis（固定窗口计数，故障自动降级放行；仅保存来源地址的加盐哈希）
+- **鉴权**：JWT（HS256）+ bcrypt；改密／暂停会递增令牌版本，使已签发令牌立即失效
+- **接口**：`POST /api/feedback` 公开提交；`/api/admin/*` 管理端登录、反馈阅读、管理员管理
+- **初始化**：`go run ./cmd/seed-admin` 创建初始超级管理员（未指定口令时自动生成并一次性打印）
+
+### 管理端 (`admin/`)
+
+- 与 Web 端同技术栈（Vue 3 + Vite 5 + Tailwind CSS v4）、同 UI 组件与视觉风格
+- 独立部署，不进入容器编排：权限分「超级管理员（可创建／暂停管理员、可删除反馈）」与
+  「管理员（仅阅读反馈、可标记已读）」，首次登录强制改密
 
 
 ### 显示与账号切换

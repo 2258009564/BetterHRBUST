@@ -31,6 +31,7 @@ import SettingsView from '@/views/SettingsView.vue';
 import LoginView from '@/views/LoginView.vue';
 import EvaluationView from '@/views/EvaluationView.vue';
 import ResourcesView from '@/views/ResourcesView.vue';
+import FeedbackView from '@/views/FeedbackView.vue';
 
 const { activeTab, navigateTo, isLoggedIn, authChecked, checkAuth } = useSession();
 const { ensureDailySync, needsDailySync, syncAll } = useAcademicData();
@@ -83,6 +84,7 @@ const views = {
   notice: NoticeView,
   course: CourseView,
   settings: SettingsView,
+  feedback: FeedbackView,
   login: LoginView
 };
 

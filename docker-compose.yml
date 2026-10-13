@@ -1,0 +1,74 @@
+# BetterHRBUST 容器化部署（web + server + MongoDB + Redis）
+#
+#   1. 复制 .env.example 为 .env，并把 JWT_SECRET 换成随机长字符串
+#   2. docker compose up -d --build
+#   3. 创建初始超级管理员（admin 端不在本编排内，需另行部署）：
+#        docker compose exec server seed-admin -username admin -nickname 超级管理员
+#   4. 访问 Web：http://localhost:8080
+#
+# 隐私约定：本编排中 MongoDB 只保存意见反馈与管理员账号，
+# Redis 只保存短时限流计数，不承载任何学生信息。
+
+name: betterhrbust
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # 限流计数无需持久化：关闭 RDB/AOF，重启即清空，避免磁盘上留下任何请求痕迹
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./server
+    restart: unless-stopped
+    environment:
+      PORT: "9191"
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: ${MONGO_DB:-betterhrbust}
+      REDIS_ADDR: redis:6379
+      REDIS_DB: "0"
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      JWT_SECRET: ${JWT_SECRET:?请在 .env 中设置 JWT_SECRET（随机长字符串）}
+      JWT_TTL_HOURS: ${JWT_TTL_HOURS:-12}
+      MAX_PAGE_SIZE: "100"
+      # web 容器的 nginx 是唯一代理，显式声明其所在网段后才会解析 X-Forwarded-For
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-172.16.0.0/12}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${SERVER_PORT:-9191}:9191"
+
+  web:
+    build:
+      # Web 端会内联仓库根的 shared/ 共享数据，构建上下文必须是仓库根目录
+      context: .
+      dockerfile: web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+volumes:
+  mongo-data:

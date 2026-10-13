@@ -45,10 +45,16 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      // 注意顺序：'/api/probe'（探测工具）必须位于 '/api' 之前，前缀更具体者优先匹配
       '/api/probe': {
         target: 'http://127.0.0.1:7788',
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api\/probe/, '')
+      },
+      // BetterHRBUST 服务端（Go + Gin）：意见反馈与管理端接口
+      '/api': {
+        target: process.env.BETTER_HRBUST_API || 'http://127.0.0.1:9191',
+        changeOrigin: true
       },
       '/academic': academicProxy
     }
@@ -56,6 +62,10 @@ export default defineConfig({
   preview: {
     port: 5173,
     proxy: {
+      '/api': {
+        target: process.env.BETTER_HRBUST_API || 'http://127.0.0.1:9191',
+        changeOrigin: true
+      },
       '/academic': academicProxy
     }
   }

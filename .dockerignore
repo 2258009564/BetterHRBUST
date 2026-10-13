@@ -1,0 +1,28 @@
+# 容器构建上下文位于仓库根目录，这里只保留 web/ 与 shared/ 两份真正需要的内容，
+# 其余目录（Android / 桌面端 / 探测工具 / 管理端等）一律排除，避免上下文膨胀。
+
+# ---------- 版本控制与协作目录 ----------
+.git/
+.github/
+.agents/
+.playwright-cli/
+
+# ---------- 不在镜像内构建的目录 ----------
+admin/
+android/
+desktop-tauri/
+landing/
+tools/
+docs/
+
+# ---------- 依赖与构建产物 ----------
+**/node_modules/
+**/dist/
+**/dist-userscript/
+**/tmp/
+web/bin/
+
+# ---------- 本地配置（含密钥，绝不能进入镜像）----------
+.env
+**/.env
+**/.env.local

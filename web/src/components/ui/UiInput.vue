@@ -13,6 +13,8 @@
       :placeholder="placeholder"
       :disabled="disabled"
       :readonly="readonly"
+      :maxlength="maxlength > 0 ? maxlength : undefined"
+      :autocomplete="autocomplete"
       :class="[
         'w-full rounded-lg text-sm transition-all duration-150 outline-none',
         'bg-zinc-50/60 dark:bg-[#1f2127] border border-zinc-200 dark:border-zinc-700/60',
@@ -75,6 +77,16 @@ defineProps({
   readonly: {
     type: Boolean,
     default: false
+  },
+  // 为 0 表示不限制长度
+  maxlength: {
+    type: Number,
+    default: 0
+  },
+  // 账号类输入框建议显式声明，便于浏览器与密码管理器正确识别
+  autocomplete: {
+    type: String,
+    default: 'off'
   },
   customClass: {
     type: String,
