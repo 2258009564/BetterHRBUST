@@ -13,6 +13,7 @@ import com.glassous.betterhrbust.core.datastore.UserPreferencesManager
 import com.glassous.betterhrbust.core.network.AcademicHttpClient
 import com.glassous.betterhrbust.data.repository.AcademicRepository
 import com.glassous.betterhrbust.data.repository.AuthRepository
+import com.glassous.betterhrbust.data.repository.FeedbackRepository
 import com.glassous.betterhrbust.data.repository.UpdateRepository
 import com.glassous.betterhrbust.data.sync.AcademicSyncManager
 
@@ -39,6 +40,9 @@ class BetterHrbustApp : Application() {
         private set
 
     lateinit var updateRepository: UpdateRepository
+        private set
+
+    lateinit var feedbackRepository: FeedbackRepository
         private set
 
     override fun onCreate() {
@@ -76,6 +80,7 @@ class BetterHrbustApp : Application() {
             currentVersion = resolveAppVersion(),
             prefs = preferencesManager
         )
+        feedbackRepository = FeedbackRepository()
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {

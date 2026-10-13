@@ -56,6 +56,7 @@ import com.glassous.betterhrbust.feature.courses.CoursesScreen
 import com.glassous.betterhrbust.feature.dashboard.DashboardScreen
 import com.glassous.betterhrbust.feature.exams.ExamsScreen
 import com.glassous.betterhrbust.feature.evaluation.EvaluationScreen
+import com.glassous.betterhrbust.feature.feedback.FeedbackScreen
 import com.glassous.betterhrbust.feature.resources.ResourcesScreen
 import com.glassous.betterhrbust.feature.profile.ProfileScreen
 import com.glassous.betterhrbust.feature.program.ProgramScreen
@@ -122,7 +123,11 @@ class MainActivity : ComponentActivity() {
                             .background(MaterialTheme.colorScheme.background)
                     )
                 } else {
-                    key((resolvedAuthState as? AuthState.Authenticated)?.studentId, prefs?.lastLoginAt) {
+                    // 只在「账号」变化时重建主界面：
+                    // 同一账号的重新登录（会话恢复）不重建，否则会把用户从二级页面
+                    // （如「更多 → 意见反馈」）踢回概览页，丢失页面状态。
+                    // 重新登录后的数据同步由 MainAppScaffold 内的会话恢复逻辑单独负责。
+                    key((resolvedAuthState as? AuthState.Authenticated)?.studentId) {
                     MainAppScaffold(
                         authState = resolvedAuthState,
                         isSessionExpired = isSessionExpired,
@@ -229,6 +234,17 @@ fun MainAppScaffold(
         }
     }
 
+    // 会话失效后重新登录成功（isSessionExpired true → false）：主界面不再重建，
+    // 这里补一次全量同步，保证「重新登录后恢复在线同步」，
+    // 同时用户停留在原页面（如正在填写的意见反馈页）。
+    var previousSessionExpired by remember { mutableStateOf(isSessionExpired) }
+    LaunchedEffect(isSessionExpired) {
+        if (previousSessionExpired && !isSessionExpired && authState is AuthState.Authenticated) {
+            syncManager.syncAll()
+        }
+        previousSessionExpired = isSessionExpired
+    }
+
     // 桌面小部件刷新：仅在「同步结束」与「会话被清理（退出登录）」两个时点各刷新一次，
     // 其余更新交给系统周期（30 分钟）与日期 / 时区 / 开机广播兜底
     val isSyncing by syncManager.isSyncing.collectAsState()
@@ -321,7 +337,8 @@ fun MainAppScaffold(
                                 navController.navigate(AuthRoute) {
                                     launchSingleTop = true
                                 }
-                            }
+                            },
+                            onQuickReLogin = { showReLogin = true }
                         )
                     }
 
@@ -341,7 +358,8 @@ fun MainAppScaffold(
                                 navController.navigate(AuthRoute) {
                                     launchSingleTop = true
                                 }
-                            }
+                            },
+                            onQuickReLogin = { showReLogin = true }
                         )
                     }
                 }
@@ -425,7 +443,8 @@ private enum class SecondaryPage(val route: Any, val key: String) {
     COURSES(CoursesRoute, "courses"),
     PROFILE(ProfileRoute, "profile"),
     EVALUATION(EvaluationRoute, "evaluation"),
-    RESOURCES(ResourcesRoute, "resources");
+    RESOURCES(ResourcesRoute, "resources"),
+    FEEDBACK(FeedbackRoute, "feedback");
 
     companion object {
         fun fromRoute(route: Any): SecondaryPage? = entries.firstOrNull { it.route == route }
@@ -450,6 +469,8 @@ fun MainPagerScreen(
     navController: NavController,
     onLogout: () -> Unit,
     onReLogin: () -> Unit,
+    /** 打开「重新登录」覆盖层（不离开当前页面，登录成功后原地恢复） */
+    onQuickReLogin: () -> Unit = {},
     /** 持久化的导航坞折叠态，作为首帧状态（不播放动画） */
     dockCollapsed: Boolean = false,
     /** 桌面小部件请求打开的一级 Tab（null = 无请求）；冷启动时直接作为首帧页，避免先闪一下概览页 */
@@ -604,6 +625,7 @@ fun MainPagerScreen(
                 4 -> NoticesSettingsScreen(
                     onEvaluation = { secondaryKey = SecondaryPage.EVALUATION.key },
                     onResources = { secondaryKey = SecondaryPage.RESOURCES.key },
+                    onFeedback = { secondaryKey = SecondaryPage.FEEDBACK.key },
                     onLogout = onLogout,
                     onReLogin = onReLogin
                 )
@@ -659,6 +681,10 @@ fun MainPagerScreen(
                         SecondaryPage.PROFILE -> ProfileScreen(onBack = closeSecondaryPage)
                         SecondaryPage.EVALUATION -> EvaluationScreen(onBack = closeSecondaryPage)
                         SecondaryPage.RESOURCES -> ResourcesScreen(onBack = closeSecondaryPage)
+                        SecondaryPage.FEEDBACK -> FeedbackScreen(
+                            onBack = closeSecondaryPage,
+                            onGoLogin = onQuickReLogin
+                        )
                     }
                 }
             }

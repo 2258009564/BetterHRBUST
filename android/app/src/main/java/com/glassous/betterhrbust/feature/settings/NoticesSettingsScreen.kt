@@ -43,6 +43,7 @@ import kotlinx.coroutines.launch
 fun NoticesSettingsScreen(
     onEvaluation: () -> Unit = {},
     onResources: () -> Unit = {},
+    onFeedback: () -> Unit = {},
     onLogout: () -> Unit,
     onReLogin: () -> Unit,
     modifier: Modifier = Modifier
@@ -296,7 +297,7 @@ fun NoticesSettingsScreen(
                     }
                 }
 
-                // Section: 账号与数据（清理缓存 / 重新登录 / 退出登录 合并为一组）
+                // Section: 账号与数据（意见反馈 / 清理缓存 / 重新登录 / 退出登录 合并为一组）
                 item {
                     Text(
                         text = "账号与数据",
@@ -318,6 +319,13 @@ fun NoticesSettingsScreen(
                                 title = "清理离线缓存",
                                 subtitle = "清除本地缓存的教务数据",
                                 onClick = { showClearCacheDialog = true }
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            SettingsActionRow(
+                                icon = Icons.Outlined.Feedback,
+                                title = "意见反馈",
+                                subtitle = "提交使用中遇到的问题、建议或数据偏差",
+                                onClick = onFeedback
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                             SettingsActionRow(

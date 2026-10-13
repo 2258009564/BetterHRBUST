@@ -45,6 +45,9 @@ data object EvaluationRoute
 @Serializable
 data object ResourcesRoute
 
+@Serializable
+data object FeedbackRoute
+
 enum class TopLevelDestination(
     val route: Any,
     val selectedIcon: ImageVector,
