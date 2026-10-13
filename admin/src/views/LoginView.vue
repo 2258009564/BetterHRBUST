@@ -77,10 +77,6 @@
           管理端只承载意见反馈文本，系统中不存在任何学生身份数据。
         </div>
       </div>
-
-      <p class="text-[11px] text-zinc-400 dark:text-zinc-500 text-center mt-4">
-        初始账号由服务端命令行创建：<span class="font-mono">go run ./cmd/seed-admin</span>
-      </p>
     </div>
   </div>
 </template>
