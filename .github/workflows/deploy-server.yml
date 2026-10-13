@@ -1,0 +1,156 @@
+name: Deploy Server
+
+# 推送 server/ 改动到 main 时，在云端构建 Linux 可执行文件并发布到 1Panel 服务器。
+#
+# 部署形态：服务器上以 systemd 常驻运行（单元名 betterhrbust-server），
+# 目录 /opt/betterhrbustserver 下放置两个二进制与手工维护的 .env：
+#   betterhrbust-server  服务端（CI 覆盖）
+#   seed-admin           初始管理员创建命令（CI 覆盖）
+#   version.txt          本次部署的 commit SHA（CI 覆盖）
+#   .env                 运行配置（**CI 不触碰**，故不使用 rsync --delete）
+#
+# 首次部署前需在服务器执行一次初始化（专用账号、目录、sudo 规则、systemd 单元、
+# 依赖的 MongoDB/Redis 与 .env），命令见仓库 README 的服务端部署章节或发布说明。
+#
+# 依赖 Secrets：SERVER_HOST / SERVER_USER / SERVER_SSH_KEY，可选 SERVER_PORT（默认 22）；
+# 与前缀为 Deploy Landing 的工作流复用同一套凭据。
+#
+# ⚠️ 主机密钥仍为部署时现场 ssh-keyscan 获取（TOFU），与 deploy-landing.yml 同一处置；
+# 修复方式为上游配置 SERVER_KNOWN_HOSTS Secret 后改为预置内容。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/deploy-server.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-server
+  # 部署串行执行：并发重启同一个服务会互相打断，不做取消
+  cancel-in-progress: false
+
+env:
+  DEPLOY_PATH: /opt/betterhrbustserver
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: 格式校验与单元测试
+        working-directory: server
+        run: |
+          set -euo pipefail
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::以下文件未通过 gofmt："
+            echo "$unformatted"
+            exit 1
+          fi
+          go vet ./...
+          go test ./...
+
+      - name: 构建 Linux 可执行文件
+        working-directory: server
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          go build -trimpath -ldflags="-s -w" -o build/betterhrbust-server ./cmd/server
+          go build -trimpath -ldflags="-s -w" -o build/seed-admin ./cmd/seed-admin
+          printf '%s\n' "$GITHUB_SHA" > build/version.txt
+          ls -lh build
+
+      # 私钥仅通过 env 注入并落盘到 ~/.ssh，避免出现在命令行回显与日志中
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$SERVER_PORT" -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error::ssh-keyscan 未能获取 $SERVER_HOST:$SERVER_PORT 的主机密钥，请检查 SERVER_HOST/SERVER_PORT 是否正确"
+            exit 1
+          fi
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: 校验目标目录
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$SERVER_USER@$SERVER_HOST" \
+            "test -d '$DEPLOY_PATH' || { echo '目标目录 $DEPLOY_PATH 不存在，请先执行服务器初始化命令' >&2; exit 1; }"
+
+      # 不带 --delete：服务器上的 .env 必须保留。
+      # --omit-dir-times / --no-owner / --no-group：目录属主为运行账号，
+      # 非属主无法回写目录时间戳等属性，忽略后文件内容与权限仍正常同步。
+      - name: 上传可执行文件
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          rsync -avz --omit-dir-times --no-owner --no-group \
+            -e "ssh -p $SERVER_PORT -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            server/build/betterhrbust-server \
+            server/build/seed-admin \
+            server/build/version.txt \
+            "$SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/"
+
+      # sudo 使用 -n（非交互）：未配置免密规则时立即失败并给出提示，而不是卡住等待输入
+      - name: 重启服务并健康检查
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$SERVER_USER@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+
+          if ! sudo -n systemctl restart betterhrbust-server; then
+            echo "无法免密重启 betterhrbust-server：请为部署账号配置 /etc/sudoers.d/betterhrbust-deploy" >&2
+            exit 1
+          fi
+
+          for _ in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:9191/api/healthz >/dev/null 2>&1; then
+              echo "健康检查通过：http://127.0.0.1:9191/api/healthz"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "服务重启后健康检查未通过，请登录服务器排查：" >&2
+          echo "  sudo systemctl status betterhrbust-server --no-pager" >&2
+          echo "  sudo journalctl -u betterhrbust-server -n 50 --no-pager" >&2
+          exit 1
+          REMOTE
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

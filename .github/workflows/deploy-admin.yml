@@ -1,0 +1,99 @@
+name: Deploy Admin
+
+# 推送 admin/ 改动到 main 时自动构建管理端并部署到 1Panel 服务器。
+# 构建全程在 GitHub 云端运行器完成（不在服务器上 build），产物经 rsync --delete
+# 同步到 /opt/1panel/www/sites/betterhrbustadmin/index/dist（全量清理，避免旧哈希产物堆积）。
+#
+# 管理端不入容器编排，由 1Panel 站点静态托管；接口基址在构建期注入：
+#   - 默认 /api（同源），需在该站点配置反向代理 /api → http://127.0.0.1:9191
+#   - 如需分域部署，在仓库 Variables 中设置 ADMIN_API_BASE 为完整地址
+# 依赖 Secrets：SERVER_HOST / SERVER_USER / SERVER_SSH_KEY，可选 SERVER_PORT（默认 22）；
+# 与 Deploy Landing 复用同一套凭据。
+#
+# ⚠️ 主机密钥仍为部署时现场 ssh-keyscan 获取（TOFU），与 deploy-landing.yml 同一处置。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'admin/**'
+      - '.github/workflows/deploy-admin.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-admin
+  cancel-in-progress: true
+
+env:
+  DEPLOY_PATH: /opt/1panel/www/sites/betterhrbustadmin/index/dist
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+
+      - name: 构建管理端
+        working-directory: admin
+        env:
+          # 未配置 ADMIN_API_BASE 时回退为同源 /api
+          VITE_API_BASE: ${{ vars.ADMIN_API_BASE || '/api' }}
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          test -f dist/index.html
+
+      # 私钥仅通过 env 注入并落盘到 ~/.ssh，避免出现在命令行回显与日志中
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$SERVER_PORT" -H "$SERVER_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error::ssh-keyscan 未能获取 $SERVER_HOST:$SERVER_PORT 的主机密钥，请检查 SERVER_HOST/SERVER_PORT 是否正确"
+            exit 1
+          fi
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Prepare remote directory
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$SERVER_USER@$SERVER_HOST" "mkdir -p '$DEPLOY_PATH'"
+
+      # 源/目标均以斜杠结尾：将 dist 内容同步进目标目录，而非多嵌套一层。
+      # --delete 清理旧的哈希产物；--omit-dir-times / --no-owner / --no-group
+      # 跳过需要属主权限的属性回写（目标目录一般属 1Panel 站点账号或 root）。
+      - name: Deploy via rsync
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          rsync -avz --delete --omit-dir-times --no-owner --no-group \
+            -e "ssh -p $SERVER_PORT -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            admin/dist/ "$SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
