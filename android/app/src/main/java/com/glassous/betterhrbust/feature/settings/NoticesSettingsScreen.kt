@@ -244,6 +244,8 @@ fun NoticesSettingsScreen(
                     }
                 }
 
+                item { CourseNotificationSettings(enabled = prefs?.courseNotifications == true) }
+
                 // Section: 外观（主题模式单独成组，与数据清理分离）
                 item {
                     Text(

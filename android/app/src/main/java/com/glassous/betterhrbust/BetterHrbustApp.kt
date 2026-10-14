@@ -76,6 +76,17 @@ class BetterHrbustApp : Application() {
                     }
                 }
         }
+        // 通知开关和认证代次也需立即处理；上游组件观察器仅观察账号键，不能代替此监听。
+        widgetScope.launch {
+            preferencesManager.preferencesFlow
+                .map { Triple(it.courseNotifications, it.username to it.studentId, it.lastLoginAt) }
+                .distinctUntilChanged()
+                .collect {
+                    try { com.glassous.betterhrbust.notification.CourseNotificationController.refresh(this@BetterHrbustApp) }
+                    catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                    catch (_: Exception) { /* 后续本地数据变化重试。 */ }
+                }
+        }
         updateRepository = UpdateRepository(
             currentVersion = resolveAppVersion(),
             prefs = preferencesManager
@@ -90,6 +101,11 @@ class BetterHrbustApp : Application() {
     }
 
     private suspend fun refreshWidgets() {
+        try {
+            com.glassous.betterhrbust.notification.CourseNotificationController.refresh(this)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (_: Exception) { /* 系统能力不可用时不影响本地课表和组件刷新。 */ }
         try {
             com.glassous.betterhrbust.widget.TimetableWidgetProvider.refreshAll(this)
             com.glassous.betterhrbust.widget.TimetableWidgetUpdater.refreshAll(this)

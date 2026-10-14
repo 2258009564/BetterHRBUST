@@ -1,5 +1,6 @@
 package com.glassous.betterhrbust
 
+import androidx.compose.ui.graphics.toArgb
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -20,6 +21,35 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class WidgetLayoutTest {
+    @Test fun courseTimeColorsSurviveThemeAndCompactReapplication() {
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val base=instrumentation.targetContext
+        val original=base.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        fun mode(night: Boolean) {
+            instrumentation.uiAutomation.executeShellCommand("cmd uimode night ${if(night) "yes" else "no"}").close()
+            Thread.sleep(1200)
+            instrumentation.waitForIdleSync()
+        }
+        try {
+            for(night in listOf(false,true,false)) {
+                mode(night)
+                instrumentation.runOnMainSync {
+                    for(compact in listOf(false,true)) {
+                        val course=WidgetCourse("数据结构","D510","10:10–11:50",false)
+                        val views=TimetableWidgetProvider.courseRow(base,course,compact)
+                        val root=views.apply(base,FrameLayout(base))
+                        views.reapply(base,root)
+                        val pill=root.findViewById<View>(R.id.widget_course_detail)
+                        val bitmap=Bitmap.createBitmap(20,20,Bitmap.Config.ARGB_8888)
+                        pill.background.setBounds(0,0,20,20);pill.background.draw(Canvas(bitmap))
+                        val expected=com.glassous.betterhrbust.core.ui.theme.CourseColorPalette.cardColors(course.colorKey,night).container
+                        assertEquals("时间色块必须保留课程颜色",expected.toArgb(),bitmap.getPixel(10,10))
+                        bitmap.recycle()
+                    }
+                }
+            }
+        } finally { mode(original==Configuration.UI_MODE_NIGHT_YES) }
+    }
     @Test fun cachedReapplicationAlwaysRestoresOpaqueBackgrounds() {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val base=instrumentation.targetContext

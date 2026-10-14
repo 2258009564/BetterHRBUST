@@ -166,7 +166,8 @@ class TimetableWidgetProvider : AppWidgetProvider() {
             val lightBg=light.container.toArgb();val darkBg=dark.container.toArgb()
             val lightInk=light.content.toArgb();val darkInk=dark.content.toArgb()
             if(android.os.Build.VERSION.SDK_INT>=31) {
-                row.setColorStateList(R.id.widget_course_detail,"setBackgroundTintList",android.content.res.ColorStateList.valueOf(lightBg),android.content.res.ColorStateList.valueOf(darkBg))
+                // 直接设置色块，避免桌面宿主对 TextView 背景 tint 的兼容差异；外层负责圆角裁剪。
+                row.setColorInt(R.id.widget_course_detail,"setBackgroundColor",lightBg,darkBg)
                 row.setColorInt(R.id.widget_course_detail,"setTextColor",lightInk,darkInk)
             } else {
                 val isDark=context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES

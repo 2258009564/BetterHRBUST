@@ -159,6 +159,7 @@ internal fun TimetableGrid(
     BoxWithConstraints(modifier = modifier) {
         // 除时间列外的宽度按日列等分：手机窄屏同样铺满屏宽，不做横向滚动
         val dayColumnWidth = (maxWidth - TimeColumnWidth) / days.size.coerceAtLeast(1)
+        val compactCards = dense && dayColumnWidth < 90.dp
 
         Column(modifier = Modifier.fillMaxWidth()) {
             // 表头：星期（今天列浅色底 + 圆点）
@@ -311,11 +312,12 @@ internal fun TimetableGrid(
                                                     page = page,
                                                     selectedWeek = selectedWeek,
                                                     isDark = isDark,
-                                                    dense = dense,
+                                                    dense = compactCards,
+                                                    showWeeks = !dense,
                                                     // 同格并排多门课时高度减半，课程名减少行数并省略教师
                                                     nameMaxLines = when {
                                                         stacked -> 2
-                                                        dense -> 3
+                                                        compactCards -> 3
                                                         else -> 2
                                                     },
                                                     showTeacher = !stacked,
@@ -350,6 +352,7 @@ private fun CourseBlock(
     selectedWeek: Int,
     isDark: Boolean,
     dense: Boolean,
+    showWeeks: Boolean,
     nameMaxLines: Int,
     showTeacher: Boolean,
     onClick: () -> Unit,
@@ -381,7 +384,7 @@ private fun CourseBlock(
     Box(modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }) {
         Column(
             modifier = Modifier
-
+                .fillMaxSize()
                 .clip(shape)
                 .background(colors.container)
                 .border(1.dp, colors.border, shape)
@@ -422,7 +425,7 @@ private fun CourseBlock(
                     modifier = Modifier
                 )
             }
-            if (!dense && cell.weeks.isNotEmpty()) {
+            if (showWeeks && cell.weeks.isNotEmpty()) {
                 Text(
                     text = cell.weeks,
                     fontSize = 10.sp,

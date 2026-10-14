@@ -41,6 +41,8 @@ android {
 
     defaultConfig {
         applicationId = "com.glassous.betterhrbust"
+        manifestPlaceholders["xiaomiAppId"] = providers.gradleProperty("xiaomiAppId").orNull ?: ""
+        manifestPlaceholders["xiaomiDebug"] = "false"
         minSdk = 30
         targetSdk = 36
         versionCode = appVersionCode
@@ -51,6 +53,7 @@ android {
 
     buildTypes {
         debug {
+            manifestPlaceholders["xiaomiDebug"] = "true"
             // Debug 与 Release 完全分离：独立包名后缀，可与正式版在同一台设备共存，
             // 互不覆盖（正式版覆盖升级仍依赖同一份正式签名）。
             applicationIdSuffix = ".debug"

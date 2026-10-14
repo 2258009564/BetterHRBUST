@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- 小部件在开机后刷新一次，避免显示开机前的旧课表 -->
@@ -19,6 +21,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BetterHRBUST"
         android:usesCleartextTraffic="true">
+
+        <meta-data android:name="com.xiaomi.xms.APP_ID" android:value="${xiaomiAppId}" />
+        <meta-data android:name="com.xiaomi.xms.BUILD_TYPE_DEBUG" android:value="${xiaomiDebug}" />
+        <receiver android:name=".notification.CourseNotificationReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
 
         <!-- singleTop：小部件点击复用已有任务并走 onNewIntent，避免重建整个界面 -->
         <activity

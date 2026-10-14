@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Refresh
@@ -198,7 +197,7 @@ data class StatEntry(
  * - 手机（窗口宽度 < [tabletWidthDp]）：每行 [compactColumns] 列（默认 2 列，即 2×N）
  * - 平板 / 横屏（窗口宽度 ≥ [tabletWidthDp]）：单行等分展示全部指标（1×N）
  *
- * 以「窗口宽度」而非容器宽度判定，避免成绩页在平板双栏布局下因列表栏变窄而误判为手机。
+ * 按实际容器宽度排布，导航栏、分屏和双栏卡片占用空间后仍保持指标可读。
  */
 @Composable
 fun ResponsiveStatGrid(
@@ -209,25 +208,27 @@ fun ResponsiveStatGrid(
 ) {
     if (entries.isEmpty()) return
 
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val columns = if (screenWidthDp >= tabletWidthDp) entries.size else compactColumns.coerceAtLeast(1)
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val columns = if (maxWidth.value >= tabletWidthDp) entries.size else compactColumns.coerceAtLeast(1)
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        entries.chunked(columns).forEach { rowEntries ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                rowEntries.forEach { entry ->
-                    StatEntryCell(entry = entry, modifier = Modifier.weight(1f))
-                }
-                // 末行不足时补占位，保证与上一行对齐
-                repeat(columns - rowEntries.size) {
-                    Spacer(modifier = Modifier.weight(1f))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            entries.chunked(columns).forEach { rowEntries ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    rowEntries.forEach { entry ->
+                        StatEntryCell(entry = entry, modifier = Modifier.weight(1f))
+                    }
+                    // 末行不足时补占位，保证与上一行对齐
+                    repeat(columns - rowEntries.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }
     }
+
 }
 
 @Composable

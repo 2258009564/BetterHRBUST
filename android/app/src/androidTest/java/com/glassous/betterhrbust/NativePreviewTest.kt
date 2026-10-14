@@ -92,7 +92,7 @@ class NativePreviewTest {
                     // 点遮罩关闭详情，然后再次打开/关闭，验证按压反馈不会残留蓝色。
                     repeat(2) {
                         var screen=android.graphics.Rect();scenario.onActivity { it.window.decorView.getGlobalVisibleRect(screen) }
-                        tap(screen.left+12f,screen.exactCenterY());Thread.sleep(400)
+                        tap(screen.right-12f,screen.exactCenterY());Thread.sleep(400)
                         val settled=SystemClock.elapsedRealtime()+3000
                         var distance=Int.MAX_VALUE
                         do {

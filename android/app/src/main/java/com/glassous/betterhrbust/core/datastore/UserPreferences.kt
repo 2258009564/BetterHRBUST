@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
 data class AppPreferences(
+    val courseNotifications: Boolean = false,
     val username: String = "",
     val studentId: String = "",
     val year: String = "",
@@ -63,6 +64,7 @@ data class AppPreferences(
 
 class UserPreferencesManager(context: Context, private val store: DataStore<Preferences> = context.dataStore) {
     companion object {
+        private val KEY_COURSE_NOTIFICATIONS = booleanPreferencesKey("course_notifications")
         private val KEY_USERNAME = stringPreferencesKey("username")
         private val KEY_STUDENT_ID = stringPreferencesKey("student_id")
         private val KEY_YEAR = stringPreferencesKey("year")
@@ -114,6 +116,7 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
             else -> null
         }
         AppPreferences(
+            courseNotifications = prefs[KEY_COURSE_NOTIFICATIONS] ?: false,
             username = prefs[KEY_USERNAME] ?: "",
             studentId = prefs[KEY_STUDENT_ID] ?: "",
             year = prefs[KEY_YEAR] ?: "",
@@ -287,6 +290,10 @@ class UserPreferencesManager(context: Context, private val store: DataStore<Pref
             prefs[KEY_CURRENT_WEEK] = week
             prefs[KEY_WEEK_REFERENCE_DATE] = java.time.LocalDate.now().toString()
         }
+    }
+
+    suspend fun setCourseNotifications(enabled: Boolean) {
+        store.edit { it[KEY_COURSE_NOTIFICATIONS] = enabled }
     }
 
     suspend fun setDarkTheme(mode: String) { // "system", "dark", "light"
