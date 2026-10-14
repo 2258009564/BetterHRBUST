@@ -81,7 +81,7 @@ class AccountIsolationTest {
                 check(withContext(Dispatchers.IO) { accepted.await(10,TimeUnit.SECONDS) })
                 prefs.saveAuth(b,"202","2026","1")
                 release.countDown()
-                assertTrue("迟到A请求必须取消，不得回退显示A缓存",result.await() is CancellationException)
+                assertTrue("迟到A请求必须取消，不得回退显示A缓存",result.await() is com.glassous.betterhrbust.data.repository.AccountSwitchedException)
                 responder.join()
                 assertEquals("Student A",Json.decodeFromString<PersonalInfo>(database.profileDao().getProfile(a).first()!!.json).realName)
             }

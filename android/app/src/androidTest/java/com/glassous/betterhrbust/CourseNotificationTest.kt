@@ -39,8 +39,9 @@ class CourseNotificationTest {
             Thread.sleep(500)
             assertTrue(manager.activeNotifications.any { it.id==testId })
         } finally { manager.cancel(testId) }
-        Thread.sleep(200)
-        assertFalse(manager.activeNotifications.any { it.id==testId })
+        val cancelDeadline=android.os.SystemClock.elapsedRealtime()+3000
+        while(manager.activeNotifications.any { it.id==testId } && android.os.SystemClock.elapsedRealtime()<cancelDeadline) Thread.sleep(50)
+        assertFalse("通知应在撤销后从系统列表移除",manager.activeNotifications.any { it.id==testId })
     }
     @Test fun unverifiedIdentityNeverPostsCourseDetails() = runBlocking {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
